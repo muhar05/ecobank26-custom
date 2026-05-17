@@ -35,7 +35,19 @@ class DashboardController extends Controller
 
     public function bankSampah()
     {
-        return view('dashboard.admin-bank-sampah');
+        $totalMembers = \App\Models\Member::count();
+        $totalCredit = \App\Models\SavingsLedger::where('type', 'credit')->sum('amount');
+        $totalDebit = \App\Models\SavingsLedger::where('type', 'debit')->sum('amount');
+        $recentLedgers = \App\Models\SavingsLedger::with('member')
+            ->latest('id')->limit(5)->get();
+
+        return view('dashboard.admin-bank-sampah', [
+            'totalMembers' => $totalMembers,
+            'totalSavings' => $totalCredit - $totalDebit,
+            'totalCredit' => $totalCredit,
+            'totalDebit' => $totalDebit,
+            'recentLedgers' => $recentLedgers,
+        ]);
     }
 
     public function warga()

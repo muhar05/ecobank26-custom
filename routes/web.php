@@ -8,6 +8,7 @@ use App\Http\Controllers\DepositController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SavingsReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
@@ -99,5 +100,9 @@ Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')
 Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('withdrawals', WithdrawalController::class)->only(['index', 'create', 'store']);
 });
+
+// Bank Sampah - Savings Report
+Route::get('/bank-sampah/savings', [SavingsReportController::class, 'index'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings');
 
 require __DIR__.'/auth.php';
