@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WasteCategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -80,6 +81,11 @@ Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicR
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {
     Route::resource('members', MemberController::class)->except(['show']);
+});
+
+// Bank Sampah - Waste Categories
+Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
 });
 
 require __DIR__.'/auth.php';

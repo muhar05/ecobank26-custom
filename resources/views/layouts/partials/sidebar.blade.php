@@ -111,9 +111,13 @@
         <div>
             <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Bank Sampah</p>
             <div class="space-y-1">
-                <x-sidebar-link href="/bank-sampah/dashboard" :active="request()->is('bank-sampah*')">
+                <x-sidebar-link href="/bank-sampah/dashboard" :active="request()->is('bank-sampah/dashboard')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg></x-slot>
                     Dashboard Bank Sampah
+                </x-sidebar-link>
+                <x-sidebar-link href="/bank-sampah/waste-categories" :active="request()->is('bank-sampah/waste-categories*')">
+                    <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg></x-slot>
+                    Kategori Sampah
                 </x-sidebar-link>
             </div>
         </div>
