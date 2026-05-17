@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CommunityExpenseController;
+use App\Http\Controllers\CommunityCashReportController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -66,5 +67,13 @@ Route::middleware(['auth', 'permission:manage_contributions'])->prefix('communit
 Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cash')->name('community-cash.')->group(function () {
     Route::resource('expenses', CommunityExpenseController::class)->only(['index', 'create', 'store']);
 });
+
+// Community Cash - Report (Admin/Bendahara)
+Route::get('/community-cash/report', [CommunityCashReportController::class, 'index'])
+    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report');
+
+// Warga - Public Cash Report
+Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicReport'])
+    ->middleware(['auth', 'permission:view_public_cash_report'])->name('warga.cash-report');
 
 require __DIR__.'/auth.php';
