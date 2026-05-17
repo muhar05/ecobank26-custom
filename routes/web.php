@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +54,11 @@ Route::middleware('auth')->group(function () {
 // Community Cash - Fund Categories
 Route::middleware(['auth', 'permission:manage_fund_categories'])->prefix('community-cash')->name('community-cash.')->group(function () {
     Route::resource('categories', FundCategoryController::class)->except(['show']);
+});
+
+// Community Cash - Contributions
+Route::middleware(['auth', 'permission:manage_contributions'])->prefix('community-cash')->name('community-cash.')->group(function () {
+    Route::resource('contributions', CommunityContributionController::class)->only(['index', 'create', 'store']);
 });
 
 require __DIR__.'/auth.php';
