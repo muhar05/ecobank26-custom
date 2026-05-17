@@ -112,4 +112,7 @@ Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampa
 Route::get('/bank-sampah/savings', [SavingsReportController::class, 'index'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings');
 
+Route::get('/bank-sampah/savings/export', [SavingsReportController::class, 'export'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings.export');
+
 require __DIR__.'/auth.php';
