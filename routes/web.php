@@ -9,6 +9,7 @@ use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SavingsReportController;
+use App\Http\Controllers\WargaSavingsController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
@@ -80,6 +81,12 @@ Route::get('/community-cash/report/export', [CommunityCashReportController::clas
 // Warga - Public Cash Report
 Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicReport'])
     ->middleware(['auth', 'permission:view_public_cash_report'])->name('warga.cash-report');
+
+// Warga - Bank Sampah Savings
+Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
+    Route::get('/warga/savings', [WargaSavingsController::class, 'index'])->name('warga.savings');
+    Route::get('/warga/savings/history', [WargaSavingsController::class, 'history'])->name('warga.savings.history');
+});
 
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {

@@ -66,6 +66,16 @@ class DashboardController extends Controller
         $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
             ->latest('id')->limit(5)->get();
 
+        // Savings balance for linked member
+        $member = auth()->user()->member;
+        if ($member) {
+            $credit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
+            $debit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
+            $data['savingsBalance'] = $credit - $debit;
+        } else {
+            $data['savingsBalance'] = null;
+        }
+
         return view('dashboard.warga', $data);
     }
 

@@ -13,6 +13,19 @@
             <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">Total pemasukan: Rp {{ number_format($totalIn, 0, ',', '.') }} · Total pengeluaran: Rp {{ number_format($totalOut, 0, ',', '.') }}</p>
         </div>
 
+        {{-- Savings balance --}}
+        @if($savingsBalance !== null)
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Saldo Tabungan Bank Sampah</p>
+                    <p class="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">Rp {{ number_format($savingsBalance, 0, ',', '.') }}</p>
+                </div>
+                <a href="{{ route('warga.savings') }}" class="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline">Lihat Detail →</a>
+            </div>
+        </div>
+        @endif
+
         {{-- Recent public transactions --}}
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
             <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
