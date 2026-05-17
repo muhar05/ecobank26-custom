@@ -16,6 +16,16 @@ class DashboardController extends Controller
         $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
             ->latest('id')->limit(5)->get();
 
+        // Bank Sampah
+        $data['totalMembers'] = \App\Models\Member::count();
+        $totalCredit = \App\Models\SavingsLedger::where('type', 'credit')->sum('amount');
+        $totalDebit = \App\Models\SavingsLedger::where('type', 'debit')->sum('amount');
+        $data['savingsBalance'] = $totalCredit - $totalDebit;
+        $data['totalCredit'] = $totalCredit;
+        $data['totalDebit'] = $totalDebit;
+        $data['recentSavings'] = \App\Models\SavingsLedger::with('member')
+            ->latest('id')->limit(5)->get();
+
         return view('dashboard.admin-rt', $data);
     }
 
