@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CommunityContributionController;
+use App\Http\Controllers\CommunityExpenseController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +60,11 @@ Route::middleware(['auth', 'permission:manage_fund_categories'])->prefix('commun
 // Community Cash - Contributions
 Route::middleware(['auth', 'permission:manage_contributions'])->prefix('community-cash')->name('community-cash.')->group(function () {
     Route::resource('contributions', CommunityContributionController::class)->only(['index', 'create', 'store']);
+});
+
+// Community Cash - Expenses
+Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cash')->name('community-cash.')->group(function () {
+    Route::resource('expenses', CommunityExpenseController::class)->only(['index', 'create', 'store']);
 });
 
 require __DIR__.'/auth.php';

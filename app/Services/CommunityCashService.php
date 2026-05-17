@@ -35,9 +35,13 @@ class CommunityCashService
     public function recordExpense(array $data): CommunityExpense
     {
         return DB::transaction(function () use ($data) {
-            $expense = CommunityExpense::create($data);
-
             $lastBalance = $this->getLastBalance($data['fund_category_id']);
+
+            if ($data['amount'] > $lastBalance) {
+                throw new \App\Exceptions\InsufficientBalanceException($lastBalance);
+            }
+
+            $expense = CommunityExpense::create($data);
 
             CommunityCashLedger::create([
                 'fund_category_id' => $data['fund_category_id'],
