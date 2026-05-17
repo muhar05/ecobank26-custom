@@ -4,10 +4,12 @@ use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CommunityExpenseController;
 use App\Http\Controllers\CommunityCashReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DepositController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WasteCategoryController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -86,6 +88,16 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
 // Bank Sampah - Waste Categories
 Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
+});
+
+// Bank Sampah - Deposits
+Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('deposits', DepositController::class)->only(['index', 'create', 'store']);
+});
+
+// Bank Sampah - Withdrawals
+Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('withdrawals', WithdrawalController::class)->only(['index', 'create', 'store']);
 });
 
 require __DIR__.'/auth.php';

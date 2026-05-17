@@ -18,7 +18,7 @@ class BankSampahService
 
             $deposit = Deposit::create([
                 'member_id' => $data['member_id'],
-                'collector_id' => $data['collector_id'] ?? 1,
+                'collector_id' => $data['collector_id'],
                 'date' => $data['date'],
                 'total_amount' => $totalAmount,
                 'notes' => $data['notes'] ?? null,
