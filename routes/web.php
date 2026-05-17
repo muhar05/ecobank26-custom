@@ -70,6 +70,9 @@ Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cas
 Route::get('/community-cash/report', [CommunityCashReportController::class, 'index'])
     ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report');
 
+Route::get('/community-cash/report/export', [CommunityCashReportController::class, 'export'])
+    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report.export');
+
 // Warga - Public Cash Report
 Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicReport'])
     ->middleware(['auth', 'permission:view_public_cash_report'])->name('warga.cash-report');

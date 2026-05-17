@@ -18,6 +18,9 @@
         </select>
     </div>
     <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Filter</button>
+    @can('view_cash_reports')
+        <a href="{{ route('community-cash.report.export', request()->only(['date_from', 'date_to', 'fund_category_id'])) }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Export CSV</a>
+    @endcan
     @if(request()->hasAny(['date_from','date_to','fund_category_id']))
         <a href="{{ url()->current() }}" class="text-sm text-slate-500 dark:text-slate-400 hover:underline">Reset</a>
     @endif

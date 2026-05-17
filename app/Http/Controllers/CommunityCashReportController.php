@@ -18,6 +18,42 @@ class CommunityCashReportController extends Controller
         return $this->buildReport($request, 'warga.cash-report');
     }
 
+    public function export(Request $request)
+    {
+        $query = CommunityCashLedger::with('fundCategory');
+
+        if ($request->filled('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+        if ($request->filled('fund_category_id')) {
+            $query->where('fund_category_id', $request->fund_category_id);
+        }
+
+        $ledgers = $query->orderBy('id')->get();
+        $filename = 'buku-kas-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($ledgers) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Tanggal', 'Keterangan', 'Kategori Dana', 'Masuk', 'Keluar', 'Saldo Berjalan']);
+
+            foreach ($ledgers as $l) {
+                fputcsv($handle, [
+                    $l->date->format('Y-m-d'),
+                    $l->description,
+                    $l->fundCategory->name,
+                    $l->type === 'in' ? $l->amount : '',
+                    $l->type === 'out' ? $l->amount : '',
+                    $l->balance,
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     private function buildReport(Request $request, string $view)
     {
         $query = CommunityCashLedger::with('fundCategory');

@@ -54,7 +54,6 @@ class RolePermissionSeeder extends Seeder
         $adminBankSampah = Role::firstOrCreate(['name' => 'admin_bank_sampah']);
         $adminBankSampah->syncPermissions([
             'view_waste_bank',
-            'manage_members',
             'manage_deposits',
             'manage_withdrawals',
             'manage_sales',
