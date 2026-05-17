@@ -2,8 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Collector;
 use App\Models\FundCategory;
+use App\Models\Member;
 use App\Models\User;
+use App\Models\WasteCategory;
+use App\Services\BankSampahService;
 use App\Services\CommunityCashService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -12,75 +16,163 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Ensure roles exist
         $this->call(RolePermissionSeeder::class);
         $this->call(FundCategorySeeder::class);
 
-        // Create demo users
-        $admin = User::firstOrCreate(
-            ['email' => 'adminrt@test.com'],
-            ['name' => 'Admin RT', 'password' => Hash::make('password')]
-        );
+        // Demo users
+        $admin = User::firstOrCreate(['email' => 'adminrt@test.com'], ['name' => 'Admin RT', 'password' => Hash::make('password')]);
         $admin->syncRoles(['admin_rt']);
 
-        $bendahara = User::firstOrCreate(
-            ['email' => 'bendahara@test.com'],
-            ['name' => 'Bendahara', 'password' => Hash::make('password')]
-        );
+        $bendahara = User::firstOrCreate(['email' => 'bendahara@test.com'], ['name' => 'Bendahara', 'password' => Hash::make('password')]);
         $bendahara->syncRoles(['bendahara']);
 
-        $bankSampah = User::firstOrCreate(
-            ['email' => 'banksampah@test.com'],
-            ['name' => 'Admin Bank Sampah', 'password' => Hash::make('password')]
-        );
+        $bankSampah = User::firstOrCreate(['email' => 'banksampah@test.com'], ['name' => 'Admin Bank Sampah', 'password' => Hash::make('password')]);
         $bankSampah->syncRoles(['admin_bank_sampah']);
 
-        $warga = User::firstOrCreate(
-            ['email' => 'warga@test.com'],
-            ['name' => 'Warga Biasa', 'password' => Hash::make('password')]
-        );
+        $warga = User::firstOrCreate(['email' => 'warga@test.com'], ['name' => 'Siti Aminah', 'password' => Hash::make('password')]);
         $warga->syncRoles(['warga']);
 
-        // Sample transactions
-        $service = new CommunityCashService();
-        $categories = FundCategory::all();
+        // Members
+        $members = [
+            ['member_code' => 'WRG001', 'name' => 'Budi Santoso', 'phone' => '081234567001', 'address' => 'Jl. Merdeka No. 1'],
+            ['member_code' => 'WRG002', 'name' => 'Siti Aminah', 'phone' => '081234567002', 'address' => 'Jl. Merdeka No. 2', 'user_id' => $warga->id],
+            ['member_code' => 'WRG003', 'name' => 'Andi Pratama', 'phone' => '081234567003', 'address' => 'Jl. Kenanga No. 5'],
+            ['member_code' => 'WRG004', 'name' => 'Dewi Lestari', 'phone' => '081234567004', 'address' => 'Jl. Kenanga No. 8'],
+            ['member_code' => 'WRG005', 'name' => 'Rudi Hermawan', 'phone' => '081234567005', 'address' => 'Jl. Anggrek No. 3'],
+            ['member_code' => 'WRG006', 'name' => 'Rina Wati', 'phone' => '081234567006', 'address' => 'Jl. Anggrek No. 7'],
+        ];
 
-        if ($categories->isEmpty()) {
+        foreach ($members as $m) {
+            Member::updateOrCreate(['member_code' => $m['member_code']], $m);
+        }
+
+        // Waste categories
+        $wasteCategories = [
+            ['name' => 'Botol Putih Bersih', 'unit' => 'kg'],
+            ['name' => 'Botol Putih Kotor', 'unit' => 'kg'],
+            ['name' => 'Kardus Bersih', 'unit' => 'kg'],
+            ['name' => 'Gelas Plastik Bersih', 'unit' => 'kg'],
+            ['name' => 'Kertas Campur', 'unit' => 'kg'],
+        ];
+
+        foreach ($wasteCategories as $wc) {
+            WasteCategory::firstOrCreate(['name' => $wc['name']], $wc);
+        }
+
+        // Collector
+        $collector = Collector::firstOrCreate(['name' => 'Bu Erta'], ['phone' => '081234567890', 'address' => 'Jl. Pasar No. 10']);
+
+        // Community Cash demo
+        $this->seedCommunityCash($bendahara->id);
+
+        // Bank Sampah demo
+        $this->seedBankSampah($collector->id);
+    }
+
+    private function seedCommunityCash(int $recordedBy): void
+    {
+        // Skip if data already exists
+        if (\App\Models\CommunityContribution::count() > 5) {
             return;
         }
 
-        $names = ['Budi', 'Siti', 'Andi', 'Dewi', 'Rudi', 'Rina'];
+        $service = new CommunityCashService();
+        $categories = FundCategory::all();
+        $names = ['Budi Santoso', 'Siti Aminah', 'Andi Pratama', 'Dewi Lestari', 'Rudi Hermawan', 'Rina Wati'];
 
-        foreach ($categories->take(4) as $cat) {
-            foreach (array_slice($names, 0, 3) as $i => $name) {
+        // Contributions
+        foreach ($categories as $cat) {
+            foreach (array_slice($names, 0, 4) as $name) {
                 $service->recordContribution([
                     'fund_category_id' => $cat->id,
                     'member_name' => $name,
                     'amount' => rand(2, 10) * 10000,
-                    'date' => now()->subDays(rand(1, 30))->format('Y-m-d'),
+                    'date' => now()->subDays(rand(1, 60))->format('Y-m-d'),
                     'description' => "Iuran {$cat->name} - {$name}",
-                    'recorded_by' => $bendahara->id,
+                    'recorded_by' => $recordedBy,
                 ]);
             }
         }
 
-        // Sample expenses
+        // Expenses (safe amounts)
         $expenses = [
-            ['desc' => 'Beli sapu dan alat kebersihan', 'amount' => 75000],
-            ['desc' => 'Santunan keluarga Pak Hadi', 'amount' => 200000],
-            ['desc' => 'Bayar petugas keamanan', 'amount' => 150000],
-            ['desc' => 'Beli kantong sampah', 'amount' => 50000],
+            ['cat' => 'Dana Kebersihan', 'desc' => 'Beli sapu dan alat kebersihan', 'amount' => 75000],
+            ['cat' => 'Dana Kematian', 'desc' => 'Santunan keluarga Pak Hadi', 'amount' => 200000],
+            ['cat' => 'Dana Keamanan', 'desc' => 'Bayar petugas keamanan bulan ini', 'amount' => 150000],
+            ['cat' => 'Dana Sampah', 'desc' => 'Beli kantong sampah', 'amount' => 50000],
+            ['cat' => 'Dana Sosial', 'desc' => 'Bantuan warga sakit', 'amount' => 100000],
+            ['cat' => 'Kas Umum', 'desc' => 'Cetak undangan rapat RT', 'amount' => 35000],
         ];
 
-        foreach ($expenses as $i => $exp) {
-            $cat = $categories[$i % $categories->count()];
-            $service->recordExpense([
-                'fund_category_id' => $cat->id,
-                'amount' => $exp['amount'],
-                'date' => now()->subDays(rand(1, 15))->format('Y-m-d'),
-                'description' => $exp['desc'],
-                'recorded_by' => $bendahara->id,
-            ]);
+        foreach ($expenses as $exp) {
+            $cat = FundCategory::where('name', $exp['cat'])->first();
+            if ($cat) {
+                try {
+                    $service->recordExpense([
+                        'fund_category_id' => $cat->id,
+                        'amount' => $exp['amount'],
+                        'date' => now()->subDays(rand(1, 30))->format('Y-m-d'),
+                        'description' => $exp['desc'],
+                        'recorded_by' => $recordedBy,
+                    ]);
+                } catch (\Exception $e) {
+                    // Skip if insufficient balance
+                }
+            }
+        }
+    }
+
+    private function seedBankSampah(int $collectorId): void
+    {
+        // Skip if data already exists beyond initial
+        if (\App\Models\Deposit::count() > 10) {
+            return;
+        }
+
+        $service = new BankSampahService();
+        $members = Member::all();
+        $categories = WasteCategory::all();
+
+        if ($members->isEmpty() || $categories->isEmpty()) {
+            return;
+        }
+
+        // Deposits for each member
+        foreach ($members->take(4) as $member) {
+            for ($i = 0; $i < 3; $i++) {
+                $cat = $categories->random();
+                $weight = rand(10, 50) / 10; // 1.0 - 5.0 kg
+                $price = rand(2, 8) * 1000;
+
+                $service->recordDeposit([
+                    'member_id' => $member->id,
+                    'collector_id' => $collectorId,
+                    'date' => now()->subDays(rand(1, 45))->format('Y-m-d'),
+                    'notes' => "Setoran sampah {$cat->name}",
+                    'details' => [
+                        [
+                            'waste_category_id' => $cat->id,
+                            'weight' => $weight,
+                            'price_per_unit' => $price,
+                            'subtotal' => $weight * $price,
+                        ],
+                    ],
+                ]);
+            }
+        }
+
+        // Withdrawals (small safe amounts)
+        foreach ($members->take(3) as $member) {
+            try {
+                $service->recordWithdrawal([
+                    'member_id' => $member->id,
+                    'amount' => rand(1, 3) * 5000,
+                    'date' => now()->subDays(rand(1, 15))->format('Y-m-d'),
+                    'notes' => 'Penarikan saldo',
+                ]);
+            } catch (\Exception $e) {
+                // Skip if insufficient balance
+            }
         }
     }
 }
