@@ -48,6 +48,7 @@ class RolePermissionSeeder extends Seeder
             'manage_contributions',
             'manage_expenses',
             'view_cash_reports',
+            'manage_members',
         ]);
 
         $adminBankSampah = Role::firstOrCreate(['name' => 'admin_bank_sampah']);

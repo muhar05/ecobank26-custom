@@ -1,43 +1,41 @@
-<x-app-layout>
-    <x-slot name="header">
+<x-layouts.dashboard title="Pengeluaran Dana">
+    <div class="space-y-4">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Pengeluaran</h2>
-            <a href="{{ route('community-cash.expenses.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Catat Pengeluaran</a>
+            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Pengeluaran</h2>
+            <a href="{{ route('community-cash.expenses.create') }}" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Catat Pengeluaran</a>
         </div>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            @if(session('success'))
-                <div class="mb-4 p-4 bg-green-100 text-green-800 rounded">{{ session('success') }}</div>
-            @endif
+        @if(session('success'))
+            <div class="p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">{{ session('success') }}</div>
+        @endif
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead class="bg-slate-50 dark:bg-slate-800">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jumlah</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Keterangan</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dicatat Oleh</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Tanggal</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Kategori</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Jumlah</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Keterangan</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Dicatat Oleh</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         @forelse($expenses as $e)
-                            <tr>
-                                <td class="px-6 py-4 text-sm text-gray-900">{{ $e->date->format('d/m/Y') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900">{{ $e->fundCategory->name }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900 text-right">Rp {{ number_format($e->amount, 0, ',', '.') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-500">{{ $e->description }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-500">{{ $e->recorder->name }}</td>
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                <td class="px-6 py-4 text-sm text-slate-900 dark:text-slate-100">{{ $e->date->format('d/m/Y') }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-900 dark:text-slate-100">{{ $e->fundCategory->name }}</td>
+                                <td class="px-6 py-4 text-sm text-right font-medium text-red-700 dark:text-red-400">Rp {{ number_format($e->amount, 0, ',', '.') }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $e->description }}</td>
+                                <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $e->recorder->name }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Belum ada data pengeluaran.</td></tr>
+                            <tr><td colspan="5" class="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Belum ada data pengeluaran.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-layouts.dashboard>

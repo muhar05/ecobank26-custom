@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CommunityCashLedger;
+use App\Models\FundCategory;
+use Carbon\Carbon;
+
+class DashboardController extends Controller
+{
+    public function adminRt()
+    {
+        $data = $this->getCashSummary();
+        $data['totalCategories'] = FundCategory::where('is_active', true)->count();
+        $data['categoryBalances'] = $this->getCategoryBalances();
+        $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
+            ->latest('id')->limit(5)->get();
+
+        return view('dashboard.admin-rt', $data);
+    }
+
+    public function bendahara()
+    {
+        $data = $this->getCashSummary();
+        $month = Carbon::now();
+        $data['monthIn'] = CommunityCashLedger::where('type', 'in')
+            ->whereMonth('date', $month->month)->whereYear('date', $month->year)->sum('amount');
+        $data['monthOut'] = CommunityCashLedger::where('type', 'out')
+            ->whereMonth('date', $month->month)->whereYear('date', $month->year)->sum('amount');
+        $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
+            ->latest('id')->limit(5)->get();
+
+        return view('dashboard.bendahara', $data);
+    }
+
+    public function bankSampah()
+    {
+        return view('dashboard.admin-bank-sampah');
+    }
+
+    public function warga()
+    {
+        $data = $this->getCashSummary();
+        $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
+            ->latest('id')->limit(5)->get();
+
+        return view('dashboard.warga', $data);
+    }
+
+    private function getCashSummary(): array
+    {
+        $totalIn = CommunityCashLedger::where('type', 'in')->sum('amount');
+        $totalOut = CommunityCashLedger::where('type', 'out')->sum('amount');
+
+        return [
+            'totalIn' => $totalIn,
+            'totalOut' => $totalOut,
+            'balance' => $totalIn - $totalOut,
+        ];
+    }
+
+    private function getCategoryBalances()
+    {
+        $lastIds = CommunityCashLedger::select('fund_category_id')
+            ->selectRaw('MAX(id) as last_id')
+            ->groupBy('fund_category_id')
+            ->pluck('last_id');
+
+        return CommunityCashLedger::whereIn('id', $lastIds)->with('fundCategory')->get();
+    }
+}

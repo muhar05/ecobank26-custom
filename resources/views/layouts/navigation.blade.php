@@ -5,16 +5,48 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                    <a href="{{ route('dashboard') }}" class="text-lg font-bold text-green-700">
+                        Ecobank026
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
+                        Dashboard
                     </x-nav-link>
+
+                    @can('manage_fund_categories')
+                        <x-nav-link :href="route('community-cash.categories.index')" :active="request()->routeIs('community-cash.categories.*')">
+                            Kategori Dana
+                        </x-nav-link>
+                    @endcan
+
+                    @can('manage_contributions')
+                        <x-nav-link :href="route('community-cash.contributions.index')" :active="request()->routeIs('community-cash.contributions.*')">
+                            Pemasukan
+                        </x-nav-link>
+                    @endcan
+
+                    @can('manage_expenses')
+                        <x-nav-link :href="route('community-cash.expenses.index')" :active="request()->routeIs('community-cash.expenses.*')">
+                            Pengeluaran
+                        </x-nav-link>
+                    @endcan
+
+                    @can('view_cash_reports')
+                        <x-nav-link :href="route('community-cash.report')" :active="request()->routeIs('community-cash.report')">
+                            Buku Kas
+                        </x-nav-link>
+                    @endcan
+
+                    @can('view_public_cash_report')
+                        @cannot('view_cash_reports')
+                            <x-nav-link :href="route('warga.cash-report')" :active="request()->routeIs('warga.cash-report')">
+                                Laporan Kas
+                            </x-nav-link>
+                        @endcannot
+                    @endcan
                 </div>
             </div>
 
@@ -24,7 +56,6 @@
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                             <div>{{ Auth::user()->name }}</div>
-
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -35,17 +66,14 @@
 
                     <x-slot name="content">
                         <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
+                            Profile
                         </x-dropdown-link>
 
-                        <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-
                             <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
-                                {{ __('Log Out') }}
+                                    onclick="event.preventDefault(); this.closest('form').submit();">
+                                Log Out
                             </x-dropdown-link>
                         </form>
                     </x-slot>
@@ -68,8 +96,40 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
+                Dashboard
             </x-responsive-nav-link>
+
+            @can('manage_fund_categories')
+                <x-responsive-nav-link :href="route('community-cash.categories.index')" :active="request()->routeIs('community-cash.categories.*')">
+                    Kategori Dana
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('manage_contributions')
+                <x-responsive-nav-link :href="route('community-cash.contributions.index')" :active="request()->routeIs('community-cash.contributions.*')">
+                    Pemasukan
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('manage_expenses')
+                <x-responsive-nav-link :href="route('community-cash.expenses.index')" :active="request()->routeIs('community-cash.expenses.*')">
+                    Pengeluaran
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('view_cash_reports')
+                <x-responsive-nav-link :href="route('community-cash.report')" :active="request()->routeIs('community-cash.report')">
+                    Buku Kas
+                </x-responsive-nav-link>
+            @endcan
+
+            @can('view_public_cash_report')
+                @cannot('view_cash_reports')
+                    <x-responsive-nav-link :href="route('warga.cash-report')" :active="request()->routeIs('warga.cash-report')">
+                        Laporan Kas
+                    </x-responsive-nav-link>
+                @endcannot
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->
@@ -81,17 +141,14 @@
 
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
+                    Profile
                 </x-responsive-nav-link>
 
-                <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-
                     <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
-                        {{ __('Log Out') }}
+                            onclick="event.preventDefault(); this.closest('form').submit();">
+                        Log Out
                     </x-responsive-nav-link>
                 </form>
             </div>
