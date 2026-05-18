@@ -12,6 +12,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SavingsReportController;
 use App\Http\Controllers\WargaSavingsController;
+use App\Http\Controllers\WasteBankCashReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WastePriceController;
 use App\Http\Controllers\WithdrawalController;
@@ -124,5 +125,9 @@ Route::get('/bank-sampah/savings', [SavingsReportController::class, 'index'])
 
 Route::get('/bank-sampah/savings/export', [SavingsReportController::class, 'export'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings.export');
+
+// Bank Sampah - Cash Report
+Route::get('/bank-sampah/cash-report', [WasteBankCashReportController::class, 'index'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report');
 
 require __DIR__.'/auth.php';

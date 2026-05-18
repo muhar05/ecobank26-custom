@@ -1,10 +1,5 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Catat Penjualan</h2>
-    </x-slot>
-
-    <div class="py-8">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+<x-layouts.dashboard title="Catat Penjualan">
+    <div class="space-y-6">
             <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
 
                 <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
@@ -87,6 +82,5 @@
                     </div>
                 </form>
             </div>
-        </div>
     </div>
-</x-app-layout>
+</x-layouts.dashboard>

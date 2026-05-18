@@ -1,16 +1,12 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Penjualan ke Pengepul</h2>
+<x-layouts.dashboard title="Penjualan ke Pengepul">
+    <div class="space-y-6">
+        <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Penjualan ke Pengepul</h2>
             <a href="{{ route('bank-sampah.sales.create') }}" class="inline-flex items-center gap-2 bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Catat Penjualan
             </a>
         </div>
-    </x-slot>
-
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             @if(session('success'))
                 <div class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
@@ -56,6 +52,5 @@
                 </div>
             @endif
 
-        </div>
     </div>
-</x-app-layout>
+</x-layouts.dashboard>
