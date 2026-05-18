@@ -9,7 +9,7 @@ class CollectorController extends Controller
 {
     public function index()
     {
-        $collectors = Collector::latest()->get();
+        $collectors = Collector::latest()->paginate(20);
         return view('bank-sampah.collectors.index', compact('collectors'));
     }
 

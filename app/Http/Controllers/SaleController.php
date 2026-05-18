@@ -23,8 +23,13 @@ class SaleController extends Controller
     {
         $collectors = Collector::orderBy('name')->get();
         $wasteCategories = WasteCategory::orderBy('name')->get();
+        $wastePrices = \App\Models\WastePrice::all()->groupBy('collector_id')
+            ->map(fn ($items) => $items->keyBy('waste_category_id')->map(fn ($p) => [
+                'member_price' => (float) $p->member_price,
+                'collector_price' => (float) $p->collector_price,
+            ]));
 
-        return view('bank-sampah.sales.create', compact('collectors', 'wasteCategories'));
+        return view('bank-sampah.sales.create', compact('collectors', 'wasteCategories', 'wastePrices'));
     }
 
     public function store(Request $request)
@@ -35,7 +40,7 @@ class SaleController extends Controller
             'notes' => 'nullable|string|max:255',
             'details' => 'required|array',
             'details.*.waste_category_id' => 'nullable|exists:waste_categories,id',
-            'details.*.weight' => 'nullable|numeric|min:0.01',
+            'details.*.weight' => 'nullable|numeric|min:0',
             'details.*.price_per_unit' => 'nullable|numeric|min:0',
         ]);
 

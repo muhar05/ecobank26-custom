@@ -130,4 +130,7 @@ Route::get('/bank-sampah/savings/export', [SavingsReportController::class, 'expo
 Route::get('/bank-sampah/cash-report', [WasteBankCashReportController::class, 'index'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report');
 
+Route::get('/bank-sampah/cash-report/export', [WasteBankCashReportController::class, 'export'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report.export');
+
 require __DIR__.'/auth.php';

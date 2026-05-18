@@ -9,7 +9,7 @@ class WasteCategoryController extends Controller
 {
     public function index()
     {
-        $categories = WasteCategory::latest()->get();
+        $categories = WasteCategory::latest()->paginate(20);
         return view('bank-sampah.waste-categories.index', compact('categories'));
     }
 

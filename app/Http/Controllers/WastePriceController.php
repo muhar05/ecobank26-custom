@@ -11,7 +11,7 @@ class WastePriceController extends Controller
 {
     public function index()
     {
-        $prices = WastePrice::with(['wasteCategory', 'collector'])->latest()->get();
+        $prices = WastePrice::with(['wasteCategory', 'collector'])->latest()->paginate(20);
         return view('bank-sampah.waste-prices.index', compact('prices'));
     }
 
@@ -27,7 +27,8 @@ class WastePriceController extends Controller
         $validated = $request->validate([
             'waste_category_id' => 'required|exists:waste_categories,id',
             'collector_id' => 'required|exists:collectors,id',
-            'price_per_unit' => 'required|numeric|min:0',
+            'member_price' => 'required|numeric|min:0',
+            'collector_price' => 'required|numeric|min:0|gte:member_price',
         ]);
 
         $exists = WastePrice::where('waste_category_id', $validated['waste_category_id'])
@@ -37,6 +38,7 @@ class WastePriceController extends Controller
             return back()->withErrors(['waste_category_id' => 'Harga untuk kombinasi kategori dan pengepul ini sudah ada.'])->withInput();
         }
 
+        $validated['price_per_unit'] = $validated['member_price'];
         WastePrice::create($validated);
 
         return redirect()->route('bank-sampah.waste-prices.index')
@@ -55,7 +57,8 @@ class WastePriceController extends Controller
         $validated = $request->validate([
             'waste_category_id' => 'required|exists:waste_categories,id',
             'collector_id' => 'required|exists:collectors,id',
-            'price_per_unit' => 'required|numeric|min:0',
+            'member_price' => 'required|numeric|min:0',
+            'collector_price' => 'required|numeric|min:0|gte:member_price',
         ]);
 
         $exists = WastePrice::where('waste_category_id', $validated['waste_category_id'])
@@ -66,6 +69,7 @@ class WastePriceController extends Controller
             return back()->withErrors(['waste_category_id' => 'Harga untuk kombinasi kategori dan pengepul ini sudah ada.'])->withInput();
         }
 
+        $validated['price_per_unit'] = $validated['member_price'];
         $wastePrice->update($validated);
 
         return redirect()->route('bank-sampah.waste-prices.index')

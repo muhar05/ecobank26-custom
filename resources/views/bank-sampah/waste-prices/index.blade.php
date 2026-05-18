@@ -16,7 +16,9 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Kategori Sampah</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Pengepul</th>
-                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Harga/Unit</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Harga Nasabah</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Harga Pengepul</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Margin</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Aksi</th>
                         </tr>
                     </thead>
@@ -25,21 +27,25 @@
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                                 <td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">{{ $price->wasteCategory->name ?? '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{{ $price->collector->name ?? '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-right font-medium text-emerald-700 dark:text-emerald-400">Rp {{ number_format($price->price_per_unit, 0, ',', '.') }}</td>
+                                <td class="px-6 py-4 text-sm text-right text-slate-900 dark:text-slate-100">Rp {{ number_format($price->member_price, 0, ',', '.') }}</td>
+                                <td class="px-6 py-4 text-sm text-right text-emerald-700 dark:text-emerald-400 font-medium">Rp {{ number_format($price->collector_price, 0, ',', '.') }}</td>
+                                <td class="px-6 py-4 text-sm text-right text-slate-500 dark:text-slate-400">Rp {{ number_format($price->collector_price - $price->member_price, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-sm space-x-2">
                                     <a href="{{ route('bank-sampah.waste-prices.edit', $price) }}" class="text-emerald-700 dark:text-emerald-400 hover:underline">Edit</a>
-                                    <form action="{{ route('bank-sampah.waste-prices.destroy', $price) }}" method="POST" class="inline" onsubmit="return confirm('Hapus harga ini?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
-                                    </form>
+                                    <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-prices.destroy', $price) }}'})" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Belum ada data harga sampah.</td></tr>
+                            <tr><td colspan="6" class="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Belum ada data harga sampah.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
+        <div class="mt-4">
+            {{ $prices->links() }}
+        </div>
     </div>
+
+    <x-confirm-delete-modal />
 </x-layouts.dashboard>

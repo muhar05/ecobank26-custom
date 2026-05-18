@@ -11,7 +11,7 @@ class WithdrawalController extends Controller
 {
     public function index()
     {
-        $withdrawals = Withdrawal::with('member')->latest('date')->get();
+        $withdrawals = Withdrawal::with('member')->latest('date')->paginate(20);
         return view('bank-sampah.withdrawals.index', compact('withdrawals'));
     }
 

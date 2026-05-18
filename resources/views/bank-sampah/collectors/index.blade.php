@@ -28,10 +28,7 @@
                                 <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $collector->address ?? '-' }}</td>
                                 <td class="px-6 py-4 text-sm space-x-2">
                                     <a href="{{ route('bank-sampah.collectors.edit', $collector) }}" class="text-emerald-700 dark:text-emerald-400 hover:underline">Edit</a>
-                                    <form action="{{ route('bank-sampah.collectors.destroy', $collector) }}" method="POST" class="inline" onsubmit="return confirm('Hapus pengepul ini?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
-                                    </form>
+                                    <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.collectors.destroy', $collector) }}'})" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
                                 </td>
                             </tr>
                         @empty
@@ -41,5 +38,10 @@
                 </table>
             </div>
         </div>
+        <div class="mt-4">
+            {{ $collectors->links() }}
+        </div>
     </div>
+
+    <x-confirm-delete-modal />
 </x-layouts.dashboard>

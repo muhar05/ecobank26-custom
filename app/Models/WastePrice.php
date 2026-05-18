@@ -7,11 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WastePrice extends Model
 {
-    protected $fillable = ['waste_category_id', 'collector_id', 'price_per_unit'];
+    protected $fillable = ['waste_category_id', 'collector_id', 'price_per_unit', 'member_price', 'collector_price'];
 
     protected function casts(): array
     {
-        return ['price_per_unit' => 'decimal:2'];
+        return [
+            'price_per_unit' => 'decimal:2',
+            'member_price' => 'decimal:2',
+            'collector_price' => 'decimal:2',
+        ];
     }
 
     public function wasteCategory(): BelongsTo

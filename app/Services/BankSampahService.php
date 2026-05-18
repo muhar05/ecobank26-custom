@@ -100,15 +100,34 @@ class BankSampahService
                 throw new \InvalidArgumentException('Minimal satu detail penjualan harus diisi.');
             }
 
-            $details = $details->map(function ($d) {
-                $d['subtotal'] = round((float) $d['weight'] * (float) $d['price_per_unit'], 2);
+            $collectorId = $data['collector_id'];
+
+            // Load member prices for margin calculation
+            $wastePrices = \App\Models\WastePrice::where('collector_id', $collectorId)
+                ->pluck('member_price', 'waste_category_id');
+
+            $totalMargin = 0;
+
+            $details = $details->map(function ($d) use ($wastePrices, &$totalMargin) {
+                $weight = (float) $d['weight'];
+                $collectorPrice = (float) $d['price_per_unit'];
+                $memberPrice = (float) ($wastePrices[$d['waste_category_id']] ?? 0);
+                $subtotal = round($weight * $collectorPrice, 2);
+                $margin = round(($collectorPrice - $memberPrice) * $weight, 2);
+                $totalMargin += $margin;
+
+                $d['subtotal'] = $subtotal;
                 return $d;
             });
+
+            if ($totalMargin < 0) {
+                throw new \InvalidArgumentException('Total margin negatif. Periksa harga pengepul dan harga nasabah.');
+            }
 
             $totalAmount = $details->sum('subtotal');
 
             $sale = Sale::create([
-                'collector_id' => $data['collector_id'],
+                'collector_id' => $collectorId,
                 'date' => $data['date'],
                 'total_amount' => $totalAmount,
                 'notes' => $data['notes'] ?? null,
@@ -124,17 +143,19 @@ class BankSampahService
                 ]);
             }
 
-            $currentBalance = $this->getWasteBankBalance();
+            if ($totalMargin > 0) {
+                $currentBalance = $this->getWasteBankBalance();
 
-            WasteBankCashLedger::create([
-                'type' => 'in',
-                'amount' => $totalAmount,
-                'balance' => $currentBalance + $totalAmount,
-                'reference_type' => Sale::class,
-                'reference_id' => $sale->id,
-                'date' => $data['date'],
-                'description' => 'Penjualan sampah ke ' . $sale->collector->name,
-            ]);
+                WasteBankCashLedger::create([
+                    'type' => 'in',
+                    'amount' => $totalMargin,
+                    'balance' => $currentBalance + $totalMargin,
+                    'reference_type' => Sale::class,
+                    'reference_id' => $sale->id,
+                    'date' => $data['date'],
+                    'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
+                ]);
+            }
 
             return $sale;
         });

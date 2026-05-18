@@ -25,10 +25,7 @@
                             <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $category->unit }}</td>
                             <td class="px-6 py-4 text-sm space-x-2">
                                 <a href="{{ route('bank-sampah.waste-categories.edit', $category) }}" class="text-emerald-700 dark:text-emerald-400 hover:underline">Edit</a>
-                                <form action="{{ route('bank-sampah.waste-categories.destroy', $category) }}" method="POST" class="inline" onsubmit="return confirm('Hapus kategori ini?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
-                                </form>
+                                <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-categories.destroy', $category) }}'})" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
                             </td>
                         </tr>
                     @empty
@@ -37,5 +34,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="mt-4">
+            {{ $categories->links() }}
+        </div>
     </div>
+
+    <x-confirm-delete-modal />
 </x-layouts.dashboard>

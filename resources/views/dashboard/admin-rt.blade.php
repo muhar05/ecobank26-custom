@@ -60,12 +60,12 @@
                 <p class="text-2xl font-bold text-emerald-800 dark:text-emerald-300 mt-1">Rp {{ number_format($savingsBalance, 0, ',', '.') }}</p>
             </div>
             <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-[700ms] bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg transition-transform">
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Setoran</p>
-                <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">Rp {{ number_format($totalCredit, 0, ',', '.') }}</p>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Penjualan</p>
+                <p class="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">Rp {{ number_format($totalSales, 0, ',', '.') }}</p>
             </div>
-            <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-[800ms] bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg transition-transform">
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Penarikan</p>
-                <p class="text-2xl font-bold text-red-700 dark:text-red-400 mt-1">Rp {{ number_format($totalDebit, 0, ',', '.') }}</p>
+            <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-[800ms] bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-5 hover:-translate-y-1 hover:shadow-lg transition-transform">
+                <p class="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase">Kas Bank Sampah</p>
+                <p class="text-2xl font-bold text-emerald-800 dark:text-emerald-300 mt-1">Rp {{ number_format($wasteBankCashBalance, 0, ',', '.') }}</p>
             </div>
             <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-[900ms] bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg transition-transform">
                 <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Nasabah</p>
@@ -152,11 +152,29 @@
                     <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </div>
             </a>
+            <a href="/bank-sampah/dashboard" class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Dashboard Bank Sampah</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Lihat ringkasan bank sampah</p>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
             <a href="/bank-sampah/savings" class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-300">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Saldo Nasabah</p>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Lihat saldo semua nasabah</p>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+            <a href="/bank-sampah/cash-report" class="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">Kas Bank Sampah</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Laporan kas operasional</p>
                     </div>
                     <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </div>

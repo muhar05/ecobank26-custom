@@ -36,6 +36,9 @@
                             Reset
                         </a>
                     @endif
+                    <a href="{{ route('bank-sampah.cash-report.export', request()->only(['date_from', 'date_to'])) }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                        Export CSV
+                    </a>
                 </form>
             </div>
 

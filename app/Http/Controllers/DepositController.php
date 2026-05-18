@@ -15,7 +15,7 @@ class DepositController extends Controller
     public function index()
     {
         $deposits = Deposit::with(['member', 'details.wasteCategory'])
-            ->latest('date')->get();
+            ->latest('date')->paginate(20);
 
         return view('bank-sampah.deposits.index', compact('deposits'));
     }
@@ -26,7 +26,10 @@ class DepositController extends Controller
         $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
         $wastePrices = WastePrice::all()->groupBy('collector_id')
-            ->map(fn ($items) => $items->pluck('price_per_unit', 'waste_category_id'));
+            ->map(fn ($items) => $items->keyBy('waste_category_id')->map(fn ($p) => [
+                'member_price' => (float) $p->member_price,
+                'collector_price' => (float) $p->collector_price,
+            ]));
 
         return view('bank-sampah.deposits.create', compact('members', 'collectors', 'categories', 'wastePrices'));
     }

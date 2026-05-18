@@ -9,7 +9,7 @@ class FundCategoryController extends Controller
 {
     public function index()
     {
-        $categories = FundCategory::latest()->get();
+        $categories = FundCategory::latest()->paginate(20);
         return view('community-cash.categories.index', compact('categories'));
     }
 

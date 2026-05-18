@@ -35,5 +35,8 @@
                 </table>
             </div>
         </div>
+        <div class="mt-4">
+            {{ $withdrawals->links() }}
+        </div>
     </div>
 </x-layouts.dashboard>

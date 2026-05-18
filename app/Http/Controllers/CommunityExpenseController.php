@@ -12,7 +12,7 @@ class CommunityExpenseController extends Controller
     public function index()
     {
         $expenses = CommunityExpense::with(['fundCategory', 'recorder'])
-            ->latest('date')->get();
+            ->latest('date')->paginate(20);
 
         return view('community-cash.expenses.index', compact('expenses'));
     }

@@ -39,5 +39,8 @@
                 </table>
             </div>
         </div>
+        <div class="mt-4">
+            {{ $contributions->links() }}
+        </div>
     </div>
 </x-layouts.dashboard>

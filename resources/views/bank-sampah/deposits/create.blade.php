@@ -1,6 +1,11 @@
 <x-layouts.dashboard title="Catat Setoran Sampah">
-    <div class="max-w-4xl" x-data="depositForm()" x-init="init()">
+    <div class="max-w-4xl" x-data="depositForm()">
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+
+            <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga yang masuk saldo nasabah menggunakan Harga Nasabah.</p>
+            </div>
+
             <form method="POST" action="{{ route('bank-sampah.deposits.store') }}">
                 @csrf
 
@@ -49,33 +54,50 @@
                             <thead>
                                 <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase">
                                     <th class="pb-2 text-left">Kategori Sampah</th>
-                                    <th class="pb-2 text-left">Berat</th>
-                                    <th class="pb-2 text-left">Harga/Unit</th>
+                                    <th class="pb-2 text-left w-24">Berat</th>
+                                    <th class="pb-2 text-left w-28">Harga/Unit</th>
+                                    <th class="pb-2 text-right w-28">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @for($i = 0; $i < 5; $i++)
                                 <tr>
                                     <td class="pr-2 py-1">
-                                        <select name="details[{{ $i }}][waste_category_id]" @change="fillPrice({{ $i }}, $event.target.value)" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        <select name="details[{{ $i }}][waste_category_id]" x-model="rows[{{ $i }}].category" @change="fillPrice({{ $i }})" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                             <option value="">--</option>
                                             @foreach($categories as $cat)
-                                                <option value="{{ $cat->id }}" {{ old("details.$i.waste_category_id") == $cat->id ? 'selected' : '' }}>{{ $cat->name }} ({{ $cat->unit }})</option>
+                                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->unit }})</option>
                                             @endforeach
                                         </select>
                                     </td>
                                     <td class="pr-2 py-1">
-                                        <input type="number" step="0.01" min="0" name="details[{{ $i }}][weight]" value="{{ old("details.$i.weight") }}" placeholder="0.00" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        <input type="number" step="0.01" min="0" name="details[{{ $i }}][weight]" x-model.number="rows[{{ $i }}].weight" placeholder="0.00" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                     </td>
-                                    <td class="py-1">
-                                        <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" :id="'price_' + {{ $i }}" value="{{ old("details.$i.price_per_unit") }}" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                    <td class="pr-2 py-1">
+                                        <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" x-model.number="rows[{{ $i }}].price" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                    </td>
+                                    <td class="py-1 text-right text-sm font-medium text-slate-700 dark:text-slate-300 pr-1">
+                                        <span x-text="formatRp(rows[{{ $i }}].weight * rows[{{ $i }}].price)"></span>
                                     </td>
                                 </tr>
+                                <template x-if="rows[{{ $i }}].category && !rows[{{ $i }}].hasPrice">
+                                    <tr>
+                                        <td colspan="4" class="pb-1 pt-0">
+                                            <p class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia untuk pengepul dan kategori ini. Isi manual atau tambahkan di Harga Sampah.</p>
+                                        </td>
+                                    </tr>
+                                </template>
                                 @endfor
                             </tbody>
+                            <tfoot>
+                                <tr class="border-t border-slate-200 dark:border-slate-700">
+                                    <td colspan="3" class="pt-3 text-right text-sm font-semibold text-slate-700 dark:text-slate-200">Total Setoran:</td>
+                                    <td class="pt-3 text-right text-sm font-bold text-emerald-700 dark:text-emerald-400 pr-1" x-text="formatRp(grandTotal())"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Harga otomatis terisi dari data Harga Sampah. Bisa diubah manual. Baris kosong diabaikan.</p>
+                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Harga otomatis terisi dari Harga Nasabah. Bisa diubah manual. Baris kosong diabaikan.</p>
                 </div>
 
                 <div class="flex gap-3">
@@ -91,25 +113,33 @@
             return {
                 collectorId: '{{ old("collector_id", "") }}',
                 prices: @json($wastePrices),
-                init() {},
-                fillPrice(row, categoryId) {
-                    if (!this.collectorId || !categoryId) return;
-                    const collectorPrices = this.prices[this.collectorId];
-                    if (collectorPrices && collectorPrices[categoryId]) {
-                        const input = document.getElementById('price_' + row);
-                        if (input && !input.value) {
-                            input.value = Math.round(collectorPrices[categoryId]);
-                        }
+                rows: [
+                    @for($i = 0; $i < 5; $i++)
+                    { category: '{{ old("details.$i.waste_category_id", "") }}', weight: {{ old("details.$i.weight", 0) ?: 0 }}, price: {{ old("details.$i.price_per_unit", 0) ?: 0 }}, hasPrice: true },
+                    @endfor
+                ],
+                fillPrice(i) {
+                    const catId = this.rows[i].category;
+                    if (!this.collectorId || !catId) { this.rows[i].hasPrice = true; return; }
+                    const cp = this.prices[this.collectorId];
+                    if (cp && cp[catId]) {
+                        this.rows[i].price = Math.round(cp[catId].member_price);
+                        this.rows[i].hasPrice = true;
+                    } else {
+                        this.rows[i].hasPrice = false;
                     }
                 },
                 updatePrices() {
-                    // When collector changes, fill empty price fields
                     for (let i = 0; i < 5; i++) {
-                        const select = document.querySelector(`[name="details[${i}][waste_category_id]"]`);
-                        if (select && select.value) {
-                            this.fillPrice(i, select.value);
-                        }
+                        if (this.rows[i].category) this.fillPrice(i);
                     }
+                },
+                grandTotal() {
+                    return this.rows.reduce((sum, r) => sum + (r.weight * r.price || 0), 0);
+                },
+                formatRp(v) {
+                    if (!v) return '-';
+                    return 'Rp ' + Math.round(v).toLocaleString('id-ID');
                 }
             }
         }

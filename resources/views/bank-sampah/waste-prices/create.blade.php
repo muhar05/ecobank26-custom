@@ -1,8 +1,20 @@
 <x-layouts.dashboard title="Tambah Harga Sampah">
     <div class="max-w-2xl">
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+            <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga nasabah masuk ke saldo tabungan. Harga pengepul digunakan untuk menghitung margin kas bank sampah.</p>
+            </div>
             <form method="POST" action="{{ route('bank-sampah.waste-prices.store') }}">
                 @csrf
+                @if($errors->any())
+                    <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <ul class="text-xs text-red-600 dark:text-red-400 space-y-1">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="mb-4">
                     <label for="waste_category_id" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Kategori Sampah <span class="text-red-500">*</span></label>
                     <select name="waste_category_id" id="waste_category_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
@@ -23,10 +35,17 @@
                     </select>
                     @error('collector_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
-                <div class="mb-4">
-                    <label for="price_per_unit" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Harga per Unit (Rp) <span class="text-red-500">*</span></label>
-                    <input type="number" name="price_per_unit" id="price_per_unit" value="{{ old('price_per_unit') }}" required min="0" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                    @error('price_per_unit') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="member_price" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Harga Nasabah (Rp) <span class="text-red-500">*</span></label>
+                        <input type="number" name="member_price" id="member_price" value="{{ old('member_price') }}" required min="0" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        @error('member_price') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="collector_price" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Harga Pengepul (Rp) <span class="text-red-500">*</span></label>
+                        <input type="number" name="collector_price" id="collector_price" value="{{ old('collector_price') }}" required min="0" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        @error('collector_price') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Simpan</button>
