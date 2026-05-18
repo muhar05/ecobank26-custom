@@ -39,7 +39,21 @@ class RolePermissionSeeder extends Seeder
         }
 
         $adminRt = Role::firstOrCreate(['name' => 'admin_rt']);
-        $adminRt->syncPermissions($permissions);
+        $adminRt->syncPermissions([
+            'manage_users',
+            'manage_roles',
+            'view_community_cash',
+            'manage_fund_categories',
+            'manage_contributions',
+            'manage_expenses',
+            'view_cash_reports',
+            'manage_members',
+            'view_waste_bank',
+            'view_waste_reports',
+            'view_own_dashboard',
+            'view_own_savings',
+            'view_public_cash_report',
+        ]);
 
         $bendahara = Role::firstOrCreate(['name' => 'bendahara']);
         $bendahara->syncPermissions([

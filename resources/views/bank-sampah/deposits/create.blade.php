@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Catat Setoran Sampah">
-    <div class="max-w-4xl">
+    <div class="max-w-4xl" x-data="depositForm()" x-init="init()">
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
             <form method="POST" action="{{ route('bank-sampah.deposits.store') }}">
                 @csrf
@@ -21,7 +21,7 @@
                     </div>
                     <div>
                         <label for="collector_id" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Pengepul <span class="text-red-500">*</span></label>
-                        <select name="collector_id" id="collector_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <select name="collector_id" id="collector_id" required x-model="collectorId" @change="updatePrices()" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="">-- Pilih --</option>
                             @foreach($collectors as $c)
                                 <option value="{{ $c->id }}" {{ old('collector_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
@@ -53,11 +53,11 @@
                                     <th class="pb-2 text-left">Harga/Unit</th>
                                 </tr>
                             </thead>
-                            <tbody class="space-y-2">
+                            <tbody>
                                 @for($i = 0; $i < 5; $i++)
                                 <tr>
                                     <td class="pr-2 py-1">
-                                        <select name="details[{{ $i }}][waste_category_id]" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        <select name="details[{{ $i }}][waste_category_id]" @change="fillPrice({{ $i }}, $event.target.value)" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                             <option value="">--</option>
                                             @foreach($categories as $cat)
                                                 <option value="{{ $cat->id }}" {{ old("details.$i.waste_category_id") == $cat->id ? 'selected' : '' }}>{{ $cat->name }} ({{ $cat->unit }})</option>
@@ -68,14 +68,14 @@
                                         <input type="number" step="0.01" min="0" name="details[{{ $i }}][weight]" value="{{ old("details.$i.weight") }}" placeholder="0.00" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                     </td>
                                     <td class="py-1">
-                                        <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" value="{{ old("details.$i.price_per_unit") }}" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" :id="'price_' + {{ $i }}" value="{{ old("details.$i.price_per_unit") }}" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                     </td>
                                 </tr>
                                 @endfor
                             </tbody>
                         </table>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Subtotal dihitung otomatis (berat × harga). Baris kosong akan diabaikan.</p>
+                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Harga otomatis terisi dari data Harga Sampah. Bisa diubah manual. Baris kosong diabaikan.</p>
                 </div>
 
                 <div class="flex gap-3">
@@ -85,4 +85,33 @@
             </form>
         </div>
     </div>
+
+    <script>
+        function depositForm() {
+            return {
+                collectorId: '{{ old("collector_id", "") }}',
+                prices: @json($wastePrices),
+                init() {},
+                fillPrice(row, categoryId) {
+                    if (!this.collectorId || !categoryId) return;
+                    const collectorPrices = this.prices[this.collectorId];
+                    if (collectorPrices && collectorPrices[categoryId]) {
+                        const input = document.getElementById('price_' + row);
+                        if (input && !input.value) {
+                            input.value = Math.round(collectorPrices[categoryId]);
+                        }
+                    }
+                },
+                updatePrices() {
+                    // When collector changes, fill empty price fields
+                    for (let i = 0; i < 5; i++) {
+                        const select = document.querySelector(`[name="details[${i}][waste_category_id]"]`);
+                        if (select && select.value) {
+                            this.fillPrice(i, select.value);
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </x-layouts.dashboard>

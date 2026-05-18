@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CollectorController;
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CommunityExpenseController;
 use App\Http\Controllers\CommunityCashReportController;
@@ -8,9 +9,11 @@ use App\Http\Controllers\DepositController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SavingsReportController;
 use App\Http\Controllers\WargaSavingsController;
 use App\Http\Controllers\WasteCategoryController;
+use App\Http\Controllers\WastePriceController;
 use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
@@ -96,6 +99,8 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
 // Bank Sampah - Waste Categories
 Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
+    Route::resource('collectors', CollectorController::class)->except(['show']);
+    Route::resource('waste-prices', WastePriceController::class)->except(['show']);
 });
 
 // Bank Sampah - Deposits
@@ -106,6 +111,11 @@ Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')
 // Bank Sampah - Withdrawals
 Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('withdrawals', WithdrawalController::class)->only(['index', 'create', 'store']);
+});
+
+// Bank Sampah - Sales
+Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('sales', SaleController::class)->only(['index', 'create', 'store']);
 });
 
 // Bank Sampah - Savings Report

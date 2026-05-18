@@ -6,6 +6,7 @@ use App\Models\Collector;
 use App\Models\Deposit;
 use App\Models\Member;
 use App\Models\WasteCategory;
+use App\Models\WastePrice;
 use App\Services\BankSampahService;
 use Illuminate\Http\Request;
 
@@ -24,8 +25,10 @@ class DepositController extends Controller
         $members = Member::orderBy('name')->get();
         $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
+        $wastePrices = WastePrice::all()->groupBy('collector_id')
+            ->map(fn ($items) => $items->pluck('price_per_unit', 'waste_category_id'));
 
-        return view('bank-sampah.deposits.create', compact('members', 'collectors', 'categories'));
+        return view('bank-sampah.deposits.create', compact('members', 'collectors', 'categories', 'wastePrices'));
     }
 
     public function store(Request $request, BankSampahService $service)

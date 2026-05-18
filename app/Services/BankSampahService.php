@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\Deposit;
 use App\Models\DepositDetail;
+use App\Models\Sale;
+use App\Models\SaleDetail;
 use App\Models\SavingsLedger;
+use App\Models\WasteBankCashLedger;
 use App\Models\Withdrawal;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -86,5 +89,61 @@ class BankSampahService
             ->groupBy('member_id')
             ->with('member')
             ->get();
+    }
+
+    public function recordSale(array $data): Sale
+    {
+        return DB::transaction(function () use ($data) {
+            $details = collect($data['details'])->filter(fn ($d) => !empty($d['waste_category_id']) && !empty($d['weight']));
+
+            if ($details->isEmpty()) {
+                throw new \InvalidArgumentException('Minimal satu detail penjualan harus diisi.');
+            }
+
+            $details = $details->map(function ($d) {
+                $d['subtotal'] = round((float) $d['weight'] * (float) $d['price_per_unit'], 2);
+                return $d;
+            });
+
+            $totalAmount = $details->sum('subtotal');
+
+            $sale = Sale::create([
+                'collector_id' => $data['collector_id'],
+                'date' => $data['date'],
+                'total_amount' => $totalAmount,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            foreach ($details as $detail) {
+                SaleDetail::create([
+                    'sale_id' => $sale->id,
+                    'waste_category_id' => $detail['waste_category_id'],
+                    'weight' => $detail['weight'],
+                    'price_per_unit' => $detail['price_per_unit'],
+                    'subtotal' => $detail['subtotal'],
+                ]);
+            }
+
+            $currentBalance = $this->getWasteBankBalance();
+
+            WasteBankCashLedger::create([
+                'type' => 'in',
+                'amount' => $totalAmount,
+                'balance' => $currentBalance + $totalAmount,
+                'reference_type' => Sale::class,
+                'reference_id' => $sale->id,
+                'date' => $data['date'],
+                'description' => 'Penjualan sampah ke ' . $sale->collector->name,
+            ]);
+
+            return $sale;
+        });
+    }
+
+    public function getWasteBankBalance(): float
+    {
+        $latest = WasteBankCashLedger::latest('id')->first();
+
+        return $latest ? (float) $latest->balance : 0;
     }
 }
