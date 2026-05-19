@@ -64,6 +64,16 @@ class CommunityExpenseController extends Controller
         $oldCategoryId = $expense->fund_category_id;
         $newCategoryId = (int) $validated['fund_category_id'];
 
+        // Check available balance for target category
+        $currentBalance = (float) CommunityCashLedger::where('fund_category_id', $newCategoryId)
+            ->orderByDesc('id')->value('balance') ?? 0;
+        $addBack = ($newCategoryId === $oldCategoryId) ? $expense->amount : 0;
+        $available = $currentBalance + $addBack;
+
+        if ($validated['amount'] > $available) {
+            return back()->withErrors(['amount' => 'Saldo kategori dana tidak mencukupi.'])->withInput();
+        }
+
         DB::transaction(function () use ($expense, $validated, $oldCategoryId, $newCategoryId, $service) {
             $expense->update($validated);
 

@@ -10,16 +10,19 @@ class FundCategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            'Dana Kematian',
-            'Dana Sampah',
-            'Dana Keamanan',
-            'Dana Kebersihan',
-            'Dana Sosial',
-            'Kas Umum',
+            ['name' => 'Dana Kematian', 'target_amount' => 5000000],
+            ['name' => 'Dana Sampah', 'target_amount' => 2000000],
+            ['name' => 'Dana Keamanan', 'target_amount' => 3000000],
+            ['name' => 'Dana Kebersihan', 'target_amount' => 2500000],
+            ['name' => 'Dana Sosial', 'target_amount' => 3000000],
+            ['name' => 'Kas Umum', 'target_amount' => 2000000],
         ];
 
-        foreach ($categories as $name) {
-            FundCategory::firstOrCreate(['name' => $name]);
+        foreach ($categories as $cat) {
+            FundCategory::updateOrCreate(
+                ['name' => $cat['name']],
+                ['target_amount' => $cat['target_amount']]
+            );
         }
     }
 }

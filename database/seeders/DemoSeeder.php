@@ -5,8 +5,10 @@ namespace Database\Seeders;
 use App\Models\Collector;
 use App\Models\FundCategory;
 use App\Models\Member;
+use App\Models\Sale;
 use App\Models\User;
 use App\Models\WasteCategory;
+use App\Models\WastePrice;
 use App\Services\BankSampahService;
 use App\Services\CommunityCashService;
 use Illuminate\Database\Seeder;
@@ -124,6 +126,9 @@ class DemoSeeder extends Seeder
 
     private function seedBankSampah(int $collectorId): void
     {
+        // Seed waste prices (idempotent)
+        $this->seedWastePrices($collectorId);
+
         // Skip if data already exists beyond initial
         if (\App\Models\Deposit::count() > 10) {
             return;
@@ -137,12 +142,14 @@ class DemoSeeder extends Seeder
             return;
         }
 
-        // Deposits for each member
+        // Deposits for each member (use actual waste prices)
+        $prices = WastePrice::where('collector_id', $collectorId)->get()->keyBy('waste_category_id');
+
         foreach ($members->take(4) as $member) {
             for ($i = 0; $i < 3; $i++) {
                 $cat = $categories->random();
                 $weight = rand(10, 50) / 10; // 1.0 - 5.0 kg
-                $price = rand(2, 8) * 1000;
+                $memberPrice = $prices[$cat->id]->member_price ?? rand(2, 8) * 1000;
 
                 $service->recordDeposit([
                     'member_id' => $member->id,
@@ -153,8 +160,8 @@ class DemoSeeder extends Seeder
                         [
                             'waste_category_id' => $cat->id,
                             'weight' => $weight,
-                            'price_per_unit' => $price,
-                            'subtotal' => $weight * $price,
+                            'price_per_unit' => $memberPrice,
+                            'subtotal' => $weight * $memberPrice,
                         ],
                     ],
                 ]);
@@ -171,8 +178,73 @@ class DemoSeeder extends Seeder
                     'notes' => 'Penarikan saldo',
                 ]);
             } catch (\Exception $e) {
-                // Skip if insufficient balance
+                // Skip if insufficient balance or min deposit not met
             }
+        }
+
+        // Sales (idempotent: skip if already exist)
+        $this->seedSales($collectorId, $categories);
+    }
+
+    private function seedWastePrices(int $collectorId): void
+    {
+        $prices = [
+            ['name' => 'Botol Putih Bersih', 'member_price' => 2800, 'collector_price' => 3100],
+            ['name' => 'Botol Putih Kotor', 'member_price' => 1500, 'collector_price' => 1800],
+            ['name' => 'Kardus Bersih', 'member_price' => 1200, 'collector_price' => 1500],
+            ['name' => 'Gelas Plastik Bersih', 'member_price' => 1800, 'collector_price' => 2200],
+            ['name' => 'Kertas Campur', 'member_price' => 800, 'collector_price' => 1000],
+        ];
+
+        foreach ($prices as $p) {
+            $category = WasteCategory::where('name', $p['name'])->first();
+            if ($category) {
+                WastePrice::updateOrCreate(
+                    ['collector_id' => $collectorId, 'waste_category_id' => $category->id],
+                    ['member_price' => $p['member_price'], 'collector_price' => $p['collector_price'], 'price_per_unit' => $p['member_price']]
+                );
+            }
+        }
+    }
+
+    private function seedSales(int $collectorId, $categories): void
+    {
+        if (Sale::count() > 0) {
+            return;
+        }
+
+        $service = new BankSampahService();
+        $prices = WastePrice::where('collector_id', $collectorId)->get()->keyBy('waste_category_id');
+
+        // Sale 1: 2 items
+        $cat1 = $categories->firstWhere('name', 'Botol Putih Bersih');
+        $cat2 = $categories->firstWhere('name', 'Kardus Bersih');
+
+        if ($cat1 && $cat2) {
+            $service->recordSale([
+                'collector_id' => $collectorId,
+                'date' => now()->subDays(10)->format('Y-m-d'),
+                'notes' => 'Penjualan rutin minggu 1',
+                'details' => [
+                    ['waste_category_id' => $cat1->id, 'weight' => 8.5, 'price_per_unit' => $prices[$cat1->id]->collector_price ?? 3100],
+                    ['waste_category_id' => $cat2->id, 'weight' => 12.0, 'price_per_unit' => $prices[$cat2->id]->collector_price ?? 1500],
+                ],
+            ]);
+        }
+
+        // Sale 2: 3 items
+        $cat3 = $categories->firstWhere('name', 'Gelas Plastik Bersih');
+        if ($cat1 && $cat2 && $cat3) {
+            $service->recordSale([
+                'collector_id' => $collectorId,
+                'date' => now()->subDays(3)->format('Y-m-d'),
+                'notes' => 'Penjualan rutin minggu 2',
+                'details' => [
+                    ['waste_category_id' => $cat1->id, 'weight' => 5.0, 'price_per_unit' => $prices[$cat1->id]->collector_price ?? 3100],
+                    ['waste_category_id' => $cat3->id, 'weight' => 6.5, 'price_per_unit' => $prices[$cat3->id]->collector_price ?? 2200],
+                    ['waste_category_id' => $cat2->id, 'weight' => 9.0, 'price_per_unit' => $prices[$cat2->id]->collector_price ?? 1500],
+                ],
+            ]);
         }
     }
 }
