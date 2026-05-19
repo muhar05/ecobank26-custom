@@ -67,7 +67,7 @@ Route::middleware(['auth', 'permission:manage_fund_categories'])->prefix('commun
 
 // Community Cash - Contributions
 Route::middleware(['auth', 'permission:manage_contributions'])->prefix('community-cash')->name('community-cash.')->group(function () {
-    Route::resource('contributions', CommunityContributionController::class)->only(['index', 'create', 'store']);
+    Route::resource('contributions', CommunityContributionController::class)->except(['show']);
 });
 
 // Community Cash - Expenses
