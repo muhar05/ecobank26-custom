@@ -18,6 +18,7 @@
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Nasabah</th>
                             <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Total</th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Catatan</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -27,9 +28,13 @@
                                 <td class="px-6 py-4 text-sm text-slate-900 dark:text-slate-100">{{ $d->member->name }}</td>
                                 <td class="px-6 py-4 text-sm text-right font-medium text-emerald-700 dark:text-emerald-400">Rp {{ number_format($d->total_amount, 0, ',', '.') }}</td>
                                 <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $d->notes ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm space-x-2">
+                                    <a href="{{ route('bank-sampah.deposits.edit', $d) }}" class="text-emerald-700 dark:text-emerald-400 hover:underline">Edit</a>
+                                    <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.deposits.destroy', $d) }}'})" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Belum ada data setoran.</td></tr>
+                            <tr><td colspan="5" class="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Belum ada data setoran.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -39,4 +44,6 @@
             {{ $deposits->links() }}
         </div>
     </div>
+
+    <x-confirm-delete-modal />
 </x-layouts.dashboard>

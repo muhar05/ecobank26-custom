@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class BankSampahService
 {
+    public const MIN_DEPOSITS_BEFORE_WITHDRAWAL = 2;
     public function recordDeposit(array $data): Deposit
     {
         return DB::transaction(function () use ($data) {
@@ -53,6 +54,12 @@ class BankSampahService
     public function recordWithdrawal(array $data): Withdrawal
     {
         return DB::transaction(function () use ($data) {
+            $depositCount = Deposit::where('member_id', $data['member_id'])->count();
+
+            if ($depositCount < self::MIN_DEPOSITS_BEFORE_WITHDRAWAL) {
+                throw new \App\Exceptions\MinimumDepositException($depositCount, self::MIN_DEPOSITS_BEFORE_WITHDRAWAL);
+            }
+
             $balance = $this->getMemberBalance($data['member_id']);
 
             if ($data['amount'] > $balance) {

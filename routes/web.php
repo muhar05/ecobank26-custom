@@ -15,6 +15,7 @@ use App\Http\Controllers\WargaSavingsController;
 use App\Http\Controllers\WasteBankCashReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WastePriceController;
+use App\Http\Controllers\WastePriceImportController;
 use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,15 +45,15 @@ Route::get('/dashboard', function () {
 
 // Bendahara dashboard
 Route::get('/bendahara/dashboard', [DashboardController::class, 'bendahara'])
-    ->middleware(['auth', 'role:bendahara|admin_rt'])->name('bendahara.dashboard');
+    ->middleware(['auth', 'permission:view_community_cash'])->name('bendahara.dashboard');
 
 // Bank Sampah dashboard
 Route::get('/bank-sampah/dashboard', [DashboardController::class, 'bankSampah'])
-    ->middleware(['auth', 'role:admin_bank_sampah|admin_rt'])->name('bank-sampah.dashboard');
+    ->middleware(['auth', 'permission:view_waste_bank'])->name('bank-sampah.dashboard');
 
 // Warga dashboard
 Route::get('/warga/dashboard', [DashboardController::class, 'warga'])
-    ->middleware(['auth', 'role:warga|admin_rt'])->name('warga.dashboard');
+    ->middleware(['auth', 'permission:view_own_dashboard'])->name('warga.dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -99,6 +100,9 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
 
 // Bank Sampah - Waste Categories
 Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::get('waste-prices/import', [WastePriceImportController::class, 'showForm'])->name('waste-prices.import');
+    Route::post('waste-prices/import', [WastePriceImportController::class, 'import'])->name('waste-prices.import.store');
+    Route::get('waste-prices/import/template', [WastePriceImportController::class, 'template'])->name('waste-prices.import.template');
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
     Route::resource('collectors', CollectorController::class)->except(['show']);
     Route::resource('waste-prices', WastePriceController::class)->except(['show']);
@@ -106,12 +110,12 @@ Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-samp
 
 // Bank Sampah - Deposits
 Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
-    Route::resource('deposits', DepositController::class)->only(['index', 'create', 'store']);
+    Route::resource('deposits', DepositController::class)->except(['show']);
 });
 
 // Bank Sampah - Withdrawals
 Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
-    Route::resource('withdrawals', WithdrawalController::class)->only(['index', 'create', 'store']);
+    Route::resource('withdrawals', WithdrawalController::class)->except(['show']);
 });
 
 // Bank Sampah - Sales
