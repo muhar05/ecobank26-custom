@@ -72,7 +72,7 @@ Route::middleware(['auth', 'permission:manage_contributions'])->prefix('communit
 
 // Community Cash - Expenses
 Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cash')->name('community-cash.')->group(function () {
-    Route::resource('expenses', CommunityExpenseController::class)->only(['index', 'create', 'store']);
+    Route::resource('expenses', CommunityExpenseController::class)->except(['show']);
 });
 
 // Community Cash - Report (Admin/Bendahara)

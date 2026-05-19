@@ -79,6 +79,20 @@ class CommunityCashService
             ]);
     }
 
+    public function recalculateBalancesForCategory(int $fundCategoryId): void
+    {
+        $ledgers = CommunityCashLedger::where('fund_category_id', $fundCategoryId)
+            ->orderBy('date')->orderBy('id')->get();
+
+        $balance = 0;
+        foreach ($ledgers as $ledger) {
+            $balance = $ledger->type === 'in'
+                ? $balance + $ledger->amount
+                : $balance - $ledger->amount;
+            $ledger->update(['balance' => $balance]);
+        }
+    }
+
     private function getLastBalance(int $fundCategoryId): float
     {
         return (float) CommunityCashLedger::where('fund_category_id', $fundCategoryId)

@@ -9,7 +9,7 @@ class FundCategoryController extends Controller
 {
     public function index()
     {
-        $categories = FundCategory::latest()->paginate(20);
+        $categories = FundCategory::withSum('contributions', 'amount')->latest()->paginate(20);
         return view('community-cash.categories.index', compact('categories'));
     }
 
@@ -23,6 +23,7 @@ class FundCategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
+            'target_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
 
@@ -44,6 +45,7 @@ class FundCategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
+            'target_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
 

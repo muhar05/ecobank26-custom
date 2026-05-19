@@ -23,6 +23,11 @@
                     @error('description') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="mb-4">
+                    <label for="target_amount" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Target Dana (Rp)</label>
+                    <input type="number" name="target_amount" id="target_amount" value="{{ old('target_amount', $category->target_amount) }}" min="0" step="any" placeholder="Kosongkan jika belum ada target" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    @error('target_amount') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div class="mb-4">
                     <label class="flex items-center">
                         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $category->is_active) ? 'checked' : '' }} class="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500">
                         <span class="ml-2 text-sm text-slate-700 dark:text-slate-300">Aktif</span>
