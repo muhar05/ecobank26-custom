@@ -31,6 +31,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Pengepul</th>
                                     <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Total Penjualan</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Catatan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -40,6 +41,10 @@
                                         <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{{ $sale->collector->name }}</td>
                                         <td class="px-6 py-4 text-sm text-right font-medium text-emerald-700 dark:text-emerald-400">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</td>
                                         <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $sale->notes ?? '-' }}</td>
+                                        <td class="px-6 py-4 text-sm space-x-2">
+                                            <a href="{{ route('bank-sampah.sales.edit', $sale) }}" class="text-emerald-700 dark:text-emerald-400 hover:underline">Edit</a>
+                                            <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.sales.destroy', $sale) }}'})" class="text-red-600 dark:text-red-400 hover:underline">Hapus</button>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -53,4 +58,6 @@
             @endif
 
     </div>
+
+    <x-confirm-delete-modal />
 </x-layouts.dashboard>

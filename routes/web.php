@@ -120,7 +120,7 @@ Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampa
 
 // Bank Sampah - Sales
 Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
-    Route::resource('sales', SaleController::class)->only(['index', 'create', 'store']);
+    Route::resource('sales', SaleController::class)->except(['show']);
 });
 
 // Bank Sampah - Savings Report
