@@ -62,6 +62,18 @@
         </div>
     </div>
 
+    {{-- ApexCharts --}}
+    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[550ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+            <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Setoran vs Penarikan</h4>
+            <div id="chart-bs-flow"></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+            <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Komposisi Dana</h4>
+            <div id="chart-bs-composition"></div>
+        </div>
+    </div>
+
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[600ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Recent Savings Transactions --}}
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
@@ -155,3 +167,34 @@
 
 </div>
 </x-layouts.dashboard>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const baseOpts = { chart: { toolbar: { show: false }, fontFamily: 'Figtree, sans-serif', background: 'transparent' }, theme: { mode: isDark ? 'dark' : 'light' }, grid: { borderColor: isDark ? '#334155' : '#e2e8f0' } };
+
+    new ApexCharts(document.querySelector('#chart-bs-flow'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: 200 },
+        series: [{ name: 'Jumlah', data: [{{ $totalCredit }}, {{ $totalDebit }}] }],
+        xaxis: { categories: ['Setoran', 'Penarikan'] },
+        colors: ['#10b981', '#f87171'],
+        plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: '45%' } },
+        legend: { show: false },
+        yaxis: { labels: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+
+    new ApexCharts(document.querySelector('#chart-bs-composition'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'donut', height: 200 },
+        series: [{{ $totalSavings }}, {{ $wasteBankCashBalance }}, {{ $totalSales }}],
+        labels: ['Saldo Nasabah', 'Kas Operasional', 'Penjualan'],
+        colors: ['#10b981', '#64748b', '#f59e0b'],
+        legend: { position: 'bottom', fontSize: '11px' },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+});
+</script>
+@endpush

@@ -31,6 +31,20 @@
             </div>
         </div>
 
+        {{-- ApexChart: Monthly Cashflow --}}
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Arus Kas Bulan Ini</h3>
+            <div id="chart-bendahara-monthly"></div>
+        </div>
+
+        {{-- ApexChart: Category Balances --}}
+        @if($categoryBalances->isNotEmpty())
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Saldo per Kategori</h3>
+            <div id="chart-bendahara-categories"></div>
+        </div>
+        @endif
+
         {{-- Recent transactions --}}
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-300">
             <div class="p-5 border-b border-slate-100 dark:border-slate-800">
@@ -54,3 +68,36 @@
         </div>
     </div>
 </x-layouts.dashboard>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const baseOpts = { chart: { toolbar: { show: false }, fontFamily: 'Figtree, sans-serif', background: 'transparent' }, theme: { mode: isDark ? 'dark' : 'light' }, grid: { borderColor: isDark ? '#334155' : '#e2e8f0' } };
+
+    new ApexCharts(document.querySelector('#chart-bendahara-monthly'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: 180 },
+        series: [{ name: 'Jumlah', data: [{{ $monthIn }}, {{ $monthOut }}] }],
+        xaxis: { categories: ['Pemasukan', 'Pengeluaran'] },
+        colors: ['#10b981', '#f87171'],
+        plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: '45%' } },
+        legend: { show: false },
+        yaxis: { labels: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+
+    @if($categoryBalances->isNotEmpty())
+    new ApexCharts(document.querySelector('#chart-bendahara-categories'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: {{ min($categoryBalances->count() * 45 + 40, 250) }} },
+        series: [{ name: 'Saldo', data: [{!! $categoryBalances->map(fn($cb) => $cb->balance)->implode(',') !!}] }],
+        xaxis: { categories: [{!! $categoryBalances->map(fn($cb) => "'" . addslashes($cb->fundCategory->name) . "'")->implode(',') !!}] },
+        colors: ['#34d399'],
+        plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+    @endif
+});
+</script>
+@endpush

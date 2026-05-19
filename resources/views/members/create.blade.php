@@ -1,6 +1,6 @@
 <x-layouts.dashboard title="Tambah Warga">
     <div class="max-w-2xl">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
             <form method="POST" action="{{ route('members.store') }}">
                 @csrf
                 @if($errors->any())
@@ -13,8 +13,9 @@
                     </div>
                 @endif
                 <div class="mb-4">
-                    <label for="member_code" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Kode Warga <span class="text-red-500">*</span></label>
-                    <input type="text" name="member_code" id="member_code" value="{{ old('member_code') }}" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <label for="member_code" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Kode Warga</label>
+                    <input type="text" name="member_code" id="member_code" value="{{ old('member_code') }}" placeholder="{{ $nextCode }}" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Kosongkan untuk generate otomatis. Kode berikutnya: <span class="font-mono font-medium text-emerald-600 dark:text-emerald-400">{{ $nextCode }}</span></p>
                     @error('member_code') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="mb-4">

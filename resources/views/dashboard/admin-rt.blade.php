@@ -74,6 +74,27 @@
         </div>
     </div>
 
+    {{-- ApexCharts --}}
+    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[950ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+            <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Pemasukan vs Pengeluaran</h4>
+            <div id="chart-cash-flow"></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+            <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Bank Sampah</h4>
+            <div id="chart-bank-sampah"></div>
+        </div>
+    </div>
+
+    @if($categoryBalances->isNotEmpty())
+    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[980ms]">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+            <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Saldo per Kategori Dana</h4>
+            <div id="chart-categories"></div>
+        </div>
+    </div>
+    @endif
+
     {{-- Recent Activity --}}
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[1000ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Kas RT/RW Recent --}}
@@ -184,3 +205,47 @@
 
 </div>
 </x-layouts.dashboard>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const baseOpts = { chart: { toolbar: { show: false }, fontFamily: 'Figtree, sans-serif', background: 'transparent' }, theme: { mode: isDark ? 'dark' : 'light' }, grid: { borderColor: isDark ? '#334155' : '#e2e8f0' } };
+
+    new ApexCharts(document.querySelector('#chart-cash-flow'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: 200 },
+        series: [{ name: 'Jumlah', data: [{{ $totalIn }}, {{ $totalOut }}] }],
+        xaxis: { categories: ['Pemasukan', 'Pengeluaran'] },
+        colors: ['#10b981', '#f87171'],
+        plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: '50%' } },
+        legend: { show: false },
+        yaxis: { labels: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+
+    new ApexCharts(document.querySelector('#chart-bank-sampah'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'donut', height: 200 },
+        series: [{{ $savingsBalance }}, {{ $wasteBankCashBalance }}, {{ $totalSales }}],
+        labels: ['Saldo Nasabah', 'Kas Bank Sampah', 'Penjualan'],
+        colors: ['#10b981', '#64748b', '#f59e0b'],
+        legend: { position: 'bottom', fontSize: '11px' },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+
+    @if($categoryBalances->isNotEmpty())
+    new ApexCharts(document.querySelector('#chart-categories'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: {{ min($categoryBalances->count() * 50 + 40, 300) }} },
+        series: [{ name: 'Saldo', data: [{!! $categoryBalances->map(fn($cb) => $cb->balance)->implode(',') !!}] }],
+        xaxis: { categories: [{!! $categoryBalances->map(fn($cb) => "'" . addslashes($cb->fundCategory->name) . "'")->implode(',') !!}] },
+        colors: ['#34d399'],
+        plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+        yaxis: { labels: { style: { fontSize: '11px' } } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+    @endif
+});
+</script>
+@endpush

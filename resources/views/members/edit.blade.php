@@ -1,6 +1,6 @@
 <x-layouts.dashboard title="Edit Warga">
     <div class="max-w-2xl">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
             <form method="POST" action="{{ route('members.update', $member) }}">
                 @csrf @method('PUT')
                 @if($errors->any())
@@ -15,6 +15,7 @@
                 <div class="mb-4">
                     <label for="member_code" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Kode Warga <span class="text-red-500">*</span></label>
                     <input type="text" name="member_code" id="member_code" value="{{ old('member_code', $member->member_code) }}" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Kode harus unik. Ubah hanya jika diperlukan.</p>
                     @error('member_code') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="mb-4">

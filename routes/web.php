@@ -94,7 +94,7 @@ Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
 
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {
-    Route::resource('members', MemberController::class)->except(['show']);
+    Route::resource('members', MemberController::class);
 });
 
 // Bank Sampah - Waste Categories

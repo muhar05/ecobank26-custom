@@ -13,16 +13,23 @@
             <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">Total pemasukan: Rp {{ number_format($totalIn, 0, ',', '.') }} · Total pengeluaran: Rp {{ number_format($totalOut, 0, ',', '.') }}</p>
         </div>
 
+        {{-- Community Cash Visual --}}
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+            <h3 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Ringkasan Kas RT/RW</h3>
+            <div id="chart-warga-cash"></div>
+        </div>
+
         {{-- Savings balance --}}
         @if($savingsBalance !== null)
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-4">
                 <div>
                     <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Saldo Tabungan Bank Sampah</p>
                     <p class="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">Rp {{ number_format($savingsBalance, 0, ',', '.') }}</p>
                 </div>
                 <a href="{{ route('warga.savings') }}" class="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline">Lihat Detail →</a>
             </div>
+            <div id="chart-warga-savings"></div>
         </div>
         @endif
 
@@ -57,3 +64,38 @@
         </div>
     </div>
 </x-layouts.dashboard>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const baseOpts = { chart: { toolbar: { show: false }, fontFamily: 'Figtree, sans-serif', background: 'transparent' }, theme: { mode: isDark ? 'dark' : 'light' }, grid: { borderColor: isDark ? '#334155' : '#e2e8f0' } };
+
+    new ApexCharts(document.querySelector('#chart-warga-cash'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: 160 },
+        series: [{ name: 'Jumlah', data: [{{ $totalIn }}, {{ $totalOut }}] }],
+        xaxis: { categories: ['Pemasukan', 'Pengeluaran'] },
+        colors: ['#10b981', '#f87171'],
+        plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: '45%' } },
+        legend: { show: false },
+        yaxis: { labels: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+
+    @if($savingsBalance !== null)
+    new ApexCharts(document.querySelector('#chart-warga-savings'), {
+        ...baseOpts,
+        chart: { ...baseOpts.chart, type: 'bar', height: 150 },
+        series: [{ name: 'Jumlah', data: [{{ $savingsCredit }}, {{ $savingsDebit }}] }],
+        xaxis: { categories: ['Setoran', 'Penarikan'] },
+        colors: ['#10b981', '#f87171'],
+        plotOptions: { bar: { borderRadius: 6, distributed: true, columnWidth: '45%' } },
+        legend: { show: false },
+        yaxis: { labels: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } },
+        tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } }
+    }).render();
+    @endif
+});
+</script>
+@endpush

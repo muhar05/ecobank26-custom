@@ -43,6 +43,7 @@ class DashboardController extends Controller
             ->whereMonth('date', $month->month)->whereYear('date', $month->year)->sum('amount');
         $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
             ->latest('id')->limit(5)->get();
+        $data['categoryBalances'] = $this->getCategoryBalances();
 
         return view('dashboard.bendahara', $data);
     }
@@ -82,8 +83,12 @@ class DashboardController extends Controller
             $credit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
             $debit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
             $data['savingsBalance'] = $credit - $debit;
+            $data['savingsCredit'] = $credit;
+            $data['savingsDebit'] = $debit;
         } else {
             $data['savingsBalance'] = null;
+            $data['savingsCredit'] = 0;
+            $data['savingsDebit'] = 0;
         }
 
         return view('dashboard.warga', $data);
