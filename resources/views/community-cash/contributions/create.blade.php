@@ -1,63 +1,52 @@
 <x-layouts.dashboard title="Catat Iuran Warga">
-    <div class="max-w-2xl">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-            <form method="POST" action="{{ route('community-cash.contributions.store') }}">
-                @csrf
-                @if($errors->any())
-                    <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <ul class="text-xs text-red-600 dark:text-red-400 space-y-1">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
+    <x-form-card title="Catat Iuran Warga" description="Catat pemasukan iuran dari warga ke kas RT/RW.">
+        <form method="POST" action="{{ route('community-cash.contributions.store') }}">
+            @csrf
+            <x-form-section title="Data Warga" description="Pilih warga terdaftar atau isi nama manual.">
+                <div class="space-y-5">
+                    <x-field-group label="Warga Terdaftar" name="member_id" helper="Pilih dari daftar warga yang sudah terdaftar di sistem.">
+                        <select name="member_id" id="member_id" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">-- Tidak memilih --</option>
+                            @foreach($members as $member)
+                                <option value="{{ $member->id }}" {{ old('member_id') == $member->id ? 'selected' : '' }}>{{ $member->name }}</option>
                             @endforeach
-                        </ul>
+                        </select>
+                    </x-field-group>
+
+                    <x-field-group label="Nama Manual" name="member_name" helper="Isi jika warga belum terdaftar di sistem.">
+                        <input type="text" name="member_name" id="member_name" value="{{ old('member_name') }}" placeholder="Nama warga" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    </x-field-group>
+                </div>
+            </x-form-section>
+
+            <x-form-section title="Detail Iuran">
+                <div class="space-y-5">
+                    <x-field-group label="Kategori Dana" name="fund_category_id" required>
+                        <select name="fund_category_id" id="fund_category_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">-- Pilih Kategori --</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" {{ old('fund_category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </x-field-group>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <x-field-group label="Jumlah (Rp)" name="amount" required>
+                            <x-rupiah-input name="amount" :value="old('amount')" required />
+                        </x-field-group>
+
+                        <x-field-group label="Tanggal" name="date" required>
+                            <input type="date" name="date" id="date" value="{{ old('date', date('Y-m-d')) }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        </x-field-group>
                     </div>
-                @endif
-                <div class="mb-4">
-                    <label for="fund_category_id" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Kategori Dana <span class="text-red-500">*</span></label>
-                    <select name="fund_category_id" id="fund_category_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                        <option value="">-- Pilih Kategori --</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ old('fund_category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('fund_category_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+
+                    <x-field-group label="Keterangan" name="description">
+                        <input type="text" name="description" id="description" value="{{ old('description') }}" placeholder="Opsional" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    </x-field-group>
                 </div>
-                <div class="mb-4">
-                    <label for="member_id" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Pilih Warga Terdaftar</label>
-                    <select name="member_id" id="member_id" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                        <option value="">-- Tidak memilih --</option>
-                        @foreach($members as $member)
-                            <option value="{{ $member->id }}" {{ old('member_id') == $member->id ? 'selected' : '' }}>{{ $member->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('member_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="mb-4">
-                    <label for="member_name" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Atau isi Nama Warga Manual</label>
-                    <input type="text" name="member_name" id="member_name" value="{{ old('member_name') }}" placeholder="Isi jika warga belum terdaftar" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Gunakan nama manual jika warga belum terdaftar.</p>
-                    @error('member_name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="mb-4">
-                    <label for="amount" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Jumlah (Rp) <span class="text-red-500">*</span></label>
-                    <input type="number" name="amount" id="amount" value="{{ old('amount') }}" required min="1" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                    @error('amount') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="mb-4">
-                    <label for="date" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Tanggal <span class="text-red-500">*</span></label>
-                    <input type="date" name="date" id="date" value="{{ old('date', date('Y-m-d')) }}" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                    @error('date') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="mb-4">
-                    <label for="description" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Keterangan</label>
-                    <input type="text" name="description" id="description" value="{{ old('description') }}" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                    @error('description') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div class="flex gap-3">
-                    <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Simpan</button>
-                    <a href="{{ route('community-cash.contributions.index') }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</a>
-                </div>
-            </form>
-        </div>
-    </div>
+            </x-form-section>
+
+            <x-form-actions cancelUrl="{{ route('community-cash.contributions.index') }}" submitLabel="Simpan Iuran" />
+        </form>
+    </x-form-card>
 </x-layouts.dashboard>

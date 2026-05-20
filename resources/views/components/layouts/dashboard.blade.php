@@ -42,7 +42,9 @@
         @include('layouts.partials.topbar', ['title' => $title])
 
         <main class="flex-1 overflow-y-auto p-4 sm:p-6 transition-colors duration-300">
-            {{ $slot }}
+            <div x-data="{ ready: false }" x-init="setTimeout(() => ready = true, 50)" x-show="ready" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="opacity-0" :class="ready && 'opacity-100'">
+                {{ $slot }}
+            </div>
         </main>
     </div>
 </div>

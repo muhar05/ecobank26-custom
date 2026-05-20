@@ -1,10 +1,10 @@
 <x-layouts.dashboard title="Harga Sampah">
     <div class="space-y-4">
-        <div class="flex justify-between items-center">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Harga Sampah</h2>
-            <div class="flex gap-2">
-                <a href="{{ route('bank-sampah.waste-prices.import') }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Import Harga</a>
-                <a href="{{ route('bank-sampah.waste-prices.create') }}" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Tambah Harga</a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('bank-sampah.waste-prices.import') }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Import Harga</a>
+                <a href="{{ route('bank-sampah.waste-prices.create') }}" class="bg-emerald-700 dark:bg-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Tambah Harga</a>
             </div>
         </div>
 

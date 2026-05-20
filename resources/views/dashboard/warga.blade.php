@@ -63,7 +63,6 @@
             <a href="{{ route('warga.cash-report') }}" class="inline-block bg-emerald-700 dark:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Lihat Laporan Kas</a>
         </div>
     </div>
-</x-layouts.dashboard>
 
 @push('scripts')
 <script>
@@ -99,3 +98,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+</x-layouts.dashboard>

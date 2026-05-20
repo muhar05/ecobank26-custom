@@ -55,9 +55,9 @@
                             <thead>
                                 <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase">
                                     <th class="pb-2 text-left">Kategori Sampah</th>
-                                    <th class="pb-2 text-left w-24">Berat</th>
-                                    <th class="pb-2 text-left w-28">Harga/Unit</th>
-                                    <th class="pb-2 text-right w-28">Subtotal</th>
+                                    <th class="pb-2 text-left w-24">Berat (kg)</th>
+                                    <th class="pb-2 text-left w-32">Harga Nasabah / kg</th>
+                                    <th class="pb-2 text-right w-32">Subtotal Tabungan Nasabah</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -75,23 +75,43 @@
                                         <input type="number" step="0.01" min="0" name="details[{{ $i }}][weight]" x-model.number="rows[{{ $i }}].weight" placeholder="0.00" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                     </td>
                                     <td class="pr-2 py-1">
-                                        <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" x-model.number="rows[{{ $i }}].price" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        <div class="relative">
+                                            <input type="number" step="1" min="0" name="details[{{ $i }}][price_per_unit]" x-model.number="rows[{{ $i }}].price" @input="rows[{{ $i }}].manualOverride = true" placeholder="0" :class="rows[{{ $i }}].hasPrice && rows[{{ $i }}].category && collectorId ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : ''" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                        </div>
+                                        <template x-if="rows[{{ $i }}].hasPrice && rows[{{ $i }}].category && collectorId && !rows[{{ $i }}].manualOverride">
+                                            <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">Auto dari Harga Sampah</span>
+                                        </template>
+                                        <template x-if="rows[{{ $i }}].manualOverride && rows[{{ $i }}].category && collectorId">
+                                            <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">Harga diubah manual</span>
+                                        </template>
                                     </td>
                                     <td class="py-1 text-right text-sm font-medium text-slate-700 dark:text-slate-300 pr-1">
                                         <span x-text="formatRp(rows[{{ $i }}].weight * rows[{{ $i }}].price)"></span>
                                     </td>
                                 </tr>
+                                <template x-if="rows[{{ $i }}].category && !rows[{{ $i }}].hasPrice">
+                                    <tr>
+                                        <td colspan="4" class="pb-1 pt-0">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <p class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia untuk pengepul dan kategori ini. Tambahkan dulu di menu Harga Sampah.</p>
+                                                @can('manage_waste_prices')
+                                                <a href="{{ route('bank-sampah.waste-prices.create') }}" class="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:underline">+ Tambah Harga</a>
+                                                @endcan
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
                                 @endfor
                             </tbody>
                             <tfoot>
                                 <tr class="border-t border-slate-200 dark:border-slate-700">
-                                    <td colspan="3" class="pt-3 text-right text-sm font-semibold text-slate-700 dark:text-slate-200">Total Setoran:</td>
+                                    <td colspan="3" class="pt-3 text-right text-sm font-semibold text-slate-700 dark:text-slate-200">Total Masuk Tabungan Nasabah:</td>
                                     <td class="pt-3 text-right text-sm font-bold text-emerald-700 dark:text-emerald-400 pr-1" x-text="formatRp(grandTotal())"></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Harga otomatis terisi dari Harga Nasabah. Bisa diubah manual. Baris kosong diabaikan.</p>
+                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Harga otomatis diambil dari menu Harga Sampah berdasarkan pengepul dan kategori. Bisa diubah manual jika diperlukan. Baris kosong diabaikan.</p>
                 </div>
 
                 <div class="flex gap-3">
@@ -112,7 +132,7 @@
                     @php
                         $detail = $deposit->details[$i] ?? null;
                     @endphp
-                    { category: '{{ old("details.$i.waste_category_id", $detail->waste_category_id ?? "") }}', weight: {{ old("details.$i.weight", $detail->weight ?? 0) ?: 0 }}, price: {{ old("details.$i.price_per_unit", $detail->price_per_unit ?? 0) ?: 0 }}, hasPrice: true },
+                    { category: '{{ old("details.$i.waste_category_id", $detail->waste_category_id ?? "") }}', weight: {{ old("details.$i.weight", $detail->weight ?? 0) ?: 0 }}, price: {{ old("details.$i.price_per_unit", $detail->price_per_unit ?? 0) ?: 0 }}, hasPrice: true, manualOverride: false },
                     @endfor
                 ],
                 fillPrice(i) {
@@ -122,6 +142,7 @@
                     if (cp && cp[catId]) {
                         this.rows[i].price = Math.round(cp[catId].member_price);
                         this.rows[i].hasPrice = true;
+                        this.rows[i].manualOverride = false;
                     } else {
                         this.rows[i].hasPrice = false;
                     }

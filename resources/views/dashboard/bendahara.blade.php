@@ -67,7 +67,6 @@
             </div>
         </div>
     </div>
-</x-layouts.dashboard>
 
 @push('scripts')
 <script>
@@ -101,3 +100,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+</x-layouts.dashboard>

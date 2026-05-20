@@ -16,6 +16,7 @@ use App\Http\Controllers\WasteBankCashReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WastePriceController;
 use App\Http\Controllers\WastePriceImportController;
+use App\Http\Controllers\WasteCategoryImportController;
 use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
@@ -100,6 +101,9 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
 
 // Bank Sampah - Waste Categories
 Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::get('waste-categories/import', [WasteCategoryImportController::class, 'showForm'])->name('waste-categories.import');
+    Route::post('waste-categories/import', [WasteCategoryImportController::class, 'import'])->name('waste-categories.import.store');
+    Route::get('waste-categories/import/template', [WasteCategoryImportController::class, 'template'])->name('waste-categories.import.template');
     Route::get('waste-prices/import', [WastePriceImportController::class, 'showForm'])->name('waste-prices.import');
     Route::post('waste-prices/import', [WastePriceImportController::class, 'import'])->name('waste-prices.import.store');
     Route::get('waste-prices/import/template', [WastePriceImportController::class, 'template'])->name('waste-prices.import.template');
