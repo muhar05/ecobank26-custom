@@ -16,10 +16,14 @@ class SaleController extends Controller
 {
     public function __construct(private BankSampahService $service) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $sales = Sale::with('collector')->latest()->paginate(20);
-        return view('bank-sampah.sales.index', compact('sales'));
+        $search = $request->input('search');
+        $sales = Sale::with('collector')
+            ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
+                ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->latest()->paginate(20)->withQueryString();
+        return view('bank-sampah.sales.index', compact('sales', 'search'));
     }
 
     public function create()

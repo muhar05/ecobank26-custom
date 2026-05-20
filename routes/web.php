@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\FundCategoryController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MemberImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SavingsReportController;
@@ -96,6 +97,9 @@ Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
 
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {
+    Route::get('members/import', [MemberImportController::class, 'showForm'])->name('members.import');
+    Route::post('members/import', [MemberImportController::class, 'import'])->name('members.import.store');
+    Route::get('members/import/template', [MemberImportController::class, 'template'])->name('members.import.template');
     Route::resource('members', MemberController::class);
 });
 

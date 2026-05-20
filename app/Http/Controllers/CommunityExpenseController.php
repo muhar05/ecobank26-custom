@@ -11,12 +11,15 @@ use Illuminate\Support\Facades\DB;
 
 class CommunityExpenseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = $request->input('search');
         $expenses = CommunityExpense::with(['fundCategory', 'recorder'])
-            ->latest('date')->paginate(20);
+            ->when($search, fn($q) => $q->where('description', 'like', "%{$search}%")
+                ->orWhereHas('fundCategory', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->latest('date')->paginate(20)->withQueryString();
 
-        return view('community-cash.expenses.index', compact('expenses'));
+        return view('community-cash.expenses.index', compact('expenses', 'search'));
     }
 
     public function create()

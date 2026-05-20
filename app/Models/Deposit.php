@@ -20,6 +20,11 @@ class Deposit extends Model
         return $this->belongsTo(Member::class);
     }
 
+    public function collector(): BelongsTo
+    {
+        return $this->belongsTo(Collector::class);
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(DepositDetail::class);

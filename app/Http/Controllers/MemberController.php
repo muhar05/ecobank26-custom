@@ -7,10 +7,16 @@ use Illuminate\Http\Request;
 
 class MemberController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $members = Member::with('user')->latest()->paginate(20);
-        return view('members.index', compact('members'));
+        $search = $request->input('search');
+        $members = Member::with('user')
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%")
+                ->orWhere('member_code', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhere('address', 'like', "%{$search}%"))
+            ->latest()->paginate(20)->withQueryString();
+        return view('members.index', compact('members', 'search'));
     }
 
     public function create()

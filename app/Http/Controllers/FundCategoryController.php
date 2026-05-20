@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 
 class FundCategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = FundCategory::withSum('contributions', 'amount')->latest()->paginate(20);
-        return view('community-cash.categories.index', compact('categories'));
+        $search = $request->input('search');
+        $categories = FundCategory::withSum('contributions', 'amount')
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%"))
+            ->latest()->paginate(20)->withQueryString();
+        return view('community-cash.categories.index', compact('categories', 'search'));
     }
 
     public function create()

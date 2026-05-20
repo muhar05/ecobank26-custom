@@ -12,41 +12,49 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'phone' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
-     *
+     * Normalize phone number before validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->phone) {
+            $phone = preg_replace('/[^0-9]/', '', $this->phone);
+            // Convert +62 to 0
+            if (str_starts_with($phone, '62')) {
+                $phone = '0' . substr($phone, 2);
+            }
+            $this->merge(['phone' => $phone]);
+        }
+    }
+
+    /**
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        if (! Auth::attempt($this->only('phone', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'phone' => 'Nomor telepon atau password salah.',
             ]);
         }
 
@@ -54,8 +62,6 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Ensure the login request is not rate limited.
-     *
      * @throws ValidationException
      */
     public function ensureIsNotRateLimited(): void
@@ -69,18 +75,15 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'phone' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate($this->string('phone') . '|' . $this->ip());
     }
 }

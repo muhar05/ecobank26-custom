@@ -15,12 +15,15 @@ use Illuminate\Support\Facades\DB;
 
 class DepositController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = $request->input('search');
         $deposits = Deposit::with(['member', 'details.wasteCategory'])
-            ->latest('date')->paginate(20);
-
-        return view('bank-sampah.deposits.index', compact('deposits'));
+            ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
+                ->orWhereHas('member', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->latest('date')->paginate(20)->withQueryString();
+        return view('bank-sampah.deposits.index', compact('deposits', 'search'));
     }
 
     public function create()

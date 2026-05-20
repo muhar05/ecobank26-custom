@@ -7,10 +7,14 @@ use Illuminate\Http\Request;
 
 class CollectorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $collectors = Collector::latest()->paginate(20);
-        return view('bank-sampah.collectors.index', compact('collectors'));
+        $search = $request->input('search');
+        $collectors = Collector::when($search, fn($q) => $q->where('name', 'like', "%{$search}%")
+            ->orWhere('phone', 'like', "%{$search}%")
+            ->orWhere('address', 'like', "%{$search}%"))
+            ->latest()->paginate(20)->withQueryString();
+        return view('bank-sampah.collectors.index', compact('collectors', 'search'));
     }
 
     public function create()

@@ -9,6 +9,8 @@
             <div class="p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">{{ session('success') }}</div>
         @endif
 
+        <x-table-toolbar :search="$search ?? ''" placeholder="Cari kategori..." />
+
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">

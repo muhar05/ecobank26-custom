@@ -1,9 +1,20 @@
 <x-layouts.dashboard title="Data Warga">
     <div class="space-y-4">
-        <div class="flex justify-between items-center">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">Data Warga</h2>
-            <a href="{{ route('members.create') }}" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Tambah Warga</a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('members.import') }}" class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Import
+                </a>
+                <a href="{{ route('members.create') }}" class="inline-flex items-center gap-2 bg-emerald-700 dark:bg-emerald-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    Tambah
+                </a>
+            </div>
         </div>
+
+        <x-table-toolbar :search="$search ?? ''" placeholder="Cari nama, kode, telepon..." />
 
         @if(session('success'))
             <div class="p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg">{{ session('success') }}</div>

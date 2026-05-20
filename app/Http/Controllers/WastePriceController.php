@@ -9,10 +9,14 @@ use Illuminate\Http\Request;
 
 class WastePriceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $prices = WastePrice::with(['wasteCategory', 'collector'])->latest()->paginate(20);
-        return view('bank-sampah.waste-prices.index', compact('prices'));
+        $search = $request->input('search');
+        $prices = WastePrice::with(['wasteCategory', 'collector'])
+            ->when($search, fn($q) => $q->whereHas('wasteCategory', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->latest()->paginate(20)->withQueryString();
+        return view('bank-sampah.waste-prices.index', compact('prices', 'search'));
     }
 
     public function create()

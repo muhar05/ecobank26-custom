@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 
 class WasteCategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = WasteCategory::latest()->paginate(20);
-        return view('bank-sampah.waste-categories.index', compact('categories'));
+        $search = $request->input('search');
+        $categories = WasteCategory::when($search, fn($q) => $q->where('name', 'like', "%{$search}%")
+            ->orWhere('unit', 'like', "%{$search}%"))
+            ->latest()->paginate(20)->withQueryString();
+        return view('bank-sampah.waste-categories.index', compact('categories', 'search'));
     }
 
     public function create()

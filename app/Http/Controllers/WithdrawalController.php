@@ -12,10 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 class WithdrawalController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $withdrawals = Withdrawal::with('member')->latest('date')->paginate(20);
-        return view('bank-sampah.withdrawals.index', compact('withdrawals'));
+        $search = $request->input('search');
+        $withdrawals = Withdrawal::with('member')
+            ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
+                ->orWhereHas('member', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->latest('date')->paginate(20)->withQueryString();
+        return view('bank-sampah.withdrawals.index', compact('withdrawals', 'search'));
     }
 
     public function create()

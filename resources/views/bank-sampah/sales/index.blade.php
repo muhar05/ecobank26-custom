@@ -14,6 +14,8 @@
                 </div>
             @endif
 
+            <x-table-toolbar :search="$search ?? ''" placeholder="Cari penjualan..." />
+
             @if($sales->isEmpty())
                 <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
                     <p class="text-slate-400 dark:text-slate-500 text-sm">Belum ada data penjualan.</p>

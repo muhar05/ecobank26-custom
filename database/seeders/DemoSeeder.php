@@ -22,16 +22,20 @@ class DemoSeeder extends Seeder
         $this->call(FundCategorySeeder::class);
 
         // Demo users
-        $admin = User::firstOrCreate(['email' => 'adminrt@test.com'], ['name' => 'Admin RT', 'password' => Hash::make('password')]);
+        $admin = User::firstOrCreate(['email' => 'adminrt@test.com'], ['name' => 'Admin RT', 'phone' => '081111111111', 'password' => Hash::make('password')]);
+        $admin->update(['phone' => '081111111111']);
         $admin->syncRoles(['admin_rt']);
 
-        $bendahara = User::firstOrCreate(['email' => 'bendahara@test.com'], ['name' => 'Bendahara', 'password' => Hash::make('password')]);
+        $bendahara = User::firstOrCreate(['email' => 'bendahara@test.com'], ['name' => 'Bendahara', 'phone' => '082222222222', 'password' => Hash::make('password')]);
+        $bendahara->update(['phone' => '082222222222']);
         $bendahara->syncRoles(['bendahara']);
 
-        $bankSampah = User::firstOrCreate(['email' => 'banksampah@test.com'], ['name' => 'Admin Bank Sampah', 'password' => Hash::make('password')]);
+        $bankSampah = User::firstOrCreate(['email' => 'banksampah@test.com'], ['name' => 'Admin Bank Sampah', 'phone' => '083333333333', 'password' => Hash::make('password')]);
+        $bankSampah->update(['phone' => '083333333333']);
         $bankSampah->syncRoles(['admin_bank_sampah']);
 
-        $warga = User::firstOrCreate(['email' => 'warga@test.com'], ['name' => 'Siti Aminah', 'password' => Hash::make('password')]);
+        $warga = User::firstOrCreate(['email' => 'warga@test.com'], ['name' => 'Siti Aminah', 'phone' => '084444444444', 'password' => Hash::make('password')]);
+        $warga->update(['phone' => '084444444444']);
         $warga->syncRoles(['warga']);
 
         // Members
