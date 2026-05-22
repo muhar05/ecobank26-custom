@@ -40,7 +40,7 @@
         </div>
 
         {{-- Section: Kas RT/RW --}}
-        @if(auth()->user()->can('manage_fund_categories') || auth()->user()->can('manage_contributions') || auth()->user()->can('manage_expenses') || auth()->user()->can('view_cash_reports'))
+        @if(auth()->user()?->can('manage_fund_categories') || auth()->user()?->can('manage_contributions') || auth()->user()?->can('manage_expenses') || auth()->user()?->can('view_cash_reports'))
         <div>
             <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Kas RT/RW</p>
             <div class="space-y-1">

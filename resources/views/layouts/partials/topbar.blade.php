@@ -19,11 +19,11 @@
             <div class="relative" x-data="{ userMenuOpen: false }">
                 <button @click="userMenuOpen = !userMenuOpen" class="flex items-center gap-2 cursor-pointer">
                     <div class="text-right hidden sm:block">
-                        <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ Auth::user()->name }}</p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ Auth::user()->roles->first()?->name ?? 'User' }}</p>
+                        <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ Auth::user()?->name ?? 'User' }}</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ Auth::user()?->roles?->first()?->name ?? 'User' }}</p>
                     </div>
                     <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
-                        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-400">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
+                        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-400">{{ strtoupper(substr(Auth::user()?->name ?? 'U', 0, 1)) }}</span>
                     </div>
                 </button>
 
