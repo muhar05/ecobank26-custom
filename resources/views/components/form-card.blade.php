@@ -1,6 +1,6 @@
 @props(['title' => null, 'description' => null])
 
-<div class="max-w-2xl">
+<div>
     @if($title)
     <div class="mb-5">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-50">{{ $title }}</h2>

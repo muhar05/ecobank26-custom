@@ -13,7 +13,7 @@
 
 <div class="flex h-screen overflow-hidden">
     {{-- Sidebar: desktop --}}
-    <div class="hidden lg:flex lg:w-64 lg:flex-shrink-0">
+    <div class="hidden lg:flex lg:w-64 lg:min-w-[16rem] lg:flex-shrink-0">
         @include('layouts.partials.sidebar')
     </div>
 

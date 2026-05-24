@@ -387,7 +387,7 @@ Copy-paste ready patterns for new pages.
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                 <form method="POST" action="#" class="space-y-4">
                     @csrf

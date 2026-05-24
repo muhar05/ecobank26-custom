@@ -1,4 +1,4 @@
-<aside class="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 transition-colors duration-300">
+<aside class="flex flex-col w-64 min-w-[16rem] h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 transition-colors duration-300">
     {{-- Brand --}}
     <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
         <h1 class="text-lg font-bold text-emerald-800 dark:text-emerald-400">ECOBANK026</h1>
