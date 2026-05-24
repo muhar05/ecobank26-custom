@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Edit Setoran Sampah">
-    <div class="max-w-4xl" x-data="depositForm()" x-cloak>
+    <div x-data="depositForm()" x-cloak>
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
 
             <div class="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">

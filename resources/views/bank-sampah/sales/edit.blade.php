@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Edit Penjualan">
-    <div class="max-w-4xl" x-data="saleForm()" x-cloak>
+    <div x-data="saleForm()" x-cloak>
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
 
             <div class="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
@@ -9,7 +9,6 @@
             <form method="POST" action="{{ route('bank-sampah.sales.update', $sale) }}" class="space-y-6">
                 @csrf
                 @method('PUT')
-
                 @if($errors->any())
                     <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
                         <ul class="text-xs text-red-600 dark:text-red-400 space-y-1">

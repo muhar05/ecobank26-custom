@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Profile">
-<div x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 50)" class="space-y-6 max-w-4xl">
+<div x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 50)" class="space-y-6">
 
     {{-- Header --}}
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-emerald-800 dark:from-emerald-800 dark:to-emerald-950 rounded-3xl p-6">
