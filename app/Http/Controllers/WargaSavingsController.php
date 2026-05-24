@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SavingsLedger;
+use Illuminate\Http\Request;
 
 class WargaSavingsController extends Controller
 {
@@ -17,6 +18,7 @@ class WargaSavingsController extends Controller
         $credit = SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
         $debit = SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
         $recent = SavingsLedger::where('member_id', $member->id)->latest('id')->limit(5)->get();
+        $totalTransactions = SavingsLedger::where('member_id', $member->id)->count();
 
         return view('warga.savings.index', [
             'member' => $member,
@@ -24,10 +26,11 @@ class WargaSavingsController extends Controller
             'totalCredit' => $credit,
             'totalDebit' => $debit,
             'recentLedgers' => $recent,
+            'totalTransactions' => $totalTransactions,
         ]);
     }
 
-    public function history()
+    public function history(Request $request)
     {
         $member = auth()->user()->member;
 
@@ -35,8 +38,58 @@ class WargaSavingsController extends Controller
             return view('warga.savings.history', ['member' => null]);
         }
 
-        $ledgers = SavingsLedger::where('member_id', $member->id)
-            ->latest('id')->paginate(20);
+        $query = SavingsLedger::where('member_id', $member->id);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('reference_type', 'like', "%{$search}%");
+                
+                if (is_numeric($search)) {
+                    $q->orWhere('amount', $search);
+                }
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('date_preset')) {
+            $preset = $request->date_preset;
+            if ($preset === 'today') {
+                $query->whereDate('created_at', today());
+            } elseif ($preset === 'last_week') {
+                $query->whereDate('created_at', '>=', now()->subWeek());
+            } elseif ($preset === 'last_month') {
+                $query->whereDate('created_at', '>=', now()->subMonth());
+            } elseif ($preset === 'custom') {
+                if ($request->filled('start_date')) {
+                    $query->whereDate('created_at', '>=', $request->start_date);
+                }
+                if ($request->filled('end_date')) {
+                    $query->whereDate('created_at', '<=', $request->end_date);
+                }
+            }
+        }
+
+        if ($request->filled('sort')) {
+            $sort = $request->sort;
+            if ($sort === 'oldest') {
+                $query->oldest('id');
+            } elseif ($sort === 'amount_desc') {
+                $query->orderBy('amount', 'desc');
+            } elseif ($sort === 'amount_asc') {
+                $query->orderBy('amount', 'asc');
+            } else {
+                $query->latest('id');
+            }
+        } else {
+            $query->latest('id');
+        }
+
+        $ledgers = $query->paginate(20)->withQueryString()->fragment('table-section');
 
         return view('warga.savings.history', [
             'member' => $member,
