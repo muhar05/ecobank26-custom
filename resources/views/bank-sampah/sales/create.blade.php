@@ -1,6 +1,6 @@
 <x-layouts.dashboard title="Catat Penjualan">
     <div x-data="saleForm()" x-cloak>
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+        <x-form-card title="Catat Penjualan"><div class="p-6">
 
             <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
                 <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis dari Harga Sampah. Kas Bank Sampah hanya menerima margin (selisih harga pengepul − harga nasabah).</p>
@@ -159,8 +159,7 @@
                     <a href="{{ route('bank-sampah.sales.index') }}" class="text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</a>
                     <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Simpan Penjualan</button>
                 </div>
-            </form>
-        </div>
+            </form></div></x-form-card>
 
         {{-- Category Picker Modal --}}
         <div x-show="modalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="modalOpen = false">

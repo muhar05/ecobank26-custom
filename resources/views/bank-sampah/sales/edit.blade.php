@@ -1,6 +1,6 @@
 <x-layouts.dashboard title="Edit Penjualan">
     <div x-data="saleForm()" x-cloak>
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+        <x-form-card title="Edit Penjualan"><div class="p-6">
 
             <div class="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                 <p class="text-xs text-amber-700 dark:text-amber-400">Perubahan penjualan akan memperbarui Kas Bank Sampah (margin) otomatis.</p>
@@ -156,8 +156,7 @@
                     <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Perbarui</button>
                     <a href="{{ route('bank-sampah.sales.index') }}" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</a>
                 </div>
-            </form>
-        </div>
+            </form></div></x-form-card>
 
         {{-- Category Picker Modal --}}
         <div x-show="modalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="modalOpen = false">
