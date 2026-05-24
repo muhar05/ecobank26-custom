@@ -45,11 +45,17 @@ class MemberController extends Controller
 
     public function show(Member $member)
     {
+        $member->load('user.roles');
         $member->loadCount('contributions');
+        
         $totalContribution = $member->contributions()->sum('amount');
         $latestActivity = $member->contributions()->latest('date')->first();
 
-        return view('members.show', compact('member', 'totalContribution', 'latestActivity'));
+        $credit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
+        $debit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
+        $totalSavings = $credit - $debit;
+
+        return view('members.show', compact('member', 'totalContribution', 'latestActivity', 'totalSavings'));
     }
 
     public function edit(Member $member)
@@ -75,5 +81,72 @@ class MemberController extends Controller
     {
         $member->delete();
         return redirect()->route('members.index')->with('success', 'Data warga berhasil dihapus.');
+    }
+
+    public function resetPassword(Request $request, Member $member)
+    {
+        if (!auth()->user()->hasAnyRole(['admin_rt', 'admin_bank_sampah'])) {
+            abort(403, 'Anda tidak memiliki akses untuk mereset password.');
+        }
+
+        if (!$member->user) {
+            return back()->with('error', 'Warga ini belum memiliki akun yang terhubung.');
+        }
+
+        if (!$member->user->hasRole('warga') || $member->user->hasAnyRole(['admin_rt', 'admin_bank_sampah', 'bendahara'])) {
+            abort(403, 'Hanya dapat mereset password untuk akun warga biasa.');
+        }
+
+        $validated = $request->validate([
+            'password' => 'required|string|min:8',
+        ]);
+
+        $member->user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+        ]);
+
+        return back()->with('success', 'Password berhasil direset. Berikan password sementara kepada warga.');
+    }
+
+    public function createLoginAccount(Request $request, Member $member)
+    {
+        if (!auth()->user()->hasAnyRole(['admin_rt', 'admin_bank_sampah'])) {
+            abort(403, 'Anda tidak memiliki akses untuk membuat akun login.');
+        }
+
+        if ($member->user_id) {
+            return back()->with('error', 'Warga ini sudah memiliki akun login yang terhubung.');
+        }
+
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'password' => 'required|string|min:8',
+        ]);
+
+        // Normalisasi nomor telepon: hapus karakter non-angka
+        $phone = preg_replace('/[^0-9]/', '', $validated['phone']);
+        
+        // Pengecekan unik setelah normalisasi (manual safeguard)
+        if (\App\Models\User::where('phone', $phone)->exists()) {
+            return back()->withErrors(['phone' => 'Nomor telepon ini sudah digunakan oleh akun lain.']);
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($member, $phone, $validated) {
+                $user = \App\Models\User::create([
+                    'name' => $member->name,
+                    'phone' => $phone,
+                    'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+                ]);
+
+                $user->assignRole('warga');
+
+                $member->update(['user_id' => $user->id]);
+            });
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan saat membuat akun: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Akun login berhasil dibuat. Berikan password sementara kepada warga.');
     }
 }

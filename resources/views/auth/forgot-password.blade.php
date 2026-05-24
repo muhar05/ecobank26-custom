@@ -1,25 +1,20 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+    <div class="mb-6 text-center">
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Lupa Password?</h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Akun ECOBANK026 menggunakan nomor telepon untuk login.
+        </p>
     </div>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <div class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5 mb-6 text-center">
+        <p class="text-sm text-emerald-800 dark:text-emerald-300">
+            Silakan hubungi <strong>Admin RT</strong> atau <strong>Admin Bank Sampah</strong> untuk melakukan reset password.
+        </p>
+    </div>
 
-    <form method="POST" action="{{ route('password.email') }}">
-        @csrf
-
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
-    </form>
+    <div class="flex items-center justify-center mt-4">
+        <a href="{{ route('login') }}" class="inline-flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md font-semibold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-widest shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition ease-in-out duration-150 w-full text-center">
+            {{ __('Kembali ke Login') }}
+        </a>
+    </div>
 </x-guest-layout>
