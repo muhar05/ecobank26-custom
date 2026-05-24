@@ -26,7 +26,7 @@ class FundCategoryController extends Controller
             default => $query->latest(),
         };
 
-        $categories = $query->paginate(20)->withQueryString();
+        $categories = $query->paginate(20)->withQueryString()->fragment('table-section');
 
         // Stats
         $allCategories = FundCategory::withSum('contributions', 'amount')->get();

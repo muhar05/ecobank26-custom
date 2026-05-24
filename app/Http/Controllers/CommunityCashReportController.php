@@ -68,11 +68,11 @@ class CommunityCashReportController extends Controller
             $query->where('fund_category_id', $request->fund_category_id);
         }
 
-        $ledgers = $query->orderBy('id')->get();
-
-        $totalIn = $ledgers->where('type', 'in')->sum('amount');
-        $totalOut = $ledgers->where('type', 'out')->sum('amount');
+        $totalIn = (clone $query)->where('type', 'in')->sum('amount');
+        $totalOut = (clone $query)->where('type', 'out')->sum('amount');
         $currentBalance = $totalIn - $totalOut;
+
+        $ledgers = $query->orderBy('id', 'desc')->paginate(15)->withQueryString()->fragment('table-section');
 
         // Balance per category (from all ledgers, not filtered)
         $categoryBalances = CommunityCashLedger::select('fund_category_id')

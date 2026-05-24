@@ -15,7 +15,7 @@ class SavingsReportController extends Controller
             ->groupBy('member_id')
             ->with('member')
             ->orderByDesc('balance')
-            ->get();
+            ->paginate(15)->withQueryString()->fragment('table-section');
 
         return view('bank-sampah.savings.index', compact('balances'));
     }

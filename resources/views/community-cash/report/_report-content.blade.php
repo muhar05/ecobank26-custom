@@ -8,7 +8,7 @@
 
 <!-- Enhanced Filter Section -->
 <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 mb-8">
-    <form method="GET" class="flex flex-col md:flex-row gap-4 items-end">
+    <form method="GET" x-data="{ isSubmitting: false }" @submit="isSubmitting = true" class="flex flex-col md:flex-row gap-4 items-end">
         <div class="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Dari Tanggal</label>
@@ -30,8 +30,8 @@
         </div>
         
         <div class="flex items-center gap-2 w-full md:w-auto">
-            <button type="submit" class="h-10 bg-emerald-600 dark:bg-emerald-500 text-white px-5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 transition shadow-sm inline-flex justify-center items-center w-full md:w-auto">
-                Filter
+            <button type="submit" :disabled="isSubmitting" :class="{'opacity-75 cursor-not-allowed': isSubmitting}" class="h-10 bg-emerald-600 dark:bg-emerald-500 text-white px-5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 transition shadow-sm inline-flex justify-center items-center w-full md:w-auto">
+                <span x-text="isSubmitting ? 'Memfilter...' : 'Filter'"></span>
             </button>
             @if(request()->hasAny(['date_from','date_to','fund_category_id']))
                 <a href="{{ url()->current() }}" class="h-10 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-5 rounded-lg text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition">
@@ -105,7 +105,17 @@
 </div>
 
 <!-- Cash Book Table -->
-<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div id="table-section" x-data="{ tableLoading: false }" @click="if($event.target.closest('nav[role=\'navigation\'] a') || $event.target.closest('a.page-link')) tableLoading = true" class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+    {{-- Loading Overlay --}}
+    <div x-show="tableLoading" style="display: none;" class="absolute inset-0 z-50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm flex items-center justify-center">
+        <div class="flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-800 shadow-lg rounded-full border border-slate-200 dark:border-slate-700">
+            <svg class="animate-spin w-5 h-5 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">Memuat data...</span>
+        </div>
+    </div>
     <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-800">
         <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">Buku Kas</h3>
     </div>
@@ -178,4 +188,13 @@
             </tbody>
         </table>
     </div>
+    @if(method_exists($ledgers, 'hasPages') && $ledgers->hasPages())
+        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+            {{ $ledgers->links() }}
+        </div>
+    @elseif(!method_exists($ledgers, 'hasPages') && $ledgers instanceof \Illuminate\Pagination\LengthAwarePaginator)
+        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+            {{ $ledgers->links() }}
+        </div>
+    @endif
 </div>

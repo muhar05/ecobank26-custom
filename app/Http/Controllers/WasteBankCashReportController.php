@@ -18,11 +18,11 @@ class WasteBankCashReportController extends Controller
             $query->whereDate('date', '<=', $request->date_to);
         }
 
-        $ledgers = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
-
-        $totalIn = $ledgers->where('type', 'in')->sum('amount');
-        $totalOut = $ledgers->where('type', 'out')->sum('amount');
+        $totalIn = (clone $query)->where('type', 'in')->sum('amount');
+        $totalOut = (clone $query)->where('type', 'out')->sum('amount');
         $balance = WasteBankCashLedger::latest('id')->value('balance') ?? 0;
+
+        $ledgers = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->paginate(15)->withQueryString()->fragment('table-section');
 
         return view('bank-sampah.cash-report.index', compact('ledgers', 'totalIn', 'totalOut', 'balance'));
     }
