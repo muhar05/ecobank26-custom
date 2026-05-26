@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\BillPayment;
 use App\Models\FundCategory;
 use App\Models\Rt;
 use App\Services\BillService;
