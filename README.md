@@ -52,21 +52,25 @@ Ecobank026 Custom menggabungkan dua modul utama dalam satu platform:
 
 | Role | Akses |
 |------|-------|
-| **admin_rt** | Full akses Kas RT/RW + read-only laporan Bank Sampah |
-| **bendahara** | Full akses Kas RT/RW + data warga. Tidak bisa akses Bank Sampah |
-| **admin_bank_sampah** | Full akses Bank Sampah. Tidak bisa akses Kas RT/RW |
-| **warga** | Read-only: laporan kas warga, saldo tabungan sendiri, riwayat transaksi |
+| **admin_rw** | Full akses tingkat RW (Laporan Gabungan, Kas, & Bank Sampah) |
+| **bendahara_rw** / **bendahara** | Full akses Kas RT/RW + data warga. Tidak bisa akses Bank Sampah |
+| **admin_rt** | Kelola RT, data KK, warga, serta tagihan iuran bulanan |
+| **admin_bank_sampah** | Full akses operasional Bank Sampah (Setoran, Penarikan, Penjualan) |
+| **warga** | Dashboard personal, status iuran bulanan, & tabungan bank sampah |
 
 ---
 
-## Demo Credentials
+## Demo Credentials (Phone Login)
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin RT | adminrt@test.com | password |
-| Bendahara | bendahara@test.com | password |
-| Admin Bank Sampah | banksampah@test.com | password |
-| Warga | warga@test.com | password |
+Semua akun demo menggunakan **Nomor Telepon** sebagai login identifier (Password: `password`).
+
+| Role | No HP (Input Login) | Format DB | Password |
+|---|---|---|---|
+| Admin RW | `620811111111` | `0811111111` | `password` |
+| Bendahara RW | `620822222222` | `0822222222` | `password` |
+| Admin RT | `620833333333` | `0833333333` | `password` |
+| Admin Bank Sampah | `620844444444` | `0844444444` | `password` |
+| Warga | `620855555555` | `0855555555` | `password` |
 
 ---
 
@@ -117,27 +121,29 @@ Akses aplikasi di: http://localhost:8000
 
 ## Demo Flow
 
-### 1. Admin RT (adminrt@test.com)
-- Dashboard gabungan: Kas RT/RW + ringkasan Bank Sampah
-- Kelola Kategori Dana → Pemasukan → Pengeluaran → Buku Kas → Export
-- Lihat laporan Bank Sampah (read-only)
+### 1. Admin RW (`620811111111`)
+- Dashboard gabungan tingkat RW untuk visualisasi total kas & bank sampah.
+- Full access untuk pengawasan laporan terpadu.
 
-### 2. Bendahara (bendahara@test.com)
-- Dashboard fokus Kas RT/RW dengan chart bulanan
-- CRUD pemasukan dan pengeluaran
-- Akses `/bank-sampah/*` → 403 Forbidden
+### 2. Bendahara RW (`620822222222`)
+- Dashboard fokus Kas RT/RW dengan chart bulanan.
+- CRUD pemasukan dan pengeluaran.
+- Akses `/bank-sampah/*` → 403 Forbidden.
 
-### 3. Admin Bank Sampah (banksampah@test.com)
-- Dashboard Bank Sampah dengan chart
-- Harga Sampah → Import CSV → Setoran → Penarikan → Penjualan
-- Laporan: Saldo Nasabah + Kas Bank Sampah + Export
-- Akses `/community-cash/*` → 403 Forbidden
+### 3. Admin RT (`620833333333`)
+- Dashboard gabungan: Kas RT/RW + ringkasan Bank Sampah.
+- Kelola wilayah RT 001, data KK, warga, serta tagihan iuran bulanan.
 
-### 4. Warga (warga@test.com)
-- Dashboard ringkas: saldo tabungan + kas warga
-- Laporan Kas Warga (read-only)
-- Saldo Saya + Riwayat Tabungan
-- Akses halaman admin → 403 Forbidden
+### 4. Admin Bank Sampah (`620844444444`)
+- Dashboard Bank Sampah dengan chart.
+- Harga Sampah → Import CSV → Setoran → Penarikan → Penjualan.
+- Laporan: Saldo Nasabah + Kas Bank Sampah + Export.
+- Akses `/community-cash/*` → 403 Forbidden.
+
+### 5. Warga (`620855555555`)
+- Dashboard ringkas: tagihan KK bulan berjalan + saldo tabungan bank sampah.
+- Halaman "Tagihan Saya" (read-only) lengkap dengan status iuran & kuitansi.
+- Akses halaman admin → 403 Forbidden.
 
 ---
 

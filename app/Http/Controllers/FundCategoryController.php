@@ -47,14 +47,29 @@ class FundCategoryController extends Controller
 
     public function store(Request $request)
     {
+        $isMandatoryInput = $request->input('is_mandatory');
+        $isMandatory = ($isMandatoryInput == 1 || $isMandatoryInput === '1' || $isMandatoryInput === true || $isMandatoryInput === 'true');
+        
+        $request->merge([
+            'is_active' => $request->boolean('is_active'),
+            'is_mandatory' => $isMandatory ? 1 : 0,
+            'monthly_amount' => $isMandatory ? $request->input('monthly_amount') : 0.00,
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
             'target_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'is_mandatory' => 'integer|in:0,1',
+            'monthly_amount' => 'required_if:is_mandatory,1|nullable|numeric|min:0',
+        ], [
+            'monthly_amount.required_if' => 'Nominal bulanan wajib diisi jika iuran diatur sebagai wajib.',
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active');
+        if ($validated['is_mandatory'] == 1 && (!isset($validated['monthly_amount']) || $validated['monthly_amount'] <= 0)) {
+            return back()->withErrors(['monthly_amount' => 'Nominal iuran wajib harus lebih dari Rp 0.'])->withInput();
+        }
 
         FundCategory::create($validated);
 
@@ -69,14 +84,29 @@ class FundCategoryController extends Controller
 
     public function update(Request $request, FundCategory $category)
     {
+        $isMandatoryInput = $request->input('is_mandatory');
+        $isMandatory = ($isMandatoryInput == 1 || $isMandatoryInput === '1' || $isMandatoryInput === true || $isMandatoryInput === 'true');
+        
+        $request->merge([
+            'is_active' => $request->boolean('is_active'),
+            'is_mandatory' => $isMandatory ? 1 : 0,
+            'monthly_amount' => $isMandatory ? $request->input('monthly_amount') : 0.00,
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
             'target_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'is_mandatory' => 'integer|in:0,1',
+            'monthly_amount' => 'required_if:is_mandatory,1|nullable|numeric|min:0',
+        ], [
+            'monthly_amount.required_if' => 'Nominal bulanan wajib diisi jika iuran diatur sebagai wajib.',
         ]);
 
-        $validated['is_active'] = $request->boolean('is_active');
+        if ($validated['is_mandatory'] == 1 && (!isset($validated['monthly_amount']) || $validated['monthly_amount'] <= 0)) {
+            return back()->withErrors(['monthly_amount' => 'Nominal iuran wajib harus lebih dari Rp 0.'])->withInput();
+        }
 
         $category->update($validated);
 

@@ -46,6 +46,26 @@
                             class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors">
                     </div>
                 </div>
+
+                <!-- RT Filter -->
+                <div class="w-full lg:w-48">
+                    <select name="rt_id" class="block w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                        <option value="">Semua RT</option>
+                        @foreach($rts as $rt)
+                            <option value="{{ $rt->id }}" {{ ($rtFilter ?? '') == $rt->id ? 'selected' : '' }}>RT {{ $rt->rt_number }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- KK Filter -->
+                <div class="w-full lg:w-48">
+                    <select name="kk_id" class="block w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20">
+                        <option value="">Semua KK</option>
+                        @foreach($kks as $kkItem)
+                            <option value="{{ $kkItem->id }}" {{ ($kkFilter ?? '') == $kkItem->id ? 'selected' : '' }}>Keluarga {{ $kkItem->family_head }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 
                 <!-- Filter Actions -->
                 <div class="flex items-center gap-3">
@@ -64,8 +84,8 @@
                         </template>
                         <span x-text="loading ? 'Mencari...' : 'Cari'"></span>
                     </button>
-                    @if($search ?? '')
-                        <a href="{{ request()->url() }}" 
+                    @if(($search ?? '') || ($rtFilter ?? '') || ($kkFilter ?? ''))
+                        <a href="{{ route('members.index') }}" 
                             class="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 px-3 py-2.5 text-sm font-medium transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -85,7 +105,7 @@
                         <tr>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Kode</th>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Informasi Warga</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Kontak</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">KK / Wilayah</th>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status Akun</th>
                             <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Aksi</th>
                         </tr>
@@ -119,16 +139,23 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
-                                    @if($member->phone)
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                            </svg>
-                                            {{ $member->phone }}
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($member->kk)
+                                        <div>
+                                            <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                Keluarga {{ $member->kk->family_head }}
+                                                @if($member->relationship)
+                                                    <span class="text-xs text-slate-500 dark:text-slate-400 font-normal">({{ $member->relationship }})</span>
+                                                @endif
+                                            </div>
+                                            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 mt-1">
+                                                RT {{ $member->kk->rt->rt_number }}
+                                            </div>
                                         </div>
                                     @else
-                                        <span class="text-slate-400">-</span>
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                            Belum terhubung KK
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

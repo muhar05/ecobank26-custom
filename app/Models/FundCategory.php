@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FundCategory extends Model
 {
-    protected $fillable = ['name', 'description', 'target_amount', 'is_active'];
+    protected $fillable = ['name', 'description', 'target_amount', 'is_active', 'is_mandatory', 'monthly_amount'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'is_mandatory' => 'boolean',
             'target_amount' => 'decimal:2',
+            'monthly_amount' => 'decimal:2',
         ];
     }
 

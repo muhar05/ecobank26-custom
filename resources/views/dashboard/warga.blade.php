@@ -16,6 +16,51 @@
         </div>
     </div>
 
+    {{-- KK Connection Alert --}}
+    @if(!$kk)
+        <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-[2rem] p-6 text-center text-rose-800 dark:text-rose-300">
+            <svg class="w-12 h-12 mx-auto text-rose-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <p class="font-bold text-sm">Akun Anda belum terhubung ke data KK.</p>
+            <p class="text-xs mt-1 text-slate-500 dark:text-slate-400">Silakan hubungi Admin RT setempat untuk menghubungkan akun warga Anda ke Kartu Keluarga.</p>
+        </div>
+    @else
+        {{-- KK Billing Overview Card --}}
+        <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 relative overflow-hidden bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200/60 dark:border-slate-800/60 p-6 sm:p-8 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Tagihan Iuran Warga (KK Saya)
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Keluarga {{ $kk->family_head }} · RT {{ $kk->rt->rt_number }}</p>
+                </div>
+                <div>
+                    <a href="{{ route('warga.bills') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold transition">
+                        Rincian Tagihan Saya &rarr;
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
+                <!-- Tagihan Bulan Ini -->
+                <div class="space-y-1">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">Tagihan Bulan Ini ({{ [1=>'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][date('n')] }} {{ date('Y') }})</span>
+                    <span class="text-2xl font-extrabold text-slate-900 dark:text-white block">Rp {{ number_format($totalBillCurrentMonth ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <!-- Sudah Dibayar -->
+                <div class="space-y-1">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">Sudah Dibayar</span>
+                    <span class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 block">Rp {{ number_format($totalPaidCurrentMonth ?? 0, 0, ',', '.') }}</span>
+                </div>
+                <!-- Total Sisa Tunggakan (All time) -->
+                <div class="space-y-1">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold" style="color: #b91c1c;">Total Sisa Tunggakan</span>
+                    <span class="text-2xl font-extrabold text-rose-600 dark:text-rose-400 block">Rp {{ number_format($totalKkTunggakan ?? 0, 0, ',', '.') }}</span>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Stats Grid --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         {{-- Kas RT/RW --}}
@@ -80,8 +125,65 @@
         @endif
     </div>
 
+    {{-- Warga Billing Info Section --}}
+    @if($kk)
+        <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[400ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Recent Bills -->
+            <div class="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Tagihan Iuran Terkini</h4>
+                    <a href="{{ route('warga.bills') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">Lihat Semua Tagihan</a>
+                </div>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
+                    @forelse($recentBills as $b)
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-slate-900 dark:text-slate-100">{{ $b->fundCategory->name }}</p>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ [1=>'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][$b->month] }} {{ $b->year }} · {{ $b->bill_code }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-extrabold text-slate-900 dark:text-white block">Rp {{ number_format($b->outstanding_balance, 0, ',', '.') }}</span>
+                                @if($b->status === 'paid')
+                                    <span class="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-600">Lunas</span>
+                                @elseif($b->status === 'partially_paid')
+                                    <span class="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-600">Dicicil</span>
+                                @else
+                                    <span class="inline-flex px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-600">Belum Bayar</span>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="p-6 text-center text-slate-400">Tidak ada tagihan wajib.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Recent Payments -->
+            <div class="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Riwayat Transaksi Pembayaran</h4>
+                </div>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
+                    @forelse($recentPayments as $p)
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-slate-900 dark:text-slate-100">Kwitansi {{ $p->receipt_number }}</p>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ $p->bill->fundCategory->name }} · {{ $p->paid_at->format('d/m/Y') }}</p>
+                            </div>
+                            <span class="font-extrabold text-emerald-600 dark:text-emerald-400">
+                                +Rp {{ number_format($p->amount_paid, 0, ',', '.') }}
+                            </span>
+                        </div>
+                    @empty
+                        <div class="p-6 text-center text-slate-400">Belum ada riwayat pembayaran tagihan.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Charts Section --}}
-    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[400ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[500ms] grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200/60 dark:border-slate-800/60 p-6 sm:p-8">
             <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Arus Kas RT/RW</h4>
             <div id="chart-warga-cash" class="min-h-[250px]"></div>
@@ -96,7 +198,7 @@
     </div>
 
     {{-- Recent Transactions --}}
-    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[500ms]">
+    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[600ms]">
         <div class="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
             <div class="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800/60 flex justify-between items-center">
                 <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">Transaksi Kas RT/RW Terbaru</h4>
@@ -126,6 +228,8 @@
             </div>
         </div>
     </div>
+
+</div>
 
 </div>
 

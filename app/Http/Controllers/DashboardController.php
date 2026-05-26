@@ -79,12 +79,51 @@ class DashboardController extends Controller
 
         // Savings balance for linked member
         $member = auth()->user()->member;
+        $data['member'] = $member;
+        $data['kk'] = null;
+
         if ($member) {
             $credit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
             $debit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
             $data['savingsBalance'] = $credit - $debit;
             $data['savingsCredit'] = $credit;
             $data['savingsDebit'] = $debit;
+
+            // KK Billing integration
+            if ($member->kk_id) {
+                $kk = \App\Models\Kk::with('rt')->find($member->kk_id);
+                $data['kk'] = $kk;
+
+                if ($kk) {
+                    $currentMonth = date('n');
+                    $currentYear = date('Y');
+
+                    $currentMonthBills = \App\Models\Bill::where('kk_id', $kk->id)
+                        ->where('month', $currentMonth)
+                        ->where('year', $currentYear)
+                        ->get();
+
+                    $data['totalBillCurrentMonth'] = $currentMonthBills->sum('amount');
+                    $data['totalPaidCurrentMonth'] = $currentMonthBills->sum(fn($b) => $b->total_paid);
+                    $data['sisaTunggakanCurrentMonth'] = $currentMonthBills->sum(fn($b) => $b->outstanding_balance);
+
+                    $allKkBills = \App\Models\Bill::where('kk_id', $kk->id)->with(['fundCategory', 'payments'])->get();
+                    $data['totalKkTunggakan'] = $allKkBills->sum(fn($b) => $b->outstanding_balance);
+                    $data['totalKkPaid'] = $allKkBills->sum(fn($b) => $b->total_paid);
+
+                    $data['recentBills'] = \App\Models\Bill::where('kk_id', $kk->id)
+                        ->with(['fundCategory', 'payments'])
+                        ->latest()
+                        ->limit(5)
+                        ->get();
+
+                    $data['recentPayments'] = \App\Models\BillPayment::whereHas('bill', fn($q) => $q->where('kk_id', $kk->id))
+                        ->with('bill.fundCategory')
+                        ->latest()
+                        ->limit(5)
+                        ->get();
+                }
+            }
         } else {
             $data['savingsBalance'] = null;
             $data['savingsCredit'] = 0;

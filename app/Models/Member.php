@@ -11,11 +11,16 @@ class Member extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['user_id', 'member_code', 'name', 'phone', 'address'];
+    protected $fillable = ['user_id', 'kk_id', 'member_code', 'name', 'phone', 'address', 'relationship'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function kk(): BelongsTo
+    {
+        return $this->belongsTo(Kk::class, 'kk_id');
     }
 
     public function contributions(): HasMany

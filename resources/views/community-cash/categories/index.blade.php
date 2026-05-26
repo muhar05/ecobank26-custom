@@ -147,6 +147,11 @@
                                         @if($category->description)
                                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-[200px] truncate" title="{{ $category->description }}">{{ $category->description }}</p>
                                         @endif
+                                        @if($category->is_mandatory)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30 mt-1">
+                                                Wajib: Rp {{ number_format($category->monthly_amount, 0, ',', '.') }}/bln
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>
@@ -231,15 +236,22 @@
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $category->name }}</p>
-                                @if($category->is_active)
-                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Aktif
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Nonaktif
-                                    </span>
-                                @endif
+                                <div class="flex flex-wrap gap-1.5 mt-0.5">
+                                    @if($category->is_active)
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Aktif
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Nonaktif
+                                        </span>
+                                    @endif
+                                    @if($category->is_mandatory)
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30">
+                                            Wajib: Rp {{ number_format($category->monthly_amount, 0, ',', '.') }}
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-3 text-sm font-medium">

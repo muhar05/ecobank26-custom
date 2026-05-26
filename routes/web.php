@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\CollectorController;
+use App\Http\Controllers\RtController;
+use App\Http\Controllers\KkController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CommunityExpenseController;
 use App\Http\Controllers\CommunityCashReportController;
@@ -13,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SavingsReportController;
 use App\Http\Controllers\WargaSavingsController;
+use App\Http\Controllers\WargaBillController;
 use App\Http\Controllers\WasteBankCashReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WastePriceController;
@@ -73,6 +77,16 @@ Route::middleware(['auth', 'permission:manage_contributions'])->prefix('communit
     Route::resource('contributions', CommunityContributionController::class)->except(['show']);
 });
 
+// Modul Tagihan Bulanan (Topic 15)
+Route::middleware(['auth', 'permission:manage_contributions'])->prefix('iuran')->name('iuran.')->group(function () {
+    Route::get('tagihan', [BillController::class, 'index'])->name('bills.index');
+    Route::get('tagihan/generate', [BillController::class, 'create'])->name('bills.generate.form');
+    Route::post('tagihan/generate', [BillController::class, 'generate'])->name('bills.generate');
+    Route::post('tagihan/{bill}/pay', [BillController::class, 'pay'])->name('bills.pay');
+    Route::get('tunggakan', [BillController::class, 'arrears'])->name('bills.arrears');
+    Route::get('laporan-tahunan', [BillController::class, 'annualReport'])->name('bills.annual_report');
+});
+
 // Community Cash - Expenses
 Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cash')->name('community-cash.')->group(function () {
     Route::resource('expenses', CommunityExpenseController::class)->except(['show']);
@@ -95,6 +109,11 @@ Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
     Route::get('/warga/savings/history', [WargaSavingsController::class, 'history'])->name('warga.savings.history');
 });
 
+// Warga - Billing Portal
+Route::middleware(['auth', 'permission:view_own_dashboard'])->group(function () {
+    Route::get('/warga/tagihan', [WargaBillController::class, 'index'])->name('warga.bills');
+});
+
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {
     Route::get('members/import', [MemberImportController::class, 'showForm'])->name('members.import');
@@ -103,6 +122,10 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
     Route::resource('members', MemberController::class);
     Route::post('members/{member}/reset-password', [MemberController::class, 'resetPassword'])->name('members.reset-password');
     Route::post('members/{member}/create-login-account', [MemberController::class, 'createLoginAccount'])->name('members.create-login-account');
+    
+    // RT & KK CRUD
+    Route::resource('rts', RtController::class)->except(['show']);
+    Route::resource('kks', KkController::class);
 });
 
 // Bank Sampah - Waste Categories

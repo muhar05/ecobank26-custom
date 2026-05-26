@@ -212,6 +212,18 @@
                 <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide">Informasi Kontak</h3>
                 <dl class="space-y-4">
                     <div>
+                        <dt class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Kartu Keluarga / Wilayah</dt>
+                        <dd class="text-sm text-slate-900 dark:text-slate-100 font-medium flex items-center gap-2">
+                            @if($member->kk)
+                                <a href="{{ route('kks.show', $member->kk) }}" class="text-emerald-600 dark:text-emerald-400 hover:underline">
+                                    Keluarga {{ $member->kk->family_head }} (RT {{ $member->kk->rt->rt_number }}) - {{ $member->relationship ?? 'Anggota' }}
+                                </a>
+                            @else
+                                <span class="text-slate-400 italic">Belum terhubung KK</span>
+                            @endif
+                        </dd>
+                    </div>
+                    <div>
                         <dt class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Nomor Telepon</dt>
                         <dd class="text-sm text-slate-900 dark:text-slate-100 font-medium flex items-center gap-2">
                             <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>

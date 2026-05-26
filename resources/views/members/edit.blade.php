@@ -26,6 +26,23 @@
                 </div>
             </x-form-section>
 
+            <x-form-section title="Keluarga & Wilayah">
+                <div class="space-y-5">
+                    <x-field-group label="Kartu Keluarga (KK)" name="kk_id" helper="Opsional (Hubungkan warga ke KK)">
+                        <select name="kk_id" id="kk_id" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">Belum Terhubung KK</option>
+                            @foreach($kks as $kk)
+                                <option value="{{ $kk->id }}" {{ old('kk_id', $member->kk_id) == $kk->id ? 'selected' : '' }}>Keluarga {{ $kk->family_head }} (RT {{ $kk->rt->rt_number }})</option>
+                            @endforeach
+                        </select>
+                    </x-field-group>
+
+                    <x-field-group label="Hubungan Keluarga" name="relationship" helper="Opsional (Misal: Kepala Keluarga, Istri, Anak)">
+                        <input type="text" name="relationship" id="relationship" value="{{ old('relationship', $member->relationship) }}" placeholder="Contoh: Kepala Keluarga" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    </x-field-group>
+                </div>
+            </x-form-section>
+
             <x-form-actions cancelUrl="{{ route('members.index') }}" submitLabel="Perbarui" />
         </form>
     </x-form-card>

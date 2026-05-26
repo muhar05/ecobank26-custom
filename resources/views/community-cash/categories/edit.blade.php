@@ -35,6 +35,26 @@
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Kategori nonaktif tidak akan muncul sebagai pilihan saat mencatat kas</p>
                     </div>
                 </div>
+
+                <!-- Iuran Wajib Bulanan (Topic 15) -->
+                <div x-data="{ isMandatory: {{ old('is_mandatory', $category->is_mandatory) ? 'true' : 'false' }} }" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex items-center h-5">
+                            <input type="checkbox" name="is_mandatory" id="is_mandatory" value="1" @change="isMandatory = $event.target.checked" {{ old('is_mandatory', $category->is_mandatory) ? 'checked' : '' }} 
+                                class="w-5 h-5 text-emerald-600 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500 focus:ring-2 mt-0.5">
+                        </div>
+                        <div>
+                            <label for="is_mandatory" class="text-sm font-semibold text-slate-900 dark:text-slate-100 cursor-pointer">Iuran Bulanan Wajib (per KK)</label>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Aktifkan jika kategori kas ini ditagih setiap bulan untuk semua kepala keluarga</p>
+                        </div>
+                    </div>
+
+                    <div x-show="isMandatory" style="display: none;" x-transition class="mt-3">
+                        <x-field-group label="Nominal Iuran Bulanan (Rupiah)" name="monthly_amount" required>
+                            <x-rupiah-input name="monthly_amount" :value="old('monthly_amount', $category->monthly_amount)" placeholder="Contoh: 20000" />
+                        </x-field-group>
+                    </div>
+                </div>
             </x-form-section>
 
             <x-form-actions cancelUrl="{{ route('community-cash.categories.index') }}" submitLabel="Perbarui Kategori" />

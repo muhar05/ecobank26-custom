@@ -21,29 +21,61 @@ class DemoSeeder extends Seeder
         $this->call(RolePermissionSeeder::class);
         $this->call(FundCategorySeeder::class);
 
-        // Demo users
-        $admin = User::firstOrCreate(['email' => 'adminrt@test.com'], ['name' => 'Admin RT', 'phone' => '081111111111', 'password' => Hash::make('password')]);
-        $admin->update(['phone' => '081111111111']);
+        // Helper to normalize phone
+        $normalizePhone = function (string $phone) {
+            $phone = preg_replace('/[^0-9]/', '', $phone);
+            if (str_starts_with($phone, '620')) {
+                $phone = '0' . substr($phone, 3);
+            } elseif (str_starts_with($phone, '62')) {
+                $phone = '0' . substr($phone, 2);
+            }
+            return $phone;
+        };
+
+        // Demo users using new phone credentials
+        $adminRwPhone = $normalizePhone('620811111111');
+        $adminRw = User::updateOrCreate(['phone' => $adminRwPhone], ['name' => 'Admin RW', 'email' => null, 'password' => Hash::make('password')]);
+        $adminRw->syncRoles(['admin_rw']);
+
+        $bendaharaPhone = $normalizePhone('620822222222');
+        $bendahara = User::updateOrCreate(['phone' => $bendaharaPhone], ['name' => 'Bendahara RW', 'email' => null, 'password' => Hash::make('password')]);
+        $bendahara->syncRoles(['bendahara_rw', 'bendahara']);
+
+        $adminRtPhone = $normalizePhone('620833333333');
+        $admin = User::updateOrCreate(['phone' => $adminRtPhone], ['name' => 'Admin RT', 'email' => null, 'password' => Hash::make('password')]);
         $admin->syncRoles(['admin_rt']);
 
-        $bendahara = User::firstOrCreate(['email' => 'bendahara@test.com'], ['name' => 'Bendahara', 'phone' => '082222222222', 'password' => Hash::make('password')]);
-        $bendahara->update(['phone' => '082222222222']);
-        $bendahara->syncRoles(['bendahara']);
-
-        $bankSampah = User::firstOrCreate(['email' => 'banksampah@test.com'], ['name' => 'Admin Bank Sampah', 'phone' => '083333333333', 'password' => Hash::make('password')]);
-        $bankSampah->update(['phone' => '083333333333']);
+        $bankSampahPhone = $normalizePhone('620844444444');
+        $bankSampah = User::updateOrCreate(['phone' => $bankSampahPhone], ['name' => 'Admin Bank Sampah', 'email' => null, 'password' => Hash::make('password')]);
         $bankSampah->syncRoles(['admin_bank_sampah']);
 
-        $warga = User::firstOrCreate(['email' => 'warga@test.com'], ['name' => 'Siti Aminah', 'phone' => '084444444444', 'password' => Hash::make('password')]);
-        $warga->update(['phone' => '084444444444']);
+        $wargaPhone = $normalizePhone('620855555555');
+        $warga = User::updateOrCreate(['phone' => $wargaPhone], ['name' => 'Warga Demo', 'email' => null, 'password' => Hash::make('password')]);
         $warga->syncRoles(['warga']);
+
+        // Setup RT, KK, and Warga Demo connection
+        $rt = \App\Models\Rt::firstOrCreate(
+            ['rt_number' => '001'],
+            ['description' => 'RT 001 Kelurahan Eco']
+        );
+
+        $kk = \App\Models\Kk::firstOrCreate(
+            ['kk_number' => '3201234567890001'],
+            [
+                'rt_id' => $rt->id,
+                'family_head' => 'Warga Demo',
+                'address' => 'Jl. Kebersihan No. 26',
+                'phone' => '0855555555',
+                'status' => 'active',
+            ]
+        );
 
         // Members
         $members = [
-            ['member_code' => 'WRG001', 'name' => 'Budi Santoso', 'phone' => '081234567001', 'address' => 'Jl. Merdeka No. 1'],
-            ['member_code' => 'WRG002', 'name' => 'Siti Aminah', 'phone' => '081234567002', 'address' => 'Jl. Merdeka No. 2', 'user_id' => $warga->id],
-            ['member_code' => 'WRG003', 'name' => 'Andi Pratama', 'phone' => '081234567003', 'address' => 'Jl. Kenanga No. 5'],
-            ['member_code' => 'WRG004', 'name' => 'Dewi Lestari', 'phone' => '081234567004', 'address' => 'Jl. Kenanga No. 8'],
+            ['member_code' => 'WRG001', 'name' => 'Budi Santoso', 'phone' => '081234567001', 'address' => 'Jl. Merdeka No. 1', 'kk_id' => $kk->id, 'relationship' => 'Anggota'],
+            ['member_code' => 'WRG002', 'name' => 'Warga Demo', 'phone' => '0855555555', 'address' => 'Jl. Kebersihan No. 26', 'user_id' => $warga->id, 'kk_id' => $kk->id, 'relationship' => 'Kepala Keluarga'],
+            ['member_code' => 'WRG003', 'name' => 'Andi Pratama', 'phone' => '081234567003', 'address' => 'Jl. Kenanga No. 5', 'kk_id' => $kk->id, 'relationship' => 'Anak'],
+            ['member_code' => 'WRG004', 'name' => 'Dewi Lestari', 'phone' => '081234567004', 'address' => 'Jl. Kenanga No. 8', 'kk_id' => $kk->id, 'relationship' => 'Istri'],
             ['member_code' => 'WRG005', 'name' => 'Rudi Hermawan', 'phone' => '081234567005', 'address' => 'Jl. Anggrek No. 3'],
             ['member_code' => 'WRG006', 'name' => 'Rina Wati', 'phone' => '081234567006', 'address' => 'Jl. Anggrek No. 7'],
         ];

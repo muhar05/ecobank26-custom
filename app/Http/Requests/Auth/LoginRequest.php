@@ -35,8 +35,10 @@ class LoginRequest extends FormRequest
     {
         if ($this->phone) {
             $phone = preg_replace('/[^0-9]/', '', $this->phone);
-            // Convert +62 to 0
-            if (str_starts_with($phone, '62')) {
+            // Convert 620 to 0 and 62 to 0
+            if (str_starts_with($phone, '620')) {
+                $phone = '0' . substr($phone, 3);
+            } elseif (str_starts_with($phone, '62')) {
                 $phone = '0' . substr($phone, 2);
             }
             $this->merge(['phone' => $phone]);
