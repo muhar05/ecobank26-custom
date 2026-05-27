@@ -23,6 +23,7 @@ use App\Http\Controllers\WastePriceController;
 use App\Http\Controllers\WastePriceImportController;
 use App\Http\Controllers\WasteCategoryImportController;
 use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\WasteCustomerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -56,6 +57,11 @@ Route::get('/bendahara/dashboard', [DashboardController::class, 'bendahara'])
 // Bank Sampah dashboard
 Route::get('/bank-sampah/dashboard', [DashboardController::class, 'bankSampah'])
     ->middleware(['auth', 'permission:view_waste_bank'])->name('bank-sampah.dashboard');
+
+// Bank Sampah Monitoring Audit Dashboard
+Route::get('/bank-sampah/monitoring', [\App\Http\Controllers\BankSampahMonitoringController::class, 'index'])
+    ->middleware(['auth', 'role:admin_bank_sampah|admin_rw'])
+    ->name('bank-sampah.monitoring');
 
 // Warga dashboard
 Route::get('/warga/dashboard', [DashboardController::class, 'warga'])
@@ -141,6 +147,11 @@ Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-samp
     Route::resource('waste-prices', WastePriceController::class)->except(['show']);
 });
 
+// Bank Sampah - Customers
+Route::middleware(['auth', 'permission:manage_waste_customers'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('customers', WasteCustomerController::class);
+});
+
 // Bank Sampah - Deposits
 Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('deposits', DepositController::class)->except(['show']);
@@ -169,5 +180,10 @@ Route::get('/bank-sampah/cash-report', [WasteBankCashReportController::class, 'i
 
 Route::get('/bank-sampah/cash-report/export', [WasteBankCashReportController::class, 'export'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report.export');
+
+// Admin RW - Audit Trail Logs
+Route::get('/admin/audit-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])
+    ->middleware(['auth', 'role:admin_rw'])
+    ->name('admin.audit-logs');
 
 require __DIR__.'/auth.php';

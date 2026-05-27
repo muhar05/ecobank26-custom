@@ -50,7 +50,7 @@
                                         <div class="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                         </div>
-                                        <div class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $w->member->name }}</div>
+                                        <div class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $w->wasteCustomer ? $w->wasteCustomer->name : ($w->member ? $w->member->name : '-') }}</div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">

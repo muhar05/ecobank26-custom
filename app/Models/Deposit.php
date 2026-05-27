@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Deposit extends Model
 {
-    protected $fillable = ['member_id', 'collector_id', 'date', 'total_amount', 'notes'];
+    protected $fillable = ['member_id', 'waste_customer_id', 'collector_id', 'date', 'total_amount', 'notes'];
 
     protected function casts(): array
     {
@@ -18,6 +18,11 @@ class Deposit extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    public function wasteCustomer(): BelongsTo
+    {
+        return $this->belongsTo(WasteCustomer::class);
     }
 
     public function collector(): BelongsTo

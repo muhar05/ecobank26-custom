@@ -4,11 +4,11 @@
             @csrf
             <x-form-section title="Data Nasabah">
                 <div class="space-y-5">
-                    <x-field-group label="Nasabah" name="member_id" required>
-                        <select name="member_id" id="member_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <x-field-group label="Nasabah" name="waste_customer_id" required>
+                        <select name="waste_customer_id" id="waste_customer_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="">-- Pilih Nasabah --</option>
-                            @foreach($members as $m)
-                                <option value="{{ $m->id }}" {{ old('member_id') == $m->id ? 'selected' : '' }}>{{ $m->name }}</option>
+                            @foreach($customers as $c)
+                                <option value="{{ $c->id }}" {{ old('waste_customer_id') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->customer_code }})</option>
                             @endforeach
                         </select>
                     </x-field-group>

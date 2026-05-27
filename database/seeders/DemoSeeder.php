@@ -182,13 +182,27 @@ class DemoSeeder extends Seeder
         $prices = WastePrice::where('collector_id', $collectorId)->get()->keyBy('waste_category_id');
 
         foreach ($members->take(4) as $member) {
+            // Find or create active WasteCustomer for this member
+            $customer = \App\Models\WasteCustomer::firstOrCreate(
+                ['member_id' => $member->id],
+                [
+                    'user_id' => $member->user_id,
+                    'customer_code' => \App\Models\WasteCustomer::generateNextCustomerCode(),
+                    'name' => $member->name,
+                    'phone' => $member->phone,
+                    'address' => $member->address,
+                    'status' => 'active',
+                    'joined_at' => now(),
+                ]
+            );
+
             for ($i = 0; $i < 3; $i++) {
                 $cat = $categories->random();
                 $weight = rand(10, 50) / 10; // 1.0 - 5.0 kg
                 $memberPrice = $prices[$cat->id]->member_price ?? rand(2, 8) * 1000;
 
                 $service->recordDeposit([
-                    'member_id' => $member->id,
+                    'waste_customer_id' => $customer->id,
                     'collector_id' => $collectorId,
                     'date' => now()->subDays(rand(1, 45))->format('Y-m-d'),
                     'notes' => "Setoran sampah {$cat->name}",
@@ -206,9 +220,13 @@ class DemoSeeder extends Seeder
 
         // Withdrawals (small safe amounts)
         foreach ($members->take(3) as $member) {
+            $customer = \App\Models\WasteCustomer::where('member_id', $member->id)->first();
+            if (!$customer) {
+                continue;
+            }
             try {
                 $service->recordWithdrawal([
-                    'member_id' => $member->id,
+                    'waste_customer_id' => $customer->id,
                     'amount' => rand(1, 3) * 5000,
                     'date' => now()->subDays(rand(1, 15))->format('Y-m-d'),
                     'notes' => 'Penarikan saldo',

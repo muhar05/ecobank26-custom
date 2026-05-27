@@ -28,6 +28,7 @@ class RolePermissionSeeder extends Seeder
             'manage_sales',
             'manage_waste_prices',
             'view_waste_reports',
+            'manage_waste_customers',
             // Warga
             'view_own_dashboard',
             'view_own_savings',
@@ -86,6 +87,7 @@ class RolePermissionSeeder extends Seeder
             'manage_sales',
             'manage_waste_prices',
             'view_waste_reports',
+            'manage_waste_customers',
         ]);
 
         $warga = Role::firstOrCreate(['name' => 'warga']);

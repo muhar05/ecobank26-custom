@@ -151,6 +151,19 @@ class BillService
                 $bill->update(['status' => 'partially_paid']);
             }
 
+            // EXPLICIT TRANSACTION LOGGING: bill.payment
+            app(\App\Services\ActivityLogService::class)->logInfo(
+                'bill.payment',
+                "Mencatat pembayaran tagihan {$bill->bill_code} sebesar Rp " . number_format($amountPaid, 0, ',', '.') . " untuk KK {$kk->family_head}.",
+                [
+                    'bill_id' => $bill->id,
+                    'bill_code' => $bill->bill_code,
+                    'receipt_number' => $receiptNumber,
+                    'amount_paid' => $amountPaid,
+                    'payment_method' => $data['payment_method'],
+                ]
+            );
+ 
             return $payment;
         });
     }

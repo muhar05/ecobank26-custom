@@ -17,13 +17,13 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Nasabah <span class="text-red-500">*</span></label>
-                        <select name="member_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <select name="waste_customer_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="">-- Pilih --</option>
-                            @foreach($members as $m)
-                                <option value="{{ $m->id }}" {{ old('member_id', $deposit->member_id) == $m->id ? 'selected' : '' }}>{{ $m->name }}</option>
+                            @foreach($customers as $c)
+                                <option value="{{ $c->id }}" {{ old('waste_customer_id', $deposit->waste_customer_id) == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->customer_code }})</option>
                             @endforeach
                         </select>
-                        @error('member_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('waste_customer_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Pengepul <span class="text-red-500">*</span></label>

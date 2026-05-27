@@ -28,6 +28,11 @@ class Member extends Model
         return $this->hasMany(CommunityContribution::class);
     }
 
+    public function wasteCustomers(): HasMany
+    {
+        return $this->hasMany(WasteCustomer::class);
+    }
+
     public static function generateNextCode(): string
     {
         $last = static::withTrashed()

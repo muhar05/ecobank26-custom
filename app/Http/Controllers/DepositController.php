@@ -8,6 +8,7 @@ use App\Models\DepositDetail;
 use App\Models\Member;
 use App\Models\SavingsLedger;
 use App\Models\WasteCategory;
+use App\Models\WasteCustomer;
 use App\Models\WastePrice;
 use App\Services\BankSampahService;
 use Illuminate\Http\Request;
@@ -18,8 +19,9 @@ class DepositController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $deposits = Deposit::with(['member', 'details.wasteCategory'])
+        $deposits = Deposit::with(['wasteCustomer', 'member', 'details.wasteCategory'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
+                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
                 ->orWhereHas('member', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
                 ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest('date')->paginate(20)->withQueryString();
@@ -28,7 +30,7 @@ class DepositController extends Controller
 
     public function create()
     {
-        $members = Member::orderBy('name')->get();
+        $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
         $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
         $wastePrices = WastePrice::all()->groupBy('collector_id')
@@ -37,13 +39,13 @@ class DepositController extends Controller
                 'collector_price' => (float) $p->collector_price,
             ]));
 
-        return view('bank-sampah.deposits.create', compact('members', 'collectors', 'categories', 'wastePrices'));
+        return view('bank-sampah.deposits.create', compact('customers', 'collectors', 'categories', 'wastePrices'));
     }
 
     public function store(Request $request, BankSampahService $service)
     {
         $request->validate([
-            'member_id' => 'required|exists:members,id',
+            'waste_customer_id' => 'required|exists:waste_customers,id',
             'collector_id' => 'required|exists:collectors,id',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:255',
@@ -56,7 +58,7 @@ class DepositController extends Controller
         }
 
         $service->recordDeposit([
-            'member_id' => $request->member_id,
+            'waste_customer_id' => $request->waste_customer_id,
             'collector_id' => $request->collector_id,
             'date' => $request->date,
             'notes' => $request->notes,
@@ -70,7 +72,7 @@ class DepositController extends Controller
     public function edit(Deposit $deposit)
     {
         $deposit->load('details');
-        $members = Member::orderBy('name')->get();
+        $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
         $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
         $wastePrices = WastePrice::all()->groupBy('collector_id')
@@ -79,13 +81,13 @@ class DepositController extends Controller
                 'collector_price' => (float) $p->collector_price,
             ]));
 
-        return view('bank-sampah.deposits.edit', compact('deposit', 'members', 'collectors', 'categories', 'wastePrices'));
+        return view('bank-sampah.deposits.edit', compact('deposit', 'customers', 'collectors', 'categories', 'wastePrices'));
     }
 
     public function update(Request $request, Deposit $deposit)
     {
         $request->validate([
-            'member_id' => 'required|exists:members,id',
+            'waste_customer_id' => 'required|exists:waste_customers,id',
             'collector_id' => 'required|exists:collectors,id',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:255',
@@ -98,10 +100,13 @@ class DepositController extends Controller
         }
 
         $totalAmount = collect($details)->sum('subtotal');
+        $customer = WasteCustomer::findOrFail($request->waste_customer_id);
+        $memberId = $customer->member_id;
 
-        DB::transaction(function () use ($deposit, $request, $details, $totalAmount) {
+        DB::transaction(function () use ($deposit, $request, $details, $totalAmount, $customer, $memberId) {
             $deposit->update([
-                'member_id' => $request->member_id,
+                'member_id' => $memberId,
+                'waste_customer_id' => $customer->id,
                 'collector_id' => $request->collector_id,
                 'date' => $request->date,
                 'total_amount' => $totalAmount,
@@ -118,7 +123,8 @@ class DepositController extends Controller
             SavingsLedger::where('reference_type', Deposit::class)
                 ->where('reference_id', $deposit->id)
                 ->update([
-                    'member_id' => $request->member_id,
+                    'member_id' => $memberId,
+                    'waste_customer_id' => $customer->id,
                     'amount' => $totalAmount,
                 ]);
         });

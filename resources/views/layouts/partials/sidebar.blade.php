@@ -166,6 +166,12 @@
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></x-slot>
                     Harga Sampah
                 </x-sidebar-link>
+                @can('manage_waste_customers')
+                <x-sidebar-link href="/bank-sampah/customers" :active="request()->is('bank-sampah/customers*')">
+                    <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></x-slot>
+                    Data Nasabah
+                </x-sidebar-link>
+                @endcan
             </div>
         </div>
 
@@ -200,6 +206,17 @@
                 </x-sidebar-link>
             </div>
         </div>
+        @if(auth()->user()?->hasRole('admin_bank_sampah') || auth()->user()?->hasRole('admin_rw'))
+        <div>
+            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Audit & Kontrol</p>
+            <div class="space-y-1">
+                <x-sidebar-link href="/bank-sampah/monitoring" :active="request()->is('bank-sampah/monitoring*')">
+                    <x-slot name="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438a3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138a3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0a3.42 3.42 0 00-1.946-.806a3.42 3.42 0 01-3.138-3.138a3.42 3.42 0 00-.806-1.946a3.42 3.42 0 010-4.438a3.42 3.42 0 00.806-1.946a3.42 3.42 0 013.138-3.138z"/></svg></x-slot>
+                    Monitoring Audit
+                </x-sidebar-link>
+            </div>
+        </div>
+        @endif
         @endrole
 
         {{-- Section: Bank Sampah (admin_rt view-only) --}}
@@ -225,6 +242,19 @@
             </div>
         </div>
         @endcan
+        @endrole
+
+        {{-- Section: Keamanan & Audit (admin_rw only) --}}
+        @role('admin_rw')
+        <div>
+            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Keamanan & Audit</p>
+            <div class="space-y-1">
+                <x-sidebar-link href="/admin/audit-logs" :active="request()->is('admin/audit-logs*')">
+                    <x-slot name="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806a3.42 3.42 0 014.438 0a3.42 3.42 0 001.946.806a3.42 3.42 0 013.138 3.138a3.42 3.42 0 00.806 1.946a3.42 3.42 0 010 4.438a3.42 3.42 0 00-.806 1.946a3.42 3.42 0 01-3.138 3.138a3.42 3.42 0 00-1.946.806a3.42 3.42 0 01-4.438 0a3.42 3.42 0 00-1.946-.806a3.42 3.42 0 01-3.138-3.138a3.42 3.42 0 00-.806-1.946a3.42 3.42 0 010-4.438a3.42 3.42 0 00.806-1.946a3.42 3.42 0 013.138-3.138z"/></svg></x-slot>
+                    Log Audit Sistem
+                </x-sidebar-link>
+            </div>
+        </div>
         @endrole
 
     </nav>

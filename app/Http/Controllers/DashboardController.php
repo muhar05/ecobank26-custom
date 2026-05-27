@@ -77,20 +77,42 @@ class DashboardController extends Controller
         $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
             ->latest('id')->limit(5)->get();
 
-        // Savings balance for linked member
-        $member = auth()->user()->member;
+        // Savings balance for linked member & waste customers
+        $user = auth()->user();
+        $member = $user->member;
         $data['member'] = $member;
         $data['kk'] = null;
 
-        if ($member) {
-            $credit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'credit')->sum('amount');
-            $debit = \App\Models\SavingsLedger::where('member_id', $member->id)->where('type', 'debit')->sum('amount');
+        $customerIds = \App\Models\WasteCustomer::where(function($q) use ($user, $member) {
+            $q->where('user_id', $user->id);
+            if ($member) {
+                $q->orWhere('member_id', $member->id);
+            }
+        })->pluck('id');
+
+        $hasCustomer = !$customerIds->isEmpty();
+
+        if ($hasCustomer || $member) {
+            $credit = \App\Models\SavingsLedger::where(function($q) use ($customerIds, $member) {
+                $q->whereIn('waste_customer_id', $customerIds);
+                if ($member) {
+                    $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $member->id));
+                }
+            })->where('type', 'credit')->sum('amount');
+
+            $debit = \App\Models\SavingsLedger::where(function($q) use ($customerIds, $member) {
+                $q->whereIn('waste_customer_id', $customerIds);
+                if ($member) {
+                    $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $member->id));
+                }
+            })->where('type', 'debit')->sum('amount');
+
             $data['savingsBalance'] = $credit - $debit;
             $data['savingsCredit'] = $credit;
             $data['savingsDebit'] = $debit;
 
             // KK Billing integration
-            if ($member->kk_id) {
+            if ($member && $member->kk_id) {
                 $kk = \App\Models\Kk::with('rt')->find($member->kk_id);
                 $data['kk'] = $kk;
 

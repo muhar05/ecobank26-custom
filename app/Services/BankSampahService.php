@@ -18,10 +18,14 @@ class BankSampahService
     public function recordDeposit(array $data): Deposit
     {
         return DB::transaction(function () use ($data) {
+            $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
+            $memberId = $customer->member_id;
+            
             $totalAmount = collect($data['details'])->sum('subtotal');
 
             $deposit = Deposit::create([
-                'member_id' => $data['member_id'],
+                'member_id' => $memberId,
+                'waste_customer_id' => $customer->id,
                 'collector_id' => $data['collector_id'],
                 'date' => $data['date'],
                 'total_amount' => $totalAmount,
@@ -39,13 +43,26 @@ class BankSampahService
             }
 
             SavingsLedger::create([
-                'member_id' => $data['member_id'],
+                'member_id' => $memberId,
+                'waste_customer_id' => $customer->id,
                 'type' => 'credit',
                 'amount' => $totalAmount,
                 'description' => 'Setoran sampah',
                 'reference_type' => Deposit::class,
                 'reference_id' => $deposit->id,
             ]);
+
+            // EXPLICIT TRANSACTION LOGGING: deposit.create
+            app(\App\Services\ActivityLogService::class)->logInfo(
+                'deposit.create',
+                "Mencatat setoran sampah sebesar Rp " . number_format($totalAmount, 0, ',', '.') . " untuk nasabah {$customer->name}.",
+                [
+                    'deposit_id' => $deposit->id,
+                    'waste_customer_id' => $customer->id,
+                    'total_amount' => $totalAmount,
+                    'details' => $data['details']
+                ]
+            );
 
             return $deposit;
         });
@@ -54,22 +71,37 @@ class BankSampahService
     public function recordWithdrawal(array $data): Withdrawal
     {
         return DB::transaction(function () use ($data) {
-            $depositCount = Deposit::where('member_id', $data['member_id'])->count();
+            $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
+            $memberId = $customer->member_id;
+
+            $depositCount = Deposit::where(function($q) use ($customer) {
+                $q->where('waste_customer_id', $customer->id);
+                if ($customer->member_id) {
+                    $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
+                }
+            })->count();
 
             if ($depositCount < self::MIN_DEPOSITS_BEFORE_WITHDRAWAL) {
                 throw new \App\Exceptions\MinimumDepositException($depositCount, self::MIN_DEPOSITS_BEFORE_WITHDRAWAL);
             }
 
-            $balance = $this->getMemberBalance($data['member_id']);
+            $balance = $this->getCustomerBalance($customer->id);
 
             if ($data['amount'] > $balance) {
                 throw new \App\Exceptions\InsufficientBalanceException($balance);
             }
 
-            $withdrawal = Withdrawal::create($data);
+            $withdrawal = Withdrawal::create([
+                'member_id' => $memberId,
+                'waste_customer_id' => $customer->id,
+                'amount' => $data['amount'],
+                'date' => $data['date'],
+                'notes' => $data['notes'] ?? null,
+            ]);
 
             SavingsLedger::create([
-                'member_id' => $data['member_id'],
+                'member_id' => $memberId,
+                'waste_customer_id' => $customer->id,
                 'type' => 'debit',
                 'amount' => $data['amount'],
                 'description' => $data['notes'] ?? 'Penarikan saldo',
@@ -77,12 +109,49 @@ class BankSampahService
                 'reference_id' => $withdrawal->id,
             ]);
 
+            // EXPLICIT TRANSACTION LOGGING: withdrawal.create
+            app(\App\Services\ActivityLogService::class)->logInfo(
+                'withdrawal.create',
+                "Mencatat penarikan saldo sebesar Rp " . number_format($data['amount'], 0, ',', '.') . " untuk nasabah {$customer->name}.",
+                [
+                    'withdrawal_id' => $withdrawal->id,
+                    'waste_customer_id' => $customer->id,
+                    'amount' => $data['amount']
+                ]
+            );
+
             return $withdrawal;
         });
     }
 
+    public function getCustomerBalance(int $customerId): float
+    {
+        $customer = \App\Models\WasteCustomer::findOrFail($customerId);
+
+        $credit = SavingsLedger::where(function($q) use ($customer) {
+            $q->where('waste_customer_id', $customer->id);
+            if ($customer->member_id) {
+                $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
+            }
+        })->where('type', 'credit')->sum('amount');
+
+        $debit = SavingsLedger::where(function($q) use ($customer) {
+            $q->where('waste_customer_id', $customer->id);
+            if ($customer->member_id) {
+                $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
+            }
+        })->where('type', 'debit')->sum('amount');
+
+        return (float) ($credit - $debit);
+    }
+
     public function getMemberBalance(int $memberId): float
     {
+        $customer = \App\Models\WasteCustomer::where('member_id', $memberId)->first();
+        if ($customer) {
+            return $this->getCustomerBalance($customer->id);
+        }
+
         $credit = SavingsLedger::where('member_id', $memberId)->where('type', 'credit')->sum('amount');
         $debit = SavingsLedger::where('member_id', $memberId)->where('type', 'debit')->sum('amount');
 
