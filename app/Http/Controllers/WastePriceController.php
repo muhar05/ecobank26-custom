@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Collector;
 use App\Models\WasteCategory;
 use App\Models\WastePrice;
+use App\Models\WasteCategoryGroup;
 use Illuminate\Http\Request;
 
 class WastePriceController extends Controller
@@ -12,11 +13,45 @@ class WastePriceController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $prices = WastePrice::with(['wasteCategory', 'collector'])
-            ->when($search, fn($q) => $q->whereHas('wasteCategory', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
-                ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest()->paginate(20)->withQueryString();
-        return view('bank-sampah.waste-prices.index', compact('prices', 'search'));
+        $groupId = $request->input('waste_category_group_id');
+
+        $pricesQuery = WastePrice::with(['wasteCategory.wasteCategoryGroup', 'collector'])
+            ->when($search, function($q) use ($search) {
+                $q->where(function($q2) use ($search) {
+                    $q2->whereHas('wasteCategory', function($q3) use ($search) {
+                        $q3->where('name', 'like', "%{$search}%")
+                           ->orWhere('code', 'like', "%{$search}%");
+                    })->orWhereHas('collector', function($q3) use ($search) {
+                        $q3->where('name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->when($groupId, function($q) use ($groupId) {
+                if ($groupId === 'uncategorized') {
+                    $q->whereHas('wasteCategory', function($q2) {
+                        $q2->whereNull('waste_category_group_id');
+                    });
+                } else {
+                    $q->whereHas('wasteCategory', function($q2) use ($groupId) {
+                        $q2->where('waste_category_group_id', $groupId);
+                    });
+                }
+            });
+
+        $prices = $pricesQuery->latest()->paginate(20)->withQueryString();
+
+        // Fetch dynamic groups with category counts and price counts
+        $groups = WasteCategoryGroup::withCount(['wasteCategories', 'wasteCategories as active_prices_count' => function($q) {
+            $q->whereHas('wastePrices');
+        }])->orderBy('name')->get();
+
+        $totalCategories = WasteCategory::count();
+        $totalActivePrices = WastePrice::count();
+        $uncategorizedCount = WasteCategory::whereNull('waste_category_group_id')->count();
+
+        return view('bank-sampah.waste-prices.index', compact(
+            'prices', 'search', 'groupId', 'groups', 'totalCategories', 'totalActivePrices', 'uncategorizedCount'
+        ));
     }
 
     public function create()

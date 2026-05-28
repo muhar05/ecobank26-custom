@@ -24,6 +24,7 @@ use App\Http\Controllers\WastePriceImportController;
 use App\Http\Controllers\WasteCategoryImportController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WasteCustomerController;
+use App\Http\Controllers\WasteCategoryGroupController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -157,7 +158,10 @@ Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-samp
     Route::get('waste-prices/import', [WastePriceImportController::class, 'showForm'])->name('waste-prices.import');
     Route::post('waste-prices/import', [WastePriceImportController::class, 'import'])->name('waste-prices.import.store');
     Route::get('waste-prices/import/template', [WastePriceImportController::class, 'template'])->name('waste-prices.import.template');
+    Route::get('waste-prices/import/failed-rows', [WastePriceImportController::class, 'downloadFailedRows'])->name('waste-prices.import.failed-rows');
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
+    Route::patch('waste-category-groups/{waste_category_group}/toggle', [WasteCategoryGroupController::class, 'toggle'])->name('waste-category-groups.toggle');
+    Route::resource('waste-category-groups', WasteCategoryGroupController::class)->except(['show', 'destroy']);
     Route::resource('collectors', CollectorController::class)->except(['show']);
     Route::resource('waste-prices', WastePriceController::class)->except(['show']);
 });
@@ -180,6 +184,11 @@ Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampa
 // Bank Sampah - Sales
 Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('sales', SaleController::class)->except(['show']);
+});
+
+// Bank Sampah - Expenses
+Route::middleware(['auth', 'role:admin_bank_sampah|admin_rw'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::resource('expenses', \App\Http\Controllers\WasteBankExpenseController::class)->only(['index', 'create', 'store', 'show']);
 });
 
 // Bank Sampah - Savings Report

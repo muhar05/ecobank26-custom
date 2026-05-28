@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             FundCategorySeeder::class,
             DefaultAdminSeeder::class,
             DefaultAppSettingsSeeder::class,
+            DefaultWasteCategoryGroupSeeder::class,
             DemoSeeder::class,
         ]);
     }

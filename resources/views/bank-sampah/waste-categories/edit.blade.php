@@ -1,7 +1,8 @@
 <x-layouts.dashboard title="Edit Kategori Sampah">
-    <x-form-card title="Edit Kategori Sampah" description="Perbarui informasi kategori sampah.">
+    <x-form-card title="Edit Kategori Sampah" description="Ubah data kategori sampah.">
         <form method="POST" action="{{ route('bank-sampah.waste-categories.update', $category) }}">
-            @csrf @method('PUT')
+            @csrf
+            @method('PUT')
             <x-form-section title="Informasi Kategori">
                 <div class="space-y-5">
                     <x-field-group label="Nama Kategori" name="name" required>
@@ -9,27 +10,36 @@
                     </x-field-group>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <x-field-group label="Grup Kategori" name="category_group" required>
-                            <select name="category_group" id="category_group" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="waste_category_group_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Grup Kategori</label>
+                                <a href="{{ route('bank-sampah.waste-category-groups.index') }}" class="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition flex items-center gap-1">
+                                    Kelola Grup &rarr;
+                                </a>
+                            </div>
+                            <select name="waste_category_group_id" id="waste_category_group_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                 <option value="">-- Pilih Grup --</option>
-                                @foreach(\App\Models\WasteCategory::GROUPS as $group)
-                                    <option value="{{ $group }}" {{ old('category_group', $category->category_group) === $group ? 'selected' : '' }}>{{ $group }}</option>
+                                @foreach($groups as $group)
+                                    <option value="{{ $group->id }}" {{ old('waste_category_group_id', $category->waste_category_group_id) == $group->id ? 'selected' : '' }}>{{ $group->name }} ({{ $group->code }})</option>
                                 @endforeach
                             </select>
-                        </x-field-group>
-
+                            @error('waste_category_group_id')
+                                <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        
                         <x-field-group label="Satuan" name="unit" required>
                             <input type="text" name="unit" id="unit" value="{{ old('unit', $category->unit) }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                         </x-field-group>
                     </div>
 
-                    <x-field-group label="Kode Kategori (Opsional)" name="code" helper="Kosongkan kode jika ingin digenerate otomatis.">
-                        <input type="text" name="code" id="code" value="{{ old('code', $category->code) }}" placeholder="Contoh: PLS.01" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 font-mono">
+                    <x-field-group label="Kode Kategori (Opsional)" name="code" helper="Kosongkan kode jika ingin digenerate otomatis berdasarkan grup.">
+                        <input type="text" name="code" id="code" value="{{ old('code', $category->code) }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 font-mono uppercase">
                     </x-field-group>
                 </div>
             </x-form-section>
 
-            <x-form-actions cancelUrl="{{ route('bank-sampah.waste-categories.index') }}" submitLabel="Perbarui" />
+            <x-form-actions cancelUrl="{{ route('bank-sampah.waste-categories.index') }}" submitLabel="Perbarui Kategori" />
         </form>
     </x-form-card>
 </x-layouts.dashboard>

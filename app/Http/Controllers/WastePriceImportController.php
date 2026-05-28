@@ -6,6 +6,10 @@ use App\Models\Collector;
 use App\Models\WasteCategory;
 use App\Models\WastePrice;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\WastePriceTemplateExport;
+use App\Exports\WastePriceFailedRowsExport;
+use Carbon\Carbon;
 
 class WastePriceImportController extends Controller
 {
@@ -16,96 +20,151 @@ class WastePriceImportController extends Controller
 
     public function template()
     {
-        $filename = 'template-harga-sampah.csv';
-        $headers = ['collector_name', 'waste_category_name', 'unit', 'member_price', 'collector_price'];
-        $sample = [
-            ['Bu Erta', 'Botol Putih Bersih', 'kg', '2800', '3100'],
-            ['Bu Erta', 'Botol Putih Kotor', 'kg', '1500', '1800'],
-            ['Bu Erta', 'Kardus Bersih', 'kg', '1200', '1500'],
-        ];
-
-        return response()->streamDownload(function () use ($headers, $sample) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, $headers);
-            foreach ($sample as $row) {
-                fputcsv($handle, $row);
-            }
-            fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        return Excel::download(new WastePriceTemplateExport(), 'template-harga-sampah.xlsx');
     }
 
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048',
+            'file' => 'required|file|mimes:xlsx,xls|max:2048',
         ]);
 
         $file = $request->file('file');
-        $handle = fopen($file->getRealPath(), 'r');
-
-        if (!$handle) {
-            return back()->withErrors(['file' => 'Gagal membaca file.']);
+        
+        try {
+            $sheets = Excel::toArray(new WastePriceTemplateExport(), $file);
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'Gagal membaca file Excel. Pastikan format file benar.']);
         }
 
-        $header = fgetcsv($handle);
-        if (!$header) {
-            fclose($handle);
-            return back()->withErrors(['file' => 'File kosong.']);
+        if (empty($sheets) || empty($sheets[0])) {
+            return back()->withErrors(['file' => 'File kosong atau sheet DATA IMPORT tidak ditemukan.']);
         }
 
-        // Normalize header
-        $header = array_map(fn ($h) => strtolower(trim($h)), $header);
-        $required = ['collector_name', 'waste_category_name', 'member_price', 'collector_price'];
-        $missing = array_diff($required, $header);
-
-        if (!empty($missing)) {
-            fclose($handle);
-            return back()->withErrors(['file' => 'Kolom wajib tidak ditemukan: ' . implode(', ', $missing)]);
-        }
+        $importData = $sheets[0];
+        
+        // Remove header row (index 0)
+        $header = array_shift($importData);
 
         $created = 0;
         $updated = 0;
+        $failedRows = [];
         $errors = [];
-        $row = 1;
+        $rowNumber = 1;
 
-        while (($data = fgetcsv($handle)) !== false) {
-            $row++;
-            $mapped = array_combine($header, array_pad($data, count($header), ''));
+        $collector = Collector::first() ?: Collector::create([
+            'name' => 'Bu Erta', 
+            'phone' => '081234567890', 
+            'address' => 'Alamat Agregator'
+        ]);
 
-            $collectorName = trim($mapped['collector_name'] ?? '');
-            $categoryName = trim($mapped['waste_category_name'] ?? '');
-            $unit = trim($mapped['unit'] ?? '') ?: 'kg';
-            $memberPrice = $mapped['member_price'] ?? '';
-            $collectorPrice = $mapped['collector_price'] ?? '';
+        foreach ($importData as $row) {
+            $rowNumber++;
 
-            // Validate row
-            if ($collectorName === '' || $categoryName === '') {
-                $errors[] = "Baris {$row}: collector_name dan waste_category_name wajib diisi.";
-                continue;
-            }
-            if (!is_numeric($memberPrice) || $memberPrice < 0) {
-                $errors[] = "Baris {$row}: member_price harus angka >= 0.";
-                continue;
-            }
-            if (!is_numeric($collectorPrice) || $collectorPrice < 0) {
-                $errors[] = "Baris {$row}: collector_price harus angka >= 0.";
-                continue;
-            }
-            if ((float) $collectorPrice < (float) $memberPrice) {
-                $errors[] = "Baris {$row}: collector_price harus >= member_price.";
+            // Skip completely empty rows
+            $nonEmptyCells = array_filter($row, fn($cell) => $cell !== null && trim($cell) !== '');
+            if (empty($nonEmptyCells)) {
                 continue;
             }
 
-            $collector = Collector::firstOrCreate(
-                ['name' => $collectorName],
-                ['phone' => null, 'address' => null]
-            );
+            $groupCode = isset($row[0]) ? trim($row[0]) : '';
+            $groupName = isset($row[1]) ? trim($row[1]) : '';
+            $categoryCode = isset($row[2]) ? trim($row[2]) : '';
+            $categoryName = isset($row[3]) ? trim($row[3]) : '';
+            $unit = isset($row[4]) ? trim($row[4]) : '';
+            $memberPrice = isset($row[5]) ? trim($row[5]) : '';
+            $collectorPrice = isset($row[6]) ? trim($row[6]) : '';
+            $tanggalBerlakuRaw = isset($row[7]) ? trim($row[7]) : '';
 
-            $category = WasteCategory::firstOrCreate(
-                ['name' => $categoryName],
-                ['unit' => $unit]
-            );
+            $reason = null;
 
+            // Wajib validation
+            if ($categoryName === '') {
+                $reason = 'Nama Kategori Sampah wajib diisi.';
+            } elseif ($unit === '') {
+                $reason = 'Satuan wajib diisi.';
+            } elseif ($memberPrice === '' || !is_numeric($memberPrice) || $memberPrice < 0) {
+                $reason = 'Harga Beli dari Nasabah wajib diisi dengan angka >= 0.';
+            } elseif ($collectorPrice === '' || !is_numeric($collectorPrice) || $collectorPrice < 0) {
+                $reason = 'Harga Jual ke Agregator wajib diisi dengan angka >= 0.';
+            } elseif ((float) $collectorPrice < (float) $memberPrice) {
+                $reason = 'Harga Jual ke Agregator harus lebih besar atau sama dengan Harga Beli dari Nasabah.';
+            }
+
+            if ($reason) {
+                $rowWithReason = $row;
+                $rowWithReason[8] = $reason;
+                $failedRows[] = $rowWithReason;
+                $errors[] = "Baris {$rowNumber}: {$reason}";
+                continue;
+            }
+
+            // Category Lookup
+            $category = null;
+            if (!empty($categoryCode)) {
+                $category = WasteCategory::where('code', $categoryCode)->first();
+            }
+
+            if (!$category && !empty($categoryName)) {
+                // Look up by name and group
+                $category = WasteCategory::where('name', $categoryName)
+                    ->when(!empty($groupCode) || !empty($groupName), function($q) use ($groupCode, $groupName) {
+                        $q->whereHas('wasteCategoryGroup', function($q2) use ($groupCode, $groupName) {
+                            if (!empty($groupCode) && !empty($groupName)) {
+                                $q2->where('code', $groupCode)->orWhere('name', $groupName);
+                            } elseif (!empty($groupCode)) {
+                                $q2->where('code', $groupCode);
+                            } elseif (!empty($groupName)) {
+                                $q2->where('name', $groupName);
+                            }
+                        });
+                    })->first();
+
+                // If not found and no group filter specified, check by name only
+                if (!$category && empty($groupCode) && empty($groupName)) {
+                    $category = WasteCategory::where('name', $categoryName)->first();
+                }
+            }
+
+            if (!$category) {
+                $rowWithReason = $row;
+                $rowWithReason[8] = 'Kategori sampah belum terdaftar';
+                $failedRows[] = $rowWithReason;
+                $errors[] = "Baris {$rowNumber}: Kategori sampah belum terdaftar";
+                continue;
+            }
+
+            // Parse Date
+            $tanggalBerlaku = now()->format('Y-m-d');
+            if (!empty($tanggalBerlakuRaw)) {
+                if (is_numeric($tanggalBerlakuRaw)) {
+                    try {
+                        $tanggalBerlaku = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($tanggalBerlakuRaw))->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $tanggalBerlaku = now()->format('Y-m-d');
+                    }
+                } else {
+                    try {
+                        $parsedDate = Carbon::parse($tanggalBerlakuRaw);
+                        if ($parsedDate->greaterThan(now()->addYear())) {
+                            $rowWithReason = $row;
+                            $rowWithReason[8] = 'Tanggal berlaku terlalu jauh di masa depan (maksimal 1 tahun)';
+                            $failedRows[] = $rowWithReason;
+                            $errors[] = "Baris {$rowNumber}: Tanggal berlaku terlalu jauh.";
+                            continue;
+                        }
+                        $tanggalBerlaku = $parsedDate->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $rowWithReason = $row;
+                        $rowWithReason[8] = 'Format tanggal tidak valid. Gunakan YYYY-MM-DD';
+                        $failedRows[] = $rowWithReason;
+                        $errors[] = "Baris {$rowNumber}: Tanggal tidak valid.";
+                        continue;
+                    }
+                }
+            }
+
+            // Save/Update
             $existing = WastePrice::where('collector_id', $collector->id)
                 ->where('waste_category_id', $category->id)
                 ->first();
@@ -129,12 +188,28 @@ class WastePriceImportController extends Controller
             }
         }
 
-        fclose($handle);
+        // Store failed rows in session
+        if (!empty($failedRows)) {
+            session(['waste_price_import_failed_rows' => $failedRows]);
+        } else {
+            session()->forget('waste_price_import_failed_rows');
+        }
 
         return back()->with('import_result', [
             'created' => $created,
             'updated' => $updated,
             'errors' => $errors,
+            'has_failed' => !empty($failedRows),
         ]);
+    }
+
+    public function downloadFailedRows()
+    {
+        $failedRows = session('waste_price_import_failed_rows');
+        if (empty($failedRows)) {
+            return back()->withErrors(['file' => 'Tidak ada baris gagal yang dapat diunduh.']);
+        }
+
+        return Excel::download(new WastePriceFailedRowsExport($failedRows), 'failed-rows-harga-sampah.xlsx');
     }
 }

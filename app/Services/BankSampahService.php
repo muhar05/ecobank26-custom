@@ -243,4 +243,50 @@ class BankSampahService
 
         return $latest ? (float) $latest->balance : 0;
     }
+
+    public function recordExpense(array $data, ?int $recordedBy = null): \App\Models\WasteBankExpense
+    {
+        return DB::transaction(function () use ($data, $recordedBy) {
+            $amount = (float) $data['amount'];
+            
+            $currentBalance = $this->getWasteBankBalance();
+            if ($amount > $currentBalance) {
+                // If allow_negative_balance config is implemented later, it will be checked here.
+                throw new \App\Exceptions\InsufficientBalanceException($currentBalance);
+            }
+
+            $expense = \App\Models\WasteBankExpense::create([
+                'expense_code' => $data['expense_code'] ?? \App\Models\WasteBankExpense::generateExpenseCode(),
+                'amount' => $amount,
+                'description' => $data['description'],
+                'expense_date' => $data['expense_date'],
+                'recorded_by' => $recordedBy ?? auth()->id(),
+                'proof_path' => $data['proof_path'] ?? null,
+            ]);
+
+            WasteBankCashLedger::create([
+                'type' => 'out',
+                'amount' => $amount,
+                'balance' => $currentBalance - $amount,
+                'reference_type' => \App\Models\WasteBankExpense::class,
+                'reference_id' => $expense->id,
+                'date' => $expense->expense_date,
+                'description' => 'Pengeluaran operasional: ' . $expense->expense_code,
+            ]);
+
+            app(\App\Services\ActivityLogService::class)->logInfo(
+                'waste_bank_expense.create',
+                "Mencatat pengeluaran operasional bank sampah sebesar Rp " . number_format($amount, 0, ',', '.') . " [{$expense->expense_code}]",
+                [
+                    'expense_code' => $expense->expense_code,
+                    'amount' => $amount,
+                    'recorded_by' => $expense->recorded_by,
+                    'balance_before' => $currentBalance,
+                    'balance_after' => $currentBalance - $amount,
+                ]
+            );
+
+            return $expense;
+        });
+    }
 }

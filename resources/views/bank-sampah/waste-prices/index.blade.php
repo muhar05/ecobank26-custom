@@ -24,8 +24,42 @@
             </div>
         @endif
 
+        {{-- Summary Cards --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide">Total Harga Aktif</p>
+                <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ $totalActivePrices ?? 0 }}</p>
+            </div>
+            @foreach($groups as $g)
+                <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-1.5 py-0.5 text-[9px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">{{ $g->code }}</span>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate" title="{{ $g->name }}">{{ $g->name }}</p>
+                    <p class="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                        {{ $g->active_prices_count }} / {{ $g->waste_categories_count }}
+                        <span class="block text-[9px] text-slate-400 font-normal mt-0.5">Harga / Kategori</span>
+                    </p>
+                </div>
+            @endforeach
+        </div>
+
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
             <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <form action="{{ route('bank-sampah.waste-prices.index') }}" method="GET" class="flex items-center gap-2" id="filter-form">
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        <select name="waste_category_group_id" class="rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm shadow-sm focus:ring-emerald-500 focus:border-emerald-500" onchange="document.getElementById('filter-form').submit()">
+                            <option value="">Semua Grup</option>
+                            <option value="uncategorized" {{ request('waste_category_group_id') === 'uncategorized' ? 'selected' : '' }}>Belum Dikategorikan</option>
+                            @foreach($groups as $g)
+                                <option value="{{ $g->id }}" {{ request('waste_category_group_id') == $g->id ? 'selected' : '' }}>{{ $g->name }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                </div>
                 <div class="w-full sm:max-w-md">
                     <x-table-toolbar :search="$search ?? ''" placeholder="Cari harga berdasarkan kategori..." />
                 </div>
@@ -36,12 +70,13 @@
                     <thead class="bg-white dark:bg-slate-900">
                         <tr>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Kategori Sampah</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Grup</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Agregator</th>
-                            <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Harga Nasabah</th>
-                            <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Harga Agregator</th>
+                            <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Harga Beli Nasabah</th>
+                            <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Harga Jual Agregator</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 Margin
-                                <span class="block text-[10px] text-slate-400 font-normal mt-0.5 normal-case tracking-normal">Keuntungan bank sampah</span>
+                                <span class="block text-[10px] text-slate-400 font-normal mt-0.5 normal-case tracking-normal">Margin Bank Sampah</span>
                             </th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Aksi</th>
                         </tr>
@@ -54,8 +89,26 @@
                                         <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                                         </div>
-                                        <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $price->wasteCategory->name ?? '-' }}</div>
+                                        <div>
+                                            <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $price->wasteCategory->name ?? '-' }}</div>
+                                            <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{{ $price->wasteCategory->code ?? '-' }}</div>
+                                        </div>
                                     </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($price->wasteCategory && $price->wasteCategory->wasteCategoryGroup)
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                            {{ $price->wasteCategory->wasteCategoryGroup->name }}
+                                        </span>
+                                    @elseif($price->wasteCategory && $price->wasteCategory->category_group)
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                            {{ $price->wasteCategory->category_group }} (Legacy)
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                            Belum Dikategorikan
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -64,10 +117,10 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">Rp {{ number_format($price->member_price, 0, ',', '.') }}</div>
+                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">Rp {{ number_format($price->member_price, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rp {{ number_format($price->collector_price, 0, ',', '.') }}</div>
+                                    <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rp {{ number_format($price->collector_price, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
                                     @php
@@ -84,7 +137,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
                                         <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                                             <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

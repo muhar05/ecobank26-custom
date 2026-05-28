@@ -6,6 +6,9 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola daftar kategori dan satuan sampah</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('bank-sampah.waste-category-groups.index') }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition">
+                    Kelola Grup
+                </a>
                 <a href="{{ route('bank-sampah.waste-categories.import') }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Import Data
@@ -25,27 +28,26 @@
         @endif
 
         {{-- Summary Cards --}}
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm">
                 <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide">Total Kategori</p>
                 <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ $totalCategories ?? 0 }}</p>
             </div>
-            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-900/50 flex flex-col justify-between shadow-sm">
-                <p class="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wide">Plastik</p>
-                <p class="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">{{ $totalPlastik ?? 0 }}</p>
-            </div>
-            <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-100 dark:border-amber-900/50 flex flex-col justify-between shadow-sm">
-                <p class="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wide">Kertas</p>
-                <p class="text-2xl font-bold text-amber-900 dark:text-amber-100 mt-1">{{ $totalKertas ?? 0 }}</p>
-            </div>
-            <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 flex flex-col justify-between shadow-sm">
-                <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wide">Logam</p>
-                <p class="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{{ $totalLogam ?? 0 }}</p>
-            </div>
-            <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/50 flex flex-col justify-between shadow-sm">
-                <p class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wide">Grup Lainnya</p>
-                <p class="text-2xl font-bold text-emerald-900 dark:text-emerald-100 mt-1">{{ $totalOther ?? 0 }}</p>
-            </div>
+            @foreach($groups as $g)
+                <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-1.5 py-0.5 text-[9px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">{{ $g->code }}</span>
+                    </div>
+                    <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate" title="{{ $g->name }}">{{ $g->name }}</p>
+                    <p class="text-xl font-bold text-slate-900 dark:text-white mt-1">{{ $g->waste_categories_count }}</p>
+                </div>
+            @endforeach
+            @if($uncategorizedCount > 0)
+                <div class="bg-slate-50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide">Belum Grup</p>
+                    <p class="text-xl font-bold text-slate-900 dark:text-white mt-1">{{ $uncategorizedCount }}</p>
+                </div>
+            @endif
         </div>
 
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
@@ -55,11 +57,11 @@
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
-                        <select name="category_group" class="rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm shadow-sm focus:ring-emerald-500 focus:border-emerald-500" onchange="document.getElementById('filter-form').submit()">
+                        <select name="waste_category_group_id" class="rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm shadow-sm focus:ring-emerald-500 focus:border-emerald-500" onchange="document.getElementById('filter-form').submit()">
                             <option value="">Semua Grup</option>
-                            <option value="uncategorized" {{ request('category_group') === 'uncategorized' ? 'selected' : '' }}>Belum Dikategorikan</option>
-                            @foreach(\App\Models\WasteCategory::GROUPS as $group)
-                                <option value="{{ $group }}" {{ request('category_group') === $group ? 'selected' : '' }}>{{ $group }}</option>
+                            <option value="uncategorized" {{ request('waste_category_group_id') === 'uncategorized' ? 'selected' : '' }}>Belum Dikategorikan</option>
+                            @foreach($groups as $g)
+                                <option value="{{ $g->id }}" {{ request('waste_category_group_id') == $g->id ? 'selected' : '' }}>{{ $g->name }}</option>
                             @endforeach
                         </select>
                     </form>
@@ -85,7 +87,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold border border-emerald-200 dark:border-emerald-800">
-                                            {{ substr($category->code ?? '-', 0, 3) }}
+                                            {{ $category->wasteCategoryGroup ? $category->wasteCategoryGroup->code : 'UNC' }}
                                         </div>
                                         <div>
                                             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $category->name }}</div>
@@ -94,9 +96,13 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    @if($category->category_group)
+                                    @if($category->wasteCategoryGroup)
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                                            {{ $category->category_group }}
+                                            {{ $category->wasteCategoryGroup->name }}
+                                        </span>
+                                    @elseif($category->category_group)
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                            {{ $category->category_group }} (Legacy)
                                         </span>
                                     @else
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
