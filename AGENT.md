@@ -130,6 +130,20 @@ graph TD
 
 ---
 
+## 8b. Production Deployment Rules
+
+> [!CAUTION]
+> **JANGAN PERNAH MENGGUNAKAN `migrate:fresh` DI PRODUCTION!**
+> Perintah `migrate:fresh` akan menghapus seluruh database beserta data warga dan kas historis secara permanen.
+> 
+> Gunakan perintah migrasi aman dan seeding parsial berikut saat deploy di Production:
+> ```bash
+> php artisan migrate --force
+> php artisan db:seed --class=DefaultAppSettingsSeeder
+> ```
+
+---
+
 ## 9. Future Roadmap
 
 1. **Import Excel KK**: Impor massal data KK dan anggota keluarga secara instan.

@@ -105,8 +105,12 @@ php artisan key:generate
 # DB_USERNAME=root
 # DB_PASSWORD=
 
-# Migrate and seed
+# Migrate and seed (Local Development Only)
 php artisan migrate:fresh --seed
+
+# Production Deployment (NEVER use migrate:fresh in production!)
+php artisan migrate --force
+php artisan db:seed --class=DefaultAppSettingsSeeder
 
 # Build assets
 npm run build

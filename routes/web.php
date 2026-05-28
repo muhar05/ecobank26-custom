@@ -201,4 +201,10 @@ Route::get('/admin/audit-logs', [\App\Http\Controllers\ActivityLogController::cl
     ->middleware(['auth', 'role:admin_rw'])
     ->name('admin.audit-logs');
 
+// Admin RW - Settings
+Route::middleware(['auth', 'role:admin_rw'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('settings', [\App\Http\Controllers\AppSettingController::class, 'index'])->name('settings.index');
+    Route::post('settings', [\App\Http\Controllers\AppSettingController::class, 'update'])->name('settings.update');
+});
+
 require __DIR__.'/auth.php';

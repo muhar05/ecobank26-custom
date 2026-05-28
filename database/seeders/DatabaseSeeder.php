@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             FundCategorySeeder::class,
             DefaultAdminSeeder::class,
+            DefaultAppSettingsSeeder::class,
             DemoSeeder::class,
         ]);
     }

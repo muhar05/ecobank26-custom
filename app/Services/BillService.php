@@ -34,7 +34,7 @@ class BillService
             }
 
             $generatedCount = 0;
-            $dueDays = config('billing.default_due_days', env('DEFAULT_DUE_DAYS', 10));
+            $dueDays = \App\Models\AppSetting::getInt('billing.default_due_days', 10);
             $dueDate = now()->addDays($dueDays)->toDateString();
 
             // Format year and month for bill code: YYYYMM (e.g. 202605)
@@ -59,8 +59,9 @@ class BillService
                         $increment = str_pad($currentCount + $generatedCount + 1, 4, '0', STR_PAD_LEFT);
                         $rtString = 'RT' . str_pad(preg_replace('/[^0-9]/', '', $kk->rt->rt_number), 3, '0', STR_PAD_LEFT);
                         
-                        // Example format: BILL-202605-RT001-0001
-                        $billCode = "BILL-{$periodString}-{$rtString}-{$increment}";
+                        // Example format: [bill_prefix]-202605-RT001-0001
+                        $billPrefix = \App\Models\AppSetting::getString('billing.bill_prefix', 'BILL');
+                        $billCode = "{$billPrefix}-{$periodString}-{$rtString}-{$increment}";
 
                         Bill::create([
                             'kk_id' => $kk->id,
@@ -101,11 +102,12 @@ class BillService
                 throw new \InvalidArgumentException("Nominal pembayaran melebihi sisa tagihan (Sisa: Rp " . number_format($outstanding, 0, ',', '.') . ").");
             }
 
-            // 2. Generate receipt number automatically: RCPT-YYYYMM-[4-digit increment]
+            // 2. Generate receipt number automatically: [receipt_prefix]-YYYYMM-[4-digit increment]
             $periodString = date('Ym');
-            $rcptCount = \App\Models\BillPayment::where('receipt_number', 'like', "RCPT-{$periodString}-%")->count();
+            $receiptPrefix = \App\Models\AppSetting::getString('billing.receipt_prefix', 'RCPT');
+            $rcptCount = \App\Models\BillPayment::where('receipt_number', 'like', "{$receiptPrefix}-{$periodString}-%")->count();
             $increment = str_pad($rcptCount + 1, 4, '0', STR_PAD_LEFT);
-            $receiptNumber = "RCPT-{$periodString}-{$increment}";
+            $receiptNumber = "{$receiptPrefix}-{$periodString}-{$increment}";
 
             // 3. Find/get member_id if exists for this KK (use head of household or first member if any)
             $kk = $bill->kk;
