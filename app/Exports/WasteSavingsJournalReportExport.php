@@ -14,7 +14,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+
+class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
     protected Request $request;
 
@@ -54,7 +56,9 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         return [
             'Periode' => $startDate->toDateString() . ' s/d ' . $endDate->toDateString(),
             'Nasabah' => $customerName,
-            'Tipe Transaksi' => $type
+            'Tipe Transaksi' => $type,
+            'Dibuat Pada' => now()->toDateTimeString(),
+            'Dibuat Oleh' => auth()->user() ? auth()->user()->name : 'System'
         ];
     }
 
@@ -86,8 +90,26 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         $customerId = $this->request->input('waste_customer_id');
         $type = $this->request->input('type');
 
+        $linkedMemberId = null;
+        if ($customerId) {
+            $customer = WasteCustomer::find($customerId);
+            if ($customer) {
+                $linkedMemberId = $customer->member_id;
+            }
+        }
+
         $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
+            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
+                $q->where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                });
+            })
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -97,7 +119,15 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         // Preceding starting balance for running balance
         $bal = 0;
         if ($customerId) {
-            $startingBalance = SavingsLedger::where('waste_customer_id', $customerId)
+            $startingBalance = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                })
                 ->where('created_at', '<', $startDate)
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
             $bal = (float) $startingBalance;
@@ -169,7 +199,7 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
             $row++;
         }
 
-        $headingsRow = 6;
+        $headingsRow = 8;
         
         $sheet->getStyle('A' . $headingsRow . ':F' . $headingsRow)->applyFromArray([
             'font' => [
@@ -184,7 +214,7 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
 
         $lastRow = $sheet->getHighestRow();
         
-        $sheet->getStyle('E7:F' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
+        $sheet->getStyle('E9:F' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
 
         $sheet->getStyle('A' . $lastRow . ':F' . $lastRow)->applyFromArray([
             'font' => [
@@ -197,5 +227,10 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         ]);
 
         return [];
+    }
+
+    public function startCell(): string
+    {
+        return 'A8';
     }
 }

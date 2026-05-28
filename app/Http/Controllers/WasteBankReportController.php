@@ -287,9 +287,27 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $type = $request->input('type'); // credit or debit
 
+        $linkedMemberId = null;
+        if ($customerId) {
+            $customer = WasteCustomer::find($customerId);
+            if ($customer) {
+                $linkedMemberId = $customer->member_id;
+            }
+        }
+
         // We eagerly calculate running balances in PHP for safety and backward compatibility
         $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
+            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
+                $q->where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                });
+            })
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -297,23 +315,60 @@ class WasteBankReportController extends Controller
 
         // Totals calculated on current filters
         $totalSetor = SavingsLedger::whereBetween('created_at', [$startDate, $endDate])
-            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
+            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
+                $q->where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                });
+            })
             ->where('type', 'credit')
             ->sum('amount');
 
         $totalTarik = SavingsLedger::whereBetween('created_at', [$startDate, $endDate])
-            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
+            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
+                $q->where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                });
+            })
             ->where('type', 'debit')
             ->sum('amount');
 
         $totalSaldo = 0;
+        $pageOpeningBalance = 0;
         if ($customerId) {
-            $totalSaldo = SavingsLedger::where('waste_customer_id', $customerId)
+            $totalSaldo = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                })
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
 
             // Calculate running balance for the paginated collection
-            // 1. Get starting balance before current page
-            $allChronological = SavingsLedger::where('waste_customer_id', $customerId)
+            // 1. Get all chronological data for this customer to map accurate balances
+            $allChronological = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                })
                 ->orderBy('created_at', 'asc')
                 ->orderBy('id', 'asc')
                 ->get();
@@ -332,13 +387,23 @@ class WasteBankReportController extends Controller
             foreach ($ledgers as $ledger) {
                 $ledger->running_balance = $balanceMap[$ledger->id] ?? 0;
             }
+
+            if ($ledgers->isNotEmpty()) {
+                $earliestLedger = $ledgers->last();
+                $earliestBalance = $balanceMap[$earliestLedger->id] ?? 0;
+                if ($earliestLedger->type === 'credit') {
+                    $pageOpeningBalance = $earliestBalance - (float) $earliestLedger->amount;
+                } else {
+                    $pageOpeningBalance = $earliestBalance + (float) $earliestLedger->amount;
+                }
+            }
         }
 
         $customers = WasteCustomer::orderBy('name')->get();
 
         return view('bank-sampah.reports.savings-journal', compact(
             'ledgers', 'startDate', 'endDate', 'customerId', 'type',
-            'totalSetor', 'totalTarik', 'totalSaldo', 'customers'
+            'totalSetor', 'totalTarik', 'totalSaldo', 'pageOpeningBalance', 'customers'
         ));
     }
 
@@ -374,8 +439,26 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $type = $request->input('type');
 
+        $linkedMemberId = null;
+        if ($customerId) {
+            $customer = WasteCustomer::find($customerId);
+            if ($customer) {
+                $linkedMemberId = $customer->member_id;
+            }
+        }
+
         $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
+            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
+                $q->where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                });
+            })
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -384,7 +467,15 @@ class WasteBankReportController extends Controller
         // Calculate running balance per row in chronological order
         $bal = 0;
         if ($customerId) {
-            $startingBalance = SavingsLedger::where('waste_customer_id', $customerId)
+            $startingBalance = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
+                    $sub->where('waste_customer_id', $customerId);
+                    if ($linkedMemberId) {
+                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
+                            $sub2->where('member_id', $linkedMemberId)
+                                 ->whereNull('waste_customer_id');
+                        });
+                    }
+                })
                 ->where('created_at', '<', $startDate)
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
             $bal = $startingBalance;

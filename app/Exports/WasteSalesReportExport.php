@@ -15,7 +15,9 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Carbon\Carbon;
 
-class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+
+class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
     protected Request $request;
 
@@ -61,7 +63,9 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
             'Periode' => $startDate->toDateString() . ' s/d ' . $endDate->toDateString(),
             'Agregator' => $collectorName,
             'Grup Kategori' => $groupName,
-            'Kategori' => $categoryName
+            'Kategori' => $categoryName,
+            'Dibuat Pada' => now()->toDateTimeString(),
+            'Dibuat Oleh' => auth()->user() ? auth()->user()->name : 'System'
         ];
     }
 
@@ -175,7 +179,7 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
             $row++;
         }
 
-        $headingsRow = 7;
+        $headingsRow = 9;
         
         $sheet->getStyle('A' . $headingsRow . ':H' . $headingsRow)->applyFromArray([
             'font' => [
@@ -190,8 +194,8 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
 
         $lastRow = $sheet->getHighestRow();
         
-        $sheet->getStyle('F8:F' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00 "kg"');
-        $sheet->getStyle('G8:H' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
+        $sheet->getStyle('F10:F' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00 "kg"');
+        $sheet->getStyle('G10:H' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
 
         $sheet->getStyle('A' . $lastRow . ':H' . $lastRow)->applyFromArray([
             'font' => [
@@ -204,5 +208,10 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
         ]);
 
         return [];
+    }
+
+    public function startCell(): string
+    {
+        return 'A9';
     }
 }

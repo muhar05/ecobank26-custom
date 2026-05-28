@@ -198,4 +198,119 @@ class WasteBankReportsTest extends TestCase
             'description' => 'Export Excel Laporan Setoran Sampah'
         ]);
     }
+
+    public function test_multi_page_running_balance_keeps_consistency()
+    {
+        $customer = WasteCustomer::create([
+            'customer_code' => 'CUST-MP-01',
+            'name' => 'Nasabah MultiPage',
+            'phone' => '0812',
+            'address' => 'Jl. MP'
+        ]);
+
+        SavingsLedger::truncate();
+
+        // Let's create 30 transactions to trigger pagination (since limit is 25)
+        for ($i = 1; $i <= 30; $i++) {
+            SavingsLedger::create([
+                'waste_customer_id' => $customer->id,
+                'type' => 'credit',
+                'amount' => 1000,
+                'description' => 'Setoran ' . $i,
+                'created_at' => Carbon::now()->subDays(40)->addMinutes($i)
+            ]);
+        }
+
+        // View page 1 (which gets latest 25, i.e., setoran 6 to 30)
+        $response = $this->actingAs($this->adminBankSampah)
+            ->get(route('bank-sampah.reports.savings-journal', [
+                'waste_customer_id' => $customer->id,
+                'page' => 1
+            ]));
+
+        $response->assertStatus(200);
+        $ledgers = $response->viewData('ledgers');
+        $this->assertCount(25, $ledgers);
+        
+        // Page 1 opening balance should carry forward from transaction 5 (balance = 5000)
+        $this->assertEquals(5000, $response->viewData('pageOpeningBalance'));
+        // Latest transaction (30th) should have running balance 30000
+        $this->assertEquals(30000, $ledgers[0]->running_balance);
+
+        // View page 2 (which gets first 5, i.e., setoran 1 to 5)
+        $response = $this->actingAs($this->adminBankSampah)
+            ->get(route('bank-sampah.reports.savings-journal', [
+                'waste_customer_id' => $customer->id,
+                'page' => 2
+            ]));
+
+        $response->assertStatus(200);
+        $ledgers2 = $response->viewData('ledgers');
+        $this->assertCount(5, $ledgers2);
+        
+        // Page 2 opening balance should be 0 (since it's the start of chronological time)
+        $this->assertEquals(0, $response->viewData('pageOpeningBalance'));
+        // Earliest transaction (1st) should have running balance 1000
+        $this->assertEquals(1000, $ledgers2[4]->running_balance);
+        // 5th transaction should have running balance 5000
+        $this->assertEquals(5000, $ledgers2[0]->running_balance);
+    }
+
+    public function test_mixed_legacy_linked_and_mandiri_ledger_resolution()
+    {
+        // Create user/member for legacy
+        $member = \App\Models\Member::create([
+            'member_code' => 'WRG-LEG-01',
+            'name' => 'Warga Legacy',
+            'phone' => '0812345678',
+            'address' => 'Jl. Legacy No. 1'
+        ]);
+
+        $customer = WasteCustomer::create([
+            'customer_code' => 'CUST-LNK-01',
+            'name' => 'Nasabah Linked Warga',
+            'member_id' => $member->id,
+            'phone' => '08123',
+            'address' => 'RT 01'
+        ]);
+
+        SavingsLedger::truncate();
+
+        // 1. Legacy ledger (only member_id)
+        SavingsLedger::create([
+            'member_id' => $member->id,
+            'waste_customer_id' => null,
+            'type' => 'credit',
+            'amount' => 15000,
+            'description' => 'Legacy setoran warga',
+            'created_at' => Carbon::now()->subDays(10)
+        ]);
+
+        // 2. Linked/new ledger (has both waste_customer_id and member_id)
+        SavingsLedger::create([
+            'member_id' => $member->id,
+            'waste_customer_id' => $customer->id,
+            'type' => 'credit',
+            'amount' => 5000,
+            'description' => 'Linked setoran baru',
+            'created_at' => Carbon::now()->subDays(5)
+        ]);
+
+        // Get report for this hybrid customer
+        $response = $this->actingAs($this->adminBankSampah)
+            ->get(route('bank-sampah.reports.savings-journal', [
+                'waste_customer_id' => $customer->id
+            ]));
+
+        $response->assertStatus(200);
+        $ledgers = $response->viewData('ledgers');
+        $this->assertCount(2, $ledgers);
+        
+        // Total balance should be 20,000 (legacy 15k + linked 5k)
+        $this->assertEquals(20000, $response->viewData('totalSaldo'));
+        // Running balance for latest should be 20000
+        $this->assertEquals(20000, $ledgers[0]->running_balance);
+        // Running balance for legacy should be 15000
+        $this->assertEquals(15000, $ledgers[1]->running_balance);
+    }
 }

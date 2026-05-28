@@ -16,7 +16,9 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Carbon\Carbon;
 
-class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+
+class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
     protected Request $request;
 
@@ -68,7 +70,9 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
             'Nasabah' => $customerName,
             'Grup Kategori' => $groupName,
             'Kategori' => $categoryName,
-            'Agregator' => $collectorName
+            'Agregator' => $collectorName,
+            'Dibuat Pada' => now()->toDateTimeString(),
+            'Dibuat Oleh' => auth()->user() ? auth()->user()->name : 'System'
         ];
     }
 
@@ -192,8 +196,8 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
             $row++;
         }
 
-        // Leave an empty row, headings start at row 8
-        $headingsRow = 8;
+        // Leave an empty row, headings start at row 10
+        $headingsRow = 10;
         
         // Style headings
         $sheet->getStyle('A' . $headingsRow . ':H' . $headingsRow)->applyFromArray([
@@ -211,10 +215,10 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
         $lastRow = $sheet->getHighestRow();
         
         // Weight formatting (Col F)
-        $sheet->getStyle('F9:F' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00 "kg"');
+        $sheet->getStyle('F11:F' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00 "kg"');
         
         // Currency formatting (Col G, H)
-        $sheet->getStyle('G9:H' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
+        $sheet->getStyle('G11:H' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
 
         // Style Total Row
         $sheet->getStyle('A' . $lastRow . ':H' . $lastRow)->applyFromArray([
@@ -228,5 +232,10 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
         ]);
 
         return [];
+    }
+
+    public function startCell(): string
+    {
+        return 'A10';
     }
 }

@@ -26,6 +26,11 @@ class WasteCategory extends Model
         return $this->belongsTo(WasteCategoryGroup::class, 'waste_category_group_id');
     }
 
+    public function wastePrices()   
+    {
+        return $this->hasMany(WastePrice::class);
+    }
+
     public static function generateCode($groupInput): string
     {
         $prefix = 'UNC';

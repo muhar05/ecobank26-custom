@@ -82,6 +82,13 @@
             </form>
         </div>
 
+        @if($customerId && isset($pageOpeningBalance))
+            <div class="bg-slate-50 dark:bg-slate-800/40 p-4 border border-slate-200 dark:border-slate-800 rounded-xl flex justify-between items-center text-sm">
+                <span class="text-slate-600 dark:text-slate-400 font-medium">Saldo Awal Halaman Ini (Carry Forward):</span>
+                <span class="font-bold text-slate-900 dark:text-slate-100">Rp {{ number_format($pageOpeningBalance, 0, ',', '.') }}</span>
+            </div>
+        @endif
+
         <!-- Data List -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             <!-- DESKTOP VIEW (Table) -->

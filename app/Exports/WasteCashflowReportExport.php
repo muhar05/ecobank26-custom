@@ -13,7 +13,9 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Carbon\Carbon;
 
-class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+
+class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
     protected Request $request;
 
@@ -41,7 +43,9 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
         }
 
         return [
-            'Periode' => $startDate->toDateString() . ' s/d ' . $endDate->toDateString()
+            'Periode' => $startDate->toDateString() . ' s/d ' . $endDate->toDateString(),
+            'Dibuat Pada' => now()->toDateTimeString(),
+            'Dibuat Oleh' => auth()->user() ? auth()->user()->name : 'System'
         ];
     }
 
@@ -138,7 +142,7 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
             $row++;
         }
 
-        $headingsRow = 4;
+        $headingsRow = 6;
         
         $sheet->getStyle('A' . $headingsRow . ':F' . $headingsRow)->applyFromArray([
             'font' => [
@@ -153,7 +157,7 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
 
         $lastRow = $sheet->getHighestRow();
         
-        $sheet->getStyle('E5:F' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
+        $sheet->getStyle('E7:F' . $lastRow)->getNumberFormat()->setFormatCode('"Rp" #,##0');
 
         $sheet->getStyle('A' . $lastRow . ':F' . $lastRow)->applyFromArray([
             'font' => [
@@ -166,5 +170,10 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
         ]);
 
         return [];
+    }
+
+    public function startCell(): string
+    {
+        return 'A6';
     }
 }
