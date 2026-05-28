@@ -11,6 +11,20 @@
                     <x-field-group label="Nama Lengkap" name="name" required>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </x-field-group>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <x-field-group label="Tanggal Lahir" name="birth_date">
+                            <input type="date" name="birth_date" id="birth_date" value="{{ old('birth_date') }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        </x-field-group>
+
+                        <x-field-group label="Jenis Kelamin" name="gender">
+                            <select name="gender" id="gender" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="Laki-laki" {{ old('gender') === 'Laki-laki' ? 'selected' : '' }}>Laki-laki</option>
+                                <option value="Perempuan" {{ old('gender') === 'Perempuan' ? 'selected' : '' }}>Perempuan</option>
+                            </select>
+                        </x-field-group>
+                    </div>
                 </div>
             </x-form-section>
 

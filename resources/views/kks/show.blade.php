@@ -56,6 +56,37 @@
         </div>
     </div>
 
+    {{-- Demographics Summary --}}
+    @php
+        $balitaCount = $kk->members->filter(fn($m) => $m->age_group === 'balita')->count();
+        $anakCount = $kk->members->filter(fn($m) => $m->age_group === 'anak')->count();
+        $remajaCount = $kk->members->filter(fn($m) => $m->age_group === 'remaja')->count();
+        $dewasaCount = $kk->members->filter(fn($m) => $m->age_group === 'dewasa')->count();
+        $lansiaCount = $kk->members->filter(fn($m) => $m->age_group === 'lansia')->count();
+    @endphp
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+            <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Balita (0-5)</span>
+            <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400 block mt-1">{{ $balitaCount }} Orang</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+            <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Anak (6-12)</span>
+            <span class="text-2xl font-black text-blue-600 dark:text-blue-400 block mt-1">{{ $anakCount }} Orang</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+            <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Remaja (13-17)</span>
+            <span class="text-2xl font-black text-indigo-600 dark:text-indigo-400 block mt-1">{{ $remajaCount }} Orang</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+            <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Dewasa (18-59)</span>
+            <span class="text-2xl font-black text-slate-700 dark:text-slate-300 block mt-1">{{ $dewasaCount }} Orang</span>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center col-span-2 md:col-span-1">
+            <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Lansia (60+)</span>
+            <span class="text-2xl font-black text-rose-600 dark:text-rose-400 block mt-1">{{ $lansiaCount }} Orang</span>
+        </div>
+    </div>
+
     {{-- Members List Section --}}
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
@@ -69,8 +100,11 @@
                     <tr>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Kode Warga</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Lengkap</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hubungan Keluarga</th>
-                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">No HP</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Hubungan</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gender</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tanggal Lahir</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Usia</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Kelompok Usia</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -85,13 +119,34 @@
                             <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                                 {{ $member->relationship ?? 'Anggota Lainnya' }}
                             </td>
-                            <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                                {{ $member->phone ?? '—' }}
+                            <td class="px-6 py-4 text-sm text-center text-slate-600 dark:text-slate-400">
+                                {{ $member->gender ?? '—' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {{ $member->birth_date ? $member->birth_date->format('d M Y') : '—' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-center font-bold text-slate-800 dark:text-slate-200">
+                                {{ $member->age !== null ? $member->age . ' Tahun' : '—' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-center">
+                                @if($member->age_group === 'balita')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">Balita</span>
+                                @elseif($member->age_group === 'anak')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400">Anak-anak</span>
+                                @elseif($member->age_group === 'remaja')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400">Remaja</span>
+                                @elseif($member->age_group === 'dewasa')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Dewasa</span>
+                                @elseif($member->age_group === 'lansia')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400">Lansia</span>
+                                @else
+                                    <span class="text-slate-400">—</span>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                            <td colspan="7" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                                 Belum ada anggota keluarga yang dihubungkan ke KK ini.
                             </td>
                         </tr>

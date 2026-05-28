@@ -11,7 +11,39 @@ class Member extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['user_id', 'kk_id', 'member_code', 'name', 'phone', 'address', 'relationship'];
+    protected $fillable = ['user_id', 'kk_id', 'member_code', 'name', 'phone', 'birth_date', 'gender', 'address', 'relationship'];
+
+    protected $casts = [
+        'birth_date' => 'date',
+    ];
+
+    public function getAgeAttribute(): ?int
+    {
+        if (!$this->birth_date) {
+            return null;
+        }
+        return $this->birth_date->age;
+    }
+
+    public function getAgeGroupAttribute(): ?string
+    {
+        $age = $this->age;
+        if ($age === null) {
+            return null;
+        }
+
+        if ($age <= 5) {
+            return 'balita';
+        } elseif ($age <= 12) {
+            return 'anak';
+        } elseif ($age <= 17) {
+            return 'remaja';
+        } elseif ($age <= 59) {
+            return 'dewasa';
+        } else {
+            return 'lansia';
+        }
+    }
 
     public function user(): BelongsTo
     {

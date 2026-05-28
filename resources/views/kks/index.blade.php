@@ -7,7 +7,11 @@
             <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Data Kartu Keluarga (KK)</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola data Kartu Keluarga (KK) dan status hunian warga</p>
         </div>
-        <div class="flex items-center">
+        <div class="flex items-center gap-3">
+            <a href="{{ route('kks.import') }}" class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 shadow-sm transition w-full sm:w-auto justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Import KK (Excel)
+            </a>
             <a href="{{ route('kks.create') }}" class="inline-flex items-center gap-2 bg-emerald-600 dark:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 shadow-sm hover:shadow transition w-full sm:w-auto justify-center">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Tambah KK

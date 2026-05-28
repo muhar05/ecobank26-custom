@@ -122,6 +122,18 @@ Route::middleware(['auth', 'permission:view_own_dashboard'])->group(function () 
 
 // Members / Data Warga
 Route::middleware(['auth', 'permission:manage_members'])->group(function () {
+    // KK Import
+    Route::get('kks/import', [\App\Http\Controllers\KkImportController::class, 'showForm'])->name('kks.import');
+    Route::post('kks/import', [\App\Http\Controllers\KkImportController::class, 'import'])->name('kks.import.store');
+    Route::get('kks/import/template', [\App\Http\Controllers\KkImportController::class, 'downloadTemplate'])->name('kks.import.template');
+    Route::get('kks/import/failed-download', [\App\Http\Controllers\KkImportController::class, 'downloadFailed'])->name('kks.import.failed-download');
+
+    // Members / Data Warga Import Upgraded
+    Route::get('members/import-v2', [\App\Http\Controllers\MemberImportControllerV2::class, 'showForm'])->name('members.import-v2');
+    Route::post('members/import-v2', [\App\Http\Controllers\MemberImportControllerV2::class, 'import'])->name('members.import-v2.store');
+    Route::get('members/import-v2/template', [\App\Http\Controllers\MemberImportControllerV2::class, 'downloadTemplate'])->name('members.import-v2.template');
+    Route::get('members/import-v2/failed-download', [\App\Http\Controllers\MemberImportControllerV2::class, 'downloadFailed'])->name('members.import-v2.failed-download');
+
     Route::get('members/import', [MemberImportController::class, 'showForm'])->name('members.import');
     Route::post('members/import', [MemberImportController::class, 'import'])->name('members.import.store');
     Route::get('members/import/template', [MemberImportController::class, 'template'])->name('members.import.template');
