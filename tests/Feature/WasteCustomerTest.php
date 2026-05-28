@@ -748,7 +748,7 @@ class WasteCustomerTest extends TestCase
             ->get(route('admin.audit-logs'));
 
         $response->assertStatus(200);
-        $response->assertSee('Audit Trail Logs');
+        $response->assertSee('Log Aktivitas');
     }
 
     /**

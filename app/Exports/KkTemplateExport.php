@@ -22,7 +22,8 @@ class KkTemplateExport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new KkDataImportSheet($this->includeExamples),
+            new KkDataImportSheet(),
+            new KkExampleSheet(),
             new KkInstructionsSheet(),
         ];
     }
@@ -30,45 +31,32 @@ class KkTemplateExport implements WithMultipleSheets
 
 class KkDataImportSheet implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
 {
-    protected bool $includeExamples;
-
-    public function __construct(bool $includeExamples)
-    {
-        $this->includeExamples = $includeExamples;
-    }
-
     public function title(): string
     {
-        return 'Data Import';
+        return 'DATA IMPORT';
     }
 
     public function headings(): array
     {
         return [
-            '* RT Number (rt_number)',
-            'KK Number (kk_number) [16 Digits]',
-            '* Family Head (family_head)',
-            'Address (address)',
-            'Phone (phone)',
-            '* Status (status: active/kontrak/pindah/kosong)',
-            'Jumlah Anggota (jumlah_anggota)'
+            '* Nomor RT',
+            'Nomor KK (16 Digit)',
+            '* Nama Kepala Keluarga',
+            'Alamat Rumah',
+            'Nomor HP Aktif',
+            '* Status Rumah (Aktif/Kontrak/Pindah/Kosong)',
+            'Jumlah Anggota Keluarga'
         ];
     }
 
     public function array(): array
     {
-        if ($this->includeExamples) {
-            return [
-                ['001', '3201234567890001', 'Ahmad Subarjo', 'Jl. Clean No. 12', '08123456789', 'active', '4'],
-                ['002', '3201234567890002', 'Siti Aminah', 'Jl. Hijau No. 8', '08133333333', 'kontrak', '3'],
-                ['001', '', 'Dedi Hermawan', 'Jl. Asri No. 1', '08124444444', 'active', '2'],
-            ];
-        }
-        return [];
+        return []; // Keep empty for user inputs
     }
 
     public function styles(Worksheet $sheet)
     {
+        $sheet->freezePane('A2');
         return [
             1 => [
                 'font' => [
@@ -84,11 +72,58 @@ class KkDataImportSheet implements FromArray, WithHeadings, WithTitle, WithStyle
     }
 }
 
+class KkExampleSheet implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize
+{
+    public function title(): string
+    {
+        return 'CONTOH PENGISIAN';
+    }
+
+    public function headings(): array
+    {
+        return [
+            '* Nomor RT',
+            'Nomor KK (16 Digit)',
+            '* Nama Kepala Keluarga',
+            'Alamat Rumah',
+            'Nomor HP Aktif',
+            '* Status Rumah (Aktif/Kontrak/Pindah/Kosong)',
+            'Jumlah Anggota Keluarga'
+        ];
+    }
+
+    public function array(): array
+    {
+        return [
+            ['001', '3201234567890001', 'Ahmad Subarjo', 'Jl. Clean No. 12', '08123456789', 'Aktif', '4'],
+            ['002', '3201234567890002', 'Siti Aminah', 'Jl. Hijau No. 8', '08133333333', 'Kontrak', '3'],
+            ['001', '', 'Dedi Hermawan', 'Jl. Asri No. 1', '08124444444', 'Aktif', '2'],
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $sheet->freezePane('A2');
+        return [
+            1 => [
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF']
+                ],
+                'fill' => [
+                    'fillType' => 'solid',
+                    'startColor' => ['rgb' => '1E293B'] // Dark slate grey for examples
+                ]
+            ]
+        ];
+    }
+}
+
 class KkInstructionsSheet implements FromArray, WithTitle, WithStyles, ShouldAutoSize
 {
     public function title(): string
     {
-        return 'Petunjuk Pengisian';
+        return 'PETUNJUK';
     }
 
     public function array(): array
@@ -96,18 +131,22 @@ class KkInstructionsSheet implements FromArray, WithTitle, WithStyles, ShouldAut
         return [
             ['PETUNJUK PENGISIAN IMPORT KARTU KELUARGA (KK)'],
             [''],
-            ['1. Kolom dengan tanda bintang (*) wajib diisi.'],
-            ['2. rt_number: Masukkan nomor RT, contoh: "001", "002". Jika RT belum ada di sistem, sistem akan otomatis membuatnya.'],
-            ['3. kk_number: Boleh dikosongkan (nullable). Jika diisi, wajib berupa 16 digit angka unik.'],
-            ['4. family_head: Nama Kepala Keluarga (wajib diisi).'],
-            ['5. address & phone: Alamat dan No HP (boleh dikosongkan).'],
-            ['6. status: Status tempat tinggal. Wajib diisi dengan salah satu nilai berikut:'],
-            ['   - active  (Aktif / Tinggal tetap)'],
-            ['   - kontrak (Mengontrak / Sewa)'],
-            ['   - pindah  (Sudah pindah domisili)'],
-            ['   - kosong  (Rumah kosong / tidak berpenghuni)'],
-            ['7. jumlah_anggota: Jumlah anggota keluarga. Boleh dikosongkan, jika diisi harus angka >= 0.'],
-            ['8. Maksimal data yang diizinkan dalam sekali unggah adalah 1000 baris.'],
+            ['⚠️ PERINGATAN PENTING:'],
+            ['1. JANGAN UBAH NAMA HEADER KOLOM atau susunan kolom pada sheet DATA IMPORT.'],
+            ['2. JANGAN MENGHAPUS baris pertama (header) yang berwarna hijau.'],
+            ['3. Simpan file tetap dalam format Excel (.xlsx) atau CSV (.csv) sebelum diunggah.'],
+            [''],
+            ['PANDUAN INPUT KOLOM:'],
+            ['* Nomor RT: Masukkan nomor RT, contoh: "001", "002" (Wajib diisi).'],
+            ['* Nomor KK (16 Digit): Masukkan 16 digit angka nomor KK. Atur format cell sebagai TEXT agar angka tidak berubah.'],
+            ['* Nama Kepala Keluarga: Nama lengkap Kepala Keluarga (Wajib diisi).'],
+            ['* Alamat Rumah & Nomor HP Aktif: Opsional (boleh dikosongkan).'],
+            ['* Status Rumah: Status tempat tinggal (Wajib diisi). Pilih salah satu dari:'],
+            ['  - Aktif   (Tempat tinggal tetap)'],
+            ['  - Kontrak (Sewa/Mengontrak)'],
+            ['  - Pindah  (Sudah pindah domisili)'],
+            ['  - Kosong  (Rumah kosong)'],
+            ['* Jumlah Anggota Keluarga: Opsional (angka >= 0).'],
         ];
     }
 
@@ -118,7 +157,7 @@ class KkInstructionsSheet implements FromArray, WithTitle, WithStyles, ShouldAut
                 'font' => [
                     'bold' => true,
                     'size' => 14,
-                    'color' => ['rgb' => '059669']
+                    'color' => ['rgb' => 'DC2626'] // Warning Red title
                 ]
             ]
         ];

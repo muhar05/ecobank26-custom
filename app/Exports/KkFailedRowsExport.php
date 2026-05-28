@@ -26,13 +26,13 @@ class KkFailedRowsExport implements FromArray, WithHeadings, WithTitle, WithStyl
     public function headings(): array
     {
         return [
-            '* RT Number (rt_number)',
-            'KK Number (kk_number)',
-            '* Family Head (family_head)',
-            'Address (address)',
-            'Phone (phone)',
-            '* Status (status: active/kontrak/pindah/kosong)',
-            'Jumlah Anggota (jumlah_anggota)',
+            '* Nomor RT',
+            'Nomor KK (16 Digit)',
+            '* Nama Kepala Keluarga',
+            'Alamat Rumah',
+            'Nomor HP Aktif',
+            '* Status Rumah (Aktif/Kontrak/Pindah/Kosong)',
+            'Jumlah Anggota Keluarga',
             'Alasan Gagal (Error Reason)'
         ];
     }
@@ -52,7 +52,7 @@ class KkFailedRowsExport implements FromArray, WithHeadings, WithTitle, WithStyl
                 ],
                 'fill' => [
                     'fillType' => 'solid',
-                    'startColor' => ['rgb' => 'DC2626'] // High-visibility Crimson Red for errors
+                    'startColor' => ['rgb' => 'DC2626'] // Crimson Red for errors
                 ]
             ]
         ];

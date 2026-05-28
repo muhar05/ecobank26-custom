@@ -54,6 +54,20 @@ class MemberImportControllerV2 extends Controller
             return back()->withErrors(['file' => 'Jumlah baris maksimal 1000 row per upload untuk keamanan server.']);
         }
 
+        // Translation dictionary for human Warga headers to database keys
+        $headerMap = [
+            'nomor_rt' => 'rt_number',
+            'nomor_kk' => 'kk_number',
+            'nama_kepala_keluarga_fallback' => 'family_head',
+            'nama_kepala_keluarga' => 'family_head',
+            'nama_lengkap_anggota' => 'name',
+            'hubungan_dalam_keluarga' => 'relationship',
+            'jenis_kelamin' => 'gender',
+            'tanggal_lahir' => 'birth_date',
+            'nomor_hp' => 'phone',
+            'alamat_domisili' => 'address',
+        ];
+
         $cleanedRows = [];
         foreach ($rows as $row) {
             $cleanedRow = [];
@@ -62,7 +76,15 @@ class MemberImportControllerV2 extends Controller
                 $cleanKey = preg_replace('/\s*\[.*\]/', '', $cleanKey);
                 $cleanKey = preg_replace('/\s*\(.*\)/', '', $cleanKey);
                 $cleanKey = strtolower(str_replace(' ', '_', trim($cleanKey)));
-                $cleanedRow[$cleanKey] = $value;
+                
+                $mappedKey = $cleanKey;
+                foreach ($headerMap as $humanKey => $dbKey) {
+                    if (strpos($cleanKey, $humanKey) !== false) {
+                        $mappedKey = $dbKey;
+                        break;
+                    }
+                }
+                $cleanedRow[$mappedKey] = $value;
             }
             $cleanedRows[] = $cleanedRow;
         }
@@ -70,7 +92,7 @@ class MemberImportControllerV2 extends Controller
         // Validate headings - make sure critical columns are present
         $firstRow = $cleanedRows[0] ?? [];
         if (!array_key_exists('rt_number', $firstRow) || !array_key_exists('name', $firstRow) || !array_key_exists('relationship', $firstRow)) {
-            return back()->withErrors(['file' => 'Format template salah atau kolom utama tidak ditemukan. Pastikan header sesuai template (rt_number, name, relationship).']);
+            return back()->withErrors(['file' => 'Format template salah atau kolom utama tidak ditemukan. Pastikan header sesuai template (Nomor RT, Nama Lengkap Anggota, Hubungan Dalam Keluarga).']);
         }
 
         $validRows = [];
@@ -86,6 +108,9 @@ class MemberImportControllerV2 extends Controller
             'duplicates' => 0
         ];
 
+        // Track how many "Kepala Keluarga" are being imported per resolved KK in this file
+        $headCountInFile = [];
+
         foreach ($cleanedRows as $row) {
             $rowNum++;
 
@@ -100,7 +125,7 @@ class MemberImportControllerV2 extends Controller
                 $kkNumber = $kkNumberRaw !== '' ? $kkNumberRaw : null;
             }
 
-            $familyHead = isset($row['family_head_fallback']) ? trim($row['family_head_fallback']) : (isset($row['family_head']) ? trim($row['family_head']) : null);
+            $familyHead = isset($row['family_head']) ? trim($row['family_head']) : null;
             $name = isset($row['name']) ? trim($row['name']) : null;
             $relationship = isset($row['relationship']) ? trim($row['relationship']) : null;
             $phone = isset($row['phone']) ? trim($row['phone']) : null;
@@ -129,7 +154,6 @@ class MemberImportControllerV2 extends Controller
                     $unixDate = ($birthDateRaw - 25569) * 86400;
                     $birthDate = date('Y-m-d', $unixDate);
                 } else {
-                    // Try standard parsing
                     try {
                         $parsedDate = new \DateTime($birthDateRaw);
                         $birthDate = $parsedDate->format('Y-m-d');
@@ -156,14 +180,14 @@ class MemberImportControllerV2 extends Controller
                 'gender' => 'nullable|in:Laki-laki,Perempuan',
                 'birth_date' => 'nullable|date|before_or_equal:today',
             ], [
-                'rt_number.required' => 'RT Number wajib diisi.',
-                'kk_number.digits' => 'KK Number harus tepat 16 digit.',
-                'kk_number.numeric' => 'KK Number harus berupa angka.',
-                'family_head.required_without' => 'Family Head Fallback wajib diisi jika KK Number tidak ada.',
-                'name.required' => 'Name wajib diisi.',
-                'relationship.required' => 'Relationship wajib diisi.',
-                'gender.in' => 'Gender harus bernilai: Laki-laki, Perempuan, L, atau P.',
-                'birth_date.date' => 'Format tanggal lahir tidak valid.',
+                'rt_number.required' => 'Nomor RT wajib diisi.',
+                'kk_number.digits' => 'Nomor KK harus tepat 16 digit.',
+                'kk_number.numeric' => 'Nomor KK harus berupa angka.',
+                'family_head.required_without' => 'Nama Kepala Keluarga Fallback wajib diisi jika Nomor KK kosong.',
+                'name.required' => 'Nama Lengkap Anggota wajib diisi.',
+                'relationship.required' => 'Hubungan Dalam Keluarga wajib diisi.',
+                'gender.in' => 'Jenis Kelamin harus: Laki-laki atau Perempuan.',
+                'birth_date.date' => 'Format tanggal lahir tidak valid (gunakan YYYY-MM-DD).',
                 'birth_date.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini.',
             ]);
 
@@ -174,7 +198,7 @@ class MemberImportControllerV2 extends Controller
                 $failedRows[] = [
                     $row['rt_number'] ?? '',
                     $row['kk_number'] ?? '',
-                    $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                    $row['family_head'] ?? '',
                     $row['name'] ?? '',
                     $row['relationship'] ?? '',
                     $row['gender'] ?? '',
@@ -197,7 +221,7 @@ class MemberImportControllerV2 extends Controller
                     $failedRows[] = [
                         $row['rt_number'] ?? '',
                         $row['kk_number'] ?? '',
-                        $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                        $row['family_head'] ?? '',
                         $row['name'] ?? '',
                         $row['relationship'] ?? '',
                         $row['gender'] ?? '',
@@ -218,7 +242,7 @@ class MemberImportControllerV2 extends Controller
                     $failedRows[] = [
                         $row['rt_number'] ?? '',
                         $row['kk_number'] ?? '',
-                        $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                        $row['family_head'] ?? '',
                         $row['name'] ?? '',
                         $row['relationship'] ?? '',
                         $row['gender'] ?? '',
@@ -241,7 +265,7 @@ class MemberImportControllerV2 extends Controller
                     $failedRows[] = [
                         $row['rt_number'] ?? '',
                         $row['kk_number'] ?? '',
-                        $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                        $row['family_head'] ?? '',
                         $row['name'] ?? '',
                         $row['relationship'] ?? '',
                         $row['gender'] ?? '',
@@ -254,6 +278,56 @@ class MemberImportControllerV2 extends Controller
                 }
             }
 
+            // Check strict rule: Only one "Kepala Keluarga" or "Kepala Rumah Tangga" allowed per KK
+            $isClaimingHead = in_array(strtolower($relationship), ['kepala keluarga', 'kepala rumah tangga']);
+            if ($isClaimingHead) {
+                // 1. Check if database already has a Kepala Keluarga for this KK
+                $hasHeadDb = Member::where('kk_id', $kk->id)
+                    ->whereIn(DB::raw('LOWER(relationship)'), ['kepala keluarga', 'kepala rumah tangga'])
+                    ->exists();
+
+                if ($hasHeadDb) {
+                    $stats['failed']++;
+                    $err = 'Kartu Keluarga (KK) tujuan sudah memiliki Kepala Keluarga terdaftar di database.';
+                    $errors[] = "Baris {$rowNum}: {$err}";
+                    $failedRows[] = [
+                        $row['rt_number'] ?? '',
+                        $row['kk_number'] ?? '',
+                        $row['family_head'] ?? '',
+                        $row['name'] ?? '',
+                        $row['relationship'] ?? '',
+                        $row['gender'] ?? '',
+                        $row['birth_date'] ?? '',
+                        $row['phone'] ?? '',
+                        $row['address'] ?? '',
+                        $err
+                    ];
+                    continue;
+                }
+
+                // 2. Check if the current file upload has duplicate Kepala Keluarga for the same KK
+                if (isset($headCountInFile[$kk->id])) {
+                    $stats['failed']++;
+                    $err = 'Duplikat Kepala Keluarga untuk KK yang sama terdeteksi di dalam file import.';
+                    $errors[] = "Baris {$rowNum}: {$err}";
+                    $failedRows[] = [
+                        $row['rt_number'] ?? '',
+                        $row['kk_number'] ?? '',
+                        $row['family_head'] ?? '',
+                        $row['name'] ?? '',
+                        $row['relationship'] ?? '',
+                        $row['gender'] ?? '',
+                        $row['birth_date'] ?? '',
+                        $row['phone'] ?? '',
+                        $row['address'] ?? '',
+                        $err
+                    ];
+                    continue;
+                }
+
+                $headCountInFile[$kk->id] = true;
+            }
+
             // Duplicate Member Name check inside the database for the same KK
             $duplicateDb = Member::where('kk_id', $kk->id)->where('name', $name)->exists();
             if ($duplicateDb) {
@@ -264,7 +338,7 @@ class MemberImportControllerV2 extends Controller
                 $failedRows[] = [
                     $row['rt_number'] ?? '',
                     $row['kk_number'] ?? '',
-                    $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                    $row['family_head'] ?? '',
                     $row['name'] ?? '',
                     $row['relationship'] ?? '',
                     $row['gender'] ?? '',
@@ -286,7 +360,7 @@ class MemberImportControllerV2 extends Controller
                     $failedRows[] = [
                         $row['rt_number'] ?? '',
                         $row['kk_number'] ?? '',
-                        $row['family_head_fallback'] ?? ($row['family_head'] ?? ''),
+                        $row['family_head'] ?? '',
                         $row['name'] ?? '',
                         $row['relationship'] ?? '',
                         $row['gender'] ?? '',

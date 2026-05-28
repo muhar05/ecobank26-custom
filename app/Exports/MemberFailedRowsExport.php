@@ -26,15 +26,15 @@ class MemberFailedRowsExport implements FromArray, WithHeadings, WithTitle, With
     public function headings(): array
     {
         return [
-            '* RT Number (rt_number)',
-            'KK Number (kk_number)',
-            'Family Head Fallback (family_head)',
-            '* Name (name)',
-            '* Relationship (relationship)',
-            'Gender (gender)',
-            'Birth Date (birth_date)',
-            'Phone (phone)',
-            'Address (address)',
+            '* Nomor RT',
+            'Nomor KK (16 Digit)',
+            'Nama Kepala Keluarga Fallback',
+            '* Nama Lengkap Anggota',
+            '* Hubungan Dalam Keluarga',
+            'Jenis Kelamin (Laki-laki/Perempuan)',
+            'Tanggal Lahir (YYYY-MM-DD)',
+            'Nomor HP',
+            'Alamat Domisili',
             'Alasan Gagal (Error Reason)'
         ];
     }
@@ -54,7 +54,7 @@ class MemberFailedRowsExport implements FromArray, WithHeadings, WithTitle, With
                 ],
                 'fill' => [
                     'fillType' => 'solid',
-                    'startColor' => ['rgb' => 'DC2626'] // High-visibility Crimson Red for errors
+                    'startColor' => ['rgb' => 'DC2626'] // Crimson Red for errors
                 ]
             ]
         ];

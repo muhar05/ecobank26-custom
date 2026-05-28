@@ -113,4 +113,29 @@ class ImportExcelTest extends TestCase
         $this->assertEquals(70, $memberLansia->age);
         $this->assertEquals('lansia', $memberLansia->age_group);
     }
+
+    public function test_household_head_strict_validations()
+    {
+        $rt = Rt::create(['rt_number' => '001', 'description' => 'RT 001']);
+        $kk = Kk::create([
+            'rt_id' => $rt->id,
+            'kk_number' => '3201234567890001',
+            'family_head' => 'Ahmad Subarjo',
+            'status' => 'active'
+        ]);
+
+        // DB already has a Kepala Keluarga
+        Member::create([
+            'kk_id' => $kk->id,
+            'member_code' => 'WRG001',
+            'name' => 'Ahmad Subarjo',
+            'relationship' => 'Kepala Keluarga'
+        ]);
+
+        $this->assertTrue(
+            Member::where('kk_id', $kk->id)
+                ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(relationship)'), ['kepala keluarga', 'kepala rumah tangga'])
+                ->exists()
+        );
+    }
 }
