@@ -34,10 +34,13 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
+    if ($user->hasRole('admin_rw')) {
+        return app(DashboardController::class)->adminRw();
+    }
     if ($user->hasRole('admin_rt')) {
         return app(DashboardController::class)->adminRt();
     }
-    if ($user->hasRole('bendahara')) {
+    if ($user->hasRole('bendahara') || $user->hasRole('bendahara_rw')) {
         return redirect()->route('bendahara.dashboard');
     }
     if ($user->hasRole('admin_bank_sampah')) {

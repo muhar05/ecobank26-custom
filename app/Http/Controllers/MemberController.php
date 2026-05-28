@@ -41,6 +41,9 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isOperationalAdmin = $user && $user->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']);
+
         $validated = $request->validate([
             'member_code' => 'nullable|string|max:50|unique:members,member_code',
             'name' => 'required|string|max:100',
@@ -48,8 +51,10 @@ class MemberController extends Controller
             'birth_date' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:L,P,Laki-laki,Perempuan',
             'address' => 'nullable|string|max:255',
-            'kk_id' => 'nullable|exists:kks,id',
+            'kk_id' => $isOperationalAdmin ? 'required|exists:kks,id' : 'nullable|exists:kks,id',
             'relationship' => 'nullable|string|max:50',
+        ], [
+            'kk_id.required' => 'Data warga operasional RT wajib terhubung dengan Kartu Keluarga.',
         ]);
 
         if (empty($validated['member_code'])) {
@@ -84,6 +89,9 @@ class MemberController extends Controller
 
     public function update(Request $request, Member $member)
     {
+        $user = auth()->user();
+        $isOperationalAdmin = $user && $user->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']);
+
         $validated = $request->validate([
             'member_code' => 'required|string|max:50|unique:members,member_code,' . $member->id,
             'name' => 'required|string|max:100',
@@ -91,8 +99,10 @@ class MemberController extends Controller
             'birth_date' => 'nullable|date|before_or_equal:today',
             'gender' => 'nullable|in:L,P,Laki-laki,Perempuan',
             'address' => 'nullable|string|max:255',
-            'kk_id' => 'nullable|exists:kks,id',
+            'kk_id' => $isOperationalAdmin ? 'required|exists:kks,id' : 'nullable|exists:kks,id',
             'relationship' => 'nullable|string|max:50',
+        ], [
+            'kk_id.required' => 'Data warga operasional RT wajib terhubung dengan Kartu Keluarga.',
         ]);
 
         $member->update($validated);

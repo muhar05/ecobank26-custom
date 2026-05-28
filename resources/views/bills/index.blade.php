@@ -314,7 +314,24 @@
             period: '', 
             totalAmount: 0, 
             outstanding: 0,
-            amountToPay: 0,
+            amountPaidFormatted: '',
+            get amountToPay() {
+                return parseInt(this.amountPaidFormatted.replace(/[^0-9]/g, '')) || 0;
+            },
+            formatRupiah(number) {
+                return new Intl.NumberFormat('id-ID', { style: 'decimal', minimumFractionDigits: 0 }).format(number);
+            },
+            updateFormattedValue(event) {
+                let value = event.target.value.replace(/[^0-9]/g, '');
+                let numValue = parseInt(value) || 0;
+                
+                // Prevent paying more than outstanding
+                if (numValue > this.outstanding) {
+                    numValue = this.outstanding;
+                }
+                
+                this.amountPaidFormatted = this.formatRupiah(numValue);
+            },
             paymentMethod: 'cash',
             paidAt: '{{ date('Y-m-d') }}',
             description: ''
@@ -327,7 +344,7 @@
             period = $event.detail.period;
             totalAmount = $event.detail.amount;
             outstanding = $event.detail.outstanding;
-            amountToPay = outstanding;
+            amountPaidFormatted = new Intl.NumberFormat('id-ID', { style: 'decimal', minimumFractionDigits: 0 }).format(outstanding);
             open = true;
          "
          x-show="open" 
@@ -406,9 +423,24 @@
 
                         {{-- Input Amount --}}
                         <div class="space-y-1.5">
-                            <label for="amount_paid" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Jumlah yang Dibayar (Rp)</label>
-                            <input type="number" name="amount_paid" id="amount_paid" x-model="amountToPay" :max="outstanding" min="1" required class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                            <span class="text-[10px] text-slate-400 dark:text-slate-500">Mendukung pembayaran cicilan/sebagian.</span>
+                            <label for="amount_paid_display" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Jumlah yang Dibayar (Rp)</label>
+                            <input type="text" id="amount_paid_display" x-model="amountPaidFormatted" @input="updateFormattedValue($event)" required class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10 font-bold text-emerald-600 dark:text-emerald-400">
+                            <input type="hidden" name="amount_paid" :value="amountToPay">
+                            
+                            {{-- Helper / Validation warnings --}}
+                            <div class="flex flex-col gap-1 mt-1.5">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-500">Mendukung pembayaran cicilan/sebagian.</span>
+                                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400" x-show="amountToPay > 0">
+                                        Sisa tagihan: <span class="text-rose-600 dark:text-rose-400" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(outstanding - amountToPay)"></span>
+                                    </span>
+                                </div>
+                                <template x-if="amountToPay <= 0">
+                                    <p class="text-[10px] text-rose-600 dark:text-rose-400 font-bold">
+                                        * Nominal pembayaran minimal Rp 1.
+                                    </p>
+                                </template>
+                            </div>
                         </div>
 
                         {{-- Payment Method --}}
@@ -439,7 +471,7 @@
                         <button type="button" @click="open = false" class="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition">
                             Batal
                         </button>
-                        <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 rounded-lg transition shadow-sm">
+                        <button type="submit" :disabled="amountToPay <= 0" class="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 rounded-lg transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                             Simpan Pembayaran
                         </button>
                     </div>

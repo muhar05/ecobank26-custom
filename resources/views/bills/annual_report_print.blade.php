@@ -14,12 +14,18 @@
             background-color: #ffffff;
         }
         
+        @page {
+            size: auto;
+            margin: 10mm 15mm;
+        }
+        
         /* Print Styles */
         @media print {
             body {
                 padding: 0;
                 margin: 0;
                 font-size: 11px;
+                background-color: #ffffff;
             }
             .no-print {
                 display: none !important;
@@ -186,12 +192,17 @@
 <body>
 
     {{-- Control Bar (Hidden on print) --}}
-    <div class="print-control-bar no-print">
-        <div>
-            <strong>Laporan Siap Dicetak.</strong> Gunakan tombol di samping untuk mencetak laporan atau menyimpannya langsung menjadi file PDF resmi tingkat RW.
+    <div class="print-control-bar no-print" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div>
+                <strong>Laporan Siap Dicetak.</strong> Gunakan tombol di samping untuk mencetak laporan atau menyimpannya langsung menjadi file PDF resmi tingkat RW.
+            </div>
+            <div>
+                <button onclick="window.print()" class="btn">Mulai Cetak / Simpan PDF</button>
+            </div>
         </div>
-        <div>
-            <button onclick="window.print()" class="btn">Mulai Cetak / Simpan PDF</button>
+        <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 4px;">
+            * Tips: Nonaktifkan opsi <strong>Headers and Footers</strong> pada dialog print browser untuk hasil cetak terbaik.
         </div>
     </div>
 

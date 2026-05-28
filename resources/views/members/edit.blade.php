@@ -42,9 +42,15 @@
 
             <x-form-section title="Keluarga & Wilayah">
                 <div class="space-y-5">
-                    <x-field-group label="Kartu Keluarga (KK)" name="kk_id" helper="Opsional (Hubungkan warga ke KK)">
-                        <select name="kk_id" id="kk_id" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">Belum Terhubung KK</option>
+                    @if(auth()->user()->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']))
+                        <div class="p-3.5 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 rounded-xl text-xs border border-amber-200/60 dark:border-amber-900/40">
+                            <strong>PENTING:</strong> Data warga operasional RT wajib terhubung dengan Kartu Keluarga.
+                        </div>
+                    @endif
+
+                    <x-field-group label="Kartu Keluarga (KK) {{ auth()->user()->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']) ? '*' : '' }}" name="kk_id" helper="{{ auth()->user()->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']) ? 'Wajib terhubung dengan KK.' : 'Opsional (Hubungkan warga ke KK)' }}">
+                        <select name="kk_id" id="kk_id" {{ auth()->user()->hasAnyRole(['admin_rt', 'admin_rw', 'bendahara', 'bendahara_rw']) ? 'required' : '' }} class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">Pilih Kartu Keluarga (KK)</option>
                             @foreach($kks as $kk)
                                 <option value="{{ $kk->id }}" {{ old('kk_id', $member->kk_id) == $kk->id ? 'selected' : '' }}>Keluarga {{ $kk->family_head }} (RT {{ $kk->rt->rt_number }})</option>
                             @endforeach

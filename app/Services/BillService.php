@@ -34,8 +34,8 @@ class BillService
             }
 
             $generatedCount = 0;
-            $dueDay = 20; // Default due date is the 20th of the month
-            $dueDate = Carbon::createFromDate($year, $month, $dueDay)->toDateString();
+            $dueDays = config('billing.default_due_days', env('DEFAULT_DUE_DAYS', 10));
+            $dueDate = now()->addDays($dueDays)->toDateString();
 
             // Format year and month for bill code: YYYYMM (e.g. 202605)
             $periodString = $year . str_pad($month, 2, '0', STR_PAD_LEFT);

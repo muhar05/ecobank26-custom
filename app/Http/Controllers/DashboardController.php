@@ -8,6 +8,58 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function adminRw()
+    {
+        // Agregasi Lintas RT
+        $totalRts = \App\Models\Rt::count();
+        $totalKks = \App\Models\Kk::count();
+        $totalMembers = \App\Models\Member::count();
+        
+        $unpaidBills = \App\Models\Bill::whereIn('status', ['unpaid', 'partially_paid'])->with('payments')->get();
+        $totalTunggakan = $unpaidBills->sum(fn($b) => $b->outstanding_balance);
+
+        $cashSummary = $this->getCashSummary();
+        $totalKasWarga = $cashSummary['balance'];
+
+        // Bank Sampah Summary
+        $totalCredit = \App\Models\SavingsLedger::where('type', 'credit')->sum('amount');
+        $totalDebit = \App\Models\SavingsLedger::where('type', 'debit')->sum('amount');
+        $savingsBalance = $totalCredit - $totalDebit;
+        $wasteBankCashBalance = \App\Models\WasteBankCashLedger::latest('id')->value('balance') ?? 0;
+        $totalSales = \App\Models\Sale::sum('total_amount');
+
+        // Charts & Recents for RW
+        $categoryBalances = $this->getCategoryBalances();
+        $recentLedgers = CommunityCashLedger::with('fundCategory')
+            ->latest('id')->limit(5)->get();
+        $recentSavings = \App\Models\SavingsLedger::with('member')
+            ->latest('id')->limit(5)->get();
+
+        return view('dashboard.admin-rw', [
+            'totalRts' => $totalRts,
+            'totalKks' => $totalKks,
+            'totalMembers' => $totalMembers,
+            'totalTunggakan' => $totalTunggakan,
+            'totalKasWarga' => $totalKasWarga,
+            'totalIn' => $cashSummary['totalIn'],
+            'totalOut' => $cashSummary['totalOut'],
+            'balance' => $totalKasWarga,
+            
+            // Bank Sampah
+            'savingsBalance' => $savingsBalance,
+            'totalCredit' => $totalCredit,
+            'totalDebit' => $totalDebit,
+            'wasteBankCashBalance' => $wasteBankCashBalance,
+            'totalSales' => $totalSales,
+
+            // Lists
+            'categoryBalances' => $categoryBalances,
+            'recentLedgers' => $recentLedgers,
+            'recentSavings' => $recentSavings,
+            'totalCategories' => FundCategory::where('is_active', true)->count(),
+        ]);
+    }
+
     public function adminRt()
     {
         $data = $this->getCashSummary();
