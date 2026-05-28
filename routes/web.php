@@ -25,6 +25,7 @@ use App\Http\Controllers\WasteCategoryImportController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WasteCustomerController;
 use App\Http\Controllers\WasteCategoryGroupController;
+use App\Http\Controllers\WasteBankReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -190,6 +191,25 @@ Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->n
 // Bank Sampah - Expenses
 Route::middleware(['auth', 'role:admin_bank_sampah|admin_rw'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('expenses', \App\Http\Controllers\WasteBankExpenseController::class)->only(['index', 'create', 'store', 'show']);
+});
+
+// Bank Sampah - Reports Layer
+Route::middleware(['auth', 'role:admin_bank_sampah|admin_rw'])->prefix('bank-sampah/reports')->name('bank-sampah.reports.')->group(function () {
+    Route::get('deposits', [WasteBankReportController::class, 'deposits'])->name('deposits');
+    Route::get('deposits/export/excel', [WasteBankReportController::class, 'depositsExcel'])->name('deposits.excel');
+    Route::get('deposits/export/print', [WasteBankReportController::class, 'depositsPrint'])->name('deposits.print');
+
+    Route::get('sales', [WasteBankReportController::class, 'sales'])->name('sales');
+    Route::get('sales/export/excel', [WasteBankReportController::class, 'salesExcel'])->name('sales.excel');
+    Route::get('sales/export/print', [WasteBankReportController::class, 'salesPrint'])->name('sales.print');
+
+    Route::get('savings-journal', [WasteBankReportController::class, 'savingsJournal'])->name('savings-journal');
+    Route::get('savings-journal/export/excel', [WasteBankReportController::class, 'savingsJournalExcel'])->name('savings-journal.excel');
+    Route::get('savings-journal/export/print', [WasteBankReportController::class, 'savingsJournalPrint'])->name('savings-journal.print');
+
+    Route::get('cashflow', [WasteBankReportController::class, 'cashflow'])->name('cashflow');
+    Route::get('cashflow/export/excel', [WasteBankReportController::class, 'cashflowExcel'])->name('cashflow.excel');
+    Route::get('cashflow/export/print', [WasteBankReportController::class, 'cashflowPrint'])->name('cashflow.print');
 });
 
 // Bank Sampah - Savings Report
