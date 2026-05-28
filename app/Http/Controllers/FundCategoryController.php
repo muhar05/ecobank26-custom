@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\FundCategory;
+use App\Services\RtScopeService;
 use Illuminate\Http\Request;
 
 class FundCategoryController extends Controller
 {
+    public function __construct(private RtScopeService $rtScope) {}
+
     public function index(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
         $status = $request->input('status');
         $progress = $request->input('progress');
@@ -19,6 +23,9 @@ class FundCategoryController extends Controller
             ->when($status === 'active', fn($q) => $q->where('is_active', true))
             ->when($status === 'inactive', fn($q) => $q->where('is_active', false));
 
+        // RT Scoping: admin_rt hanya melihat global + milik RT-nya
+        $query = $this->rtScope->applyFundCategoryScope($query, $user);
+
         $query = match ($sort) {
             'name' => $query->orderBy('name'),
             'target' => $query->orderByDesc('target_amount'),
@@ -28,8 +35,11 @@ class FundCategoryController extends Controller
 
         $categories = $query->paginate(20)->withQueryString()->fragment('table-section');
 
-        // Stats
-        $allCategories = FundCategory::withSum('contributions', 'amount')->get();
+        // Stats — scope juga disesuaikan
+        $statsQuery = FundCategory::withSum('contributions', 'amount');
+        $statsQuery = $this->rtScope->applyFundCategoryScope($statsQuery, $user);
+        $allCategories = $statsQuery->get();
+
         $stats = [
             'total' => $allCategories->count(),
             'total_target' => $allCategories->sum('target_amount'),
@@ -47,9 +57,10 @@ class FundCategoryController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
         $isMandatoryInput = $request->input('is_mandatory');
         $isMandatory = ($isMandatoryInput == 1 || $isMandatoryInput === '1' || $isMandatoryInput === true || $isMandatoryInput === 'true');
-        
+
         $request->merge([
             'is_active' => $request->boolean('is_active'),
             'is_mandatory' => $isMandatory ? 1 : 0,
@@ -71,6 +82,14 @@ class FundCategoryController extends Controller
             return back()->withErrors(['monthly_amount' => 'Nominal iuran wajib harus lebih dari Rp 0.'])->withInput();
         }
 
+        // Auto-fill rt_id jika user adalah admin_rt
+        if ($this->rtScope->isRtAdmin($user)) {
+            $validated['rt_id'] = $user->rt_id;
+        } else {
+            // admin_rw / bendahara: kategori global (rt_id = null)
+            $validated['rt_id'] = null;
+        }
+
         FundCategory::create($validated);
 
         return redirect()->route('community-cash.categories.index')
@@ -79,14 +98,19 @@ class FundCategoryController extends Controller
 
     public function edit(FundCategory $category)
     {
+        // Pastikan admin_rt tidak bisa edit kategori RT lain
+        $this->authorizeRtAccess($category);
         return view('community-cash.categories.edit', compact('category'));
     }
 
     public function update(Request $request, FundCategory $category)
     {
+        $this->authorizeRtAccess($category);
+
+        $user = auth()->user();
         $isMandatoryInput = $request->input('is_mandatory');
         $isMandatory = ($isMandatoryInput == 1 || $isMandatoryInput === '1' || $isMandatoryInput === true || $isMandatoryInput === 'true');
-        
+
         $request->merge([
             'is_active' => $request->boolean('is_active'),
             'is_mandatory' => $isMandatory ? 1 : 0,
@@ -116,9 +140,27 @@ class FundCategoryController extends Controller
 
     public function destroy(FundCategory $category)
     {
+        $this->authorizeRtAccess($category);
         $category->delete();
 
         return redirect()->route('community-cash.categories.index')
             ->with('success', 'Kategori dana berhasil dihapus.');
+    }
+
+    /**
+     * Cegah admin_rt mengakses/mengubah kategori milik RT lain atau kategori global RW.
+     * Admin RW boleh edit semua.
+     */
+    private function authorizeRtAccess(FundCategory $category): void
+    {
+        $user = auth()->user();
+        if (!$this->rtScope->isRtAdmin($user)) {
+            return; // Global role → akses penuh
+        }
+
+        // Admin RT: hanya boleh edit kategori milik RT-nya sendiri (bukan NULL/global)
+        if ($category->rt_id === null || $category->rt_id !== $user->rt_id) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah kategori ini.');
+        }
     }
 }

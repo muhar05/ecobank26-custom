@@ -160,6 +160,97 @@
         </div>
     </div>
 
+    {{-- RT Comparison Summary --}}
+    @if($rtsSummary->count() > 0)
+    <div>
+        <div :class="loaded ? 'opacity-100' : 'opacity-0'" class="flex items-center gap-2 mt-2 mb-4 transition-opacity duration-500 delay-700">
+            <div class="w-2 h-6 bg-violet-500 rounded-full"></div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Perbandingan Antar RT</h3>
+        </div>
+
+        {{-- Highlight cards --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {{-- Best RT Payment --}}
+            @if($bestRtPayment)
+            <div class="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">RT Pembayaran Terbaik</p>
+                    <p class="text-xl font-bold text-emerald-900 dark:text-emerald-100 mt-0.5">RT {{ $bestRtPayment->rt_number }}</p>
+                    <p class="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Rp {{ number_format($bestRtPayment->payments_amount, 0, ',', '.') }} terbayar</p>
+                </div>
+            </div>
+            @endif
+
+            {{-- Highest RT Arrears --}}
+            @if($highestRtArrears && $highestRtArrears->arrears_amount > 0)
+            <div class="bg-rose-50 dark:bg-rose-950/20 rounded-2xl border border-rose-100 dark:border-rose-900/50 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/40 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-rose-700 dark:text-rose-400 uppercase tracking-wider">RT Tunggakan Tertinggi</p>
+                    <p class="text-xl font-bold text-rose-900 dark:text-rose-100 mt-0.5">RT {{ $highestRtArrears->rt_number }}</p>
+                    <p class="text-xs text-rose-600/80 dark:text-rose-400/80 mt-0.5">Rp {{ number_format($highestRtArrears->arrears_amount, 0, ',', '.') }} tunggakan</p>
+                </div>
+            </div>
+            @endif
+        </div>
+
+        {{-- RT Summary Table --}}
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800/50">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">RT</th>
+                            <th class="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Jml KK</th>
+                            <th class="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Tagihan</th>
+                            <th class="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Terbayar</th>
+                            <th class="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tunggakan</th>
+                            <th class="px-5 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        @forelse($rtsSummary as $rt)
+                        @php
+                            $payRate = $rt->bills_amount > 0 ? ($rt->payments_amount / $rt->bills_amount * 100) : 0;
+                        @endphp
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                            <td class="px-5 py-3.5">
+                                <span class="font-semibold text-slate-800 dark:text-slate-100">RT {{ $rt->rt_number }}</span>
+                                @if($rt->description)
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{{ Str::limit($rt->description, 30) }}</p>
+                                @endif
+                            </td>
+                            <td class="px-5 py-3.5 text-right text-slate-600 dark:text-slate-300 font-medium">{{ $rt->kks_count }}</td>
+                            <td class="px-5 py-3.5 text-right text-slate-600 dark:text-slate-300">Rp {{ number_format($rt->bills_amount, 0, ',', '.') }}</td>
+                            <td class="px-5 py-3.5 text-right text-emerald-600 dark:text-emerald-400 font-medium">Rp {{ number_format($rt->payments_amount, 0, ',', '.') }}</td>
+                            <td class="px-5 py-3.5 text-right {{ $rt->arrears_amount > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-400' }}">
+                                Rp {{ number_format($rt->arrears_amount, 0, ',', '.') }}
+                            </td>
+                            <td class="px-5 py-3.5 text-center">
+                                @if($payRate >= 90)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Baik</span>
+                                @elseif($payRate >= 60)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Perlu Perhatian</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Kritis</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400 text-sm">Belum ada data RT.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
 </div>
 
 @push('scripts')

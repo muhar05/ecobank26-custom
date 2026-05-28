@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CommunityCashLedger;
 use App\Models\FundCategory;
+use App\Models\Rt;
+use App\Models\Bill;
+use App\Services\RtScopeService;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function __construct(private RtScopeService $rtScope) {}
     public function adminRw()
     {
         // Agregasi Lintas RT
@@ -35,6 +39,18 @@ class DashboardController extends Controller
         $recentSavings = \App\Models\SavingsLedger::with('member')
             ->latest('id')->limit(5)->get();
 
+        // RT Comparison Summary
+        $rtsSummary = Rt::withCount('kks')->orderBy('rt_number')->get()->map(function ($rt) {
+            $rtBills = Bill::whereHas('kk', fn($q) => $q->where('rt_id', $rt->id));
+            $rt->bills_amount   = (float) $rtBills->sum('amount');
+            $rt->payments_amount = (float) $rtBills->where('status', 'paid')->sum('amount');
+            $rt->arrears_amount  = max(0.00, $rt->bills_amount - $rt->payments_amount);
+            return $rt;
+        });
+
+        $bestRtPayment     = $rtsSummary->sortByDesc('payments_amount')->first();
+        $highestRtArrears  = $rtsSummary->sortByDesc('arrears_amount')->first();
+
         return view('dashboard.admin-rw', [
             'totalRts' => $totalRts,
             'totalKks' => $totalKks,
@@ -57,16 +73,39 @@ class DashboardController extends Controller
             'recentLedgers' => $recentLedgers,
             'recentSavings' => $recentSavings,
             'totalCategories' => FundCategory::where('is_active', true)->count(),
+
+            // RT Comparison
+            'rtsSummary' => $rtsSummary,
+            'bestRtPayment' => $bestRtPayment,
+            'highestRtArrears' => $highestRtArrears,
         ]);
     }
 
     public function adminRt()
     {
+        $user = auth()->user();
+        $rtId = $this->rtScope->getUserRtId($user);
+
         $data = $this->getCashSummary();
-        $data['totalCategories'] = FundCategory::where('is_active', true)->count();
+        $data['totalCategories'] = FundCategory::where('is_active', true)->visibleToRt($rtId)->count();
         $data['categoryBalances'] = $this->getCategoryBalances();
         $data['recentLedgers'] = CommunityCashLedger::with('fundCategory')
             ->latest('id')->limit(5)->get();
+
+        // Statistik iuran scoped ke RT ini
+        if ($rtId) {
+            $rtBills = \App\Models\Bill::whereHas('kk', fn($q) => $q->where('rt_id', $rtId))->with('payments');
+            $data['totalKkInRt'] = \App\Models\Kk::where('rt_id', $rtId)->count();
+            $data['totalBillsRt'] = (float) $rtBills->sum('amount');
+            $unpaidRt = (clone $rtBills)->whereIn('status', ['unpaid', 'partially_paid'])->get();
+            $data['totalTunggakanRt'] = $unpaidRt->sum(fn($b) => $b->outstanding_balance);
+            $data['rt'] = \App\Models\Rt::find($rtId);
+        } else {
+            $data['totalKkInRt'] = 0;
+            $data['totalBillsRt'] = 0;
+            $data['totalTunggakanRt'] = 0;
+            $data['rt'] = null;
+        }
 
         // Bank Sampah
         $data['totalMembers'] = \App\Models\Member::count();

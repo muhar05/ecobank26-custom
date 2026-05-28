@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CommunityExpense extends Model
 {
     protected $fillable = [
-        'fund_category_id', 'amount', 'date', 'description', 'recorded_by',
+        'fund_category_id', 'rt_id', 'amount', 'date', 'description', 'recorded_by',
     ];
 
     protected function casts(): array
@@ -24,5 +24,10 @@ class CommunityExpense extends Model
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function rt(): BelongsTo
+    {
+        return $this->belongsTo(Rt::class, 'rt_id');
     }
 }

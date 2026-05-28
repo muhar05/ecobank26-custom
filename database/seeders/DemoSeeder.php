@@ -59,6 +59,9 @@ class DemoSeeder extends Seeder
             ['description' => 'RT 001 Kelurahan Eco']
         );
 
+        // Assign admin_rt ke RT 001
+        $admin->update(['rt_id' => $rt->id]);
+
         $kk = \App\Models\Kk::firstOrCreate(
             ['kk_number' => '3201234567890001'],
             [

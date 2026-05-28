@@ -19,4 +19,9 @@ class Rt extends Model
     {
         return $this->hasMany(Kk::class, 'rt_id');
     }
+
+    public function adminUsers(): HasMany
+    {
+        return $this->hasMany(User::class, 'rt_id');
+    }
 }

@@ -6,15 +6,23 @@ use App\Http\Requests\StoreKkRequest;
 use App\Http\Requests\UpdateKkRequest;
 use App\Models\Kk;
 use App\Models\Rt;
+use App\Services\RtScopeService;
 use Illuminate\Http\Request;
 
 class KkController extends Controller
 {
+    public function __construct(private RtScopeService $rtScope) {}
     public function index(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
         $rtFilter = $request->input('rt_id');
         $statusFilter = $request->input('status');
+
+        // admin_rt: paksa rt_id filter (cegah URL tampering)
+        if ($this->rtScope->isRtAdmin($user)) {
+            $rtFilter = $user->rt_id;
+        }
 
         $query = Kk::with('rt')
             ->withCount('members')
@@ -31,7 +39,8 @@ class KkController extends Controller
             });
 
         $kks = $query->latest()->paginate(15)->withQueryString();
-        $rts = Rt::orderBy('rt_number')->get();
+        // admin_rt tidak perlu dropdown filter RT (sudah terkunci ke RT mereka)
+        $rts = $this->rtScope->isGlobal($user) ? Rt::orderBy('rt_number')->get() : collect();
         $statuses = Kk::getStatuses();
 
         return view('kks.index', compact('kks', 'rts', 'statuses', 'search', 'rtFilter', 'statusFilter'));

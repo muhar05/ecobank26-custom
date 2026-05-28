@@ -6,30 +6,47 @@ use App\Models\CommunityCashLedger;
 use App\Models\CommunityExpense;
 use App\Models\FundCategory;
 use App\Services\CommunityCashService;
+use App\Services\RtScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CommunityExpenseController extends Controller
 {
+    public function __construct(private RtScopeService $rtScope) {}
+
     public function index(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
-        $expenses = CommunityExpense::with(['fundCategory', 'recorder'])
+
+        $query = CommunityExpense::with(['fundCategory', 'recorder', 'rt'])
             ->when($search, fn($q) => $q->where('description', 'like', "%{$search}%")
-                ->orWhereHas('fundCategory', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest('date')->paginate(20)->withQueryString();
+                ->orWhereHas('fundCategory', fn($q2) => $q2->where('name', 'like', "%{$search}%")));
+
+        // RT Scoping: admin_rt hanya data rt_id = mereka (legacy NULL tidak tampil)
+        $query = $this->rtScope->applyRtScope($query, $user);
+
+        $expenses = $query->latest('date')->paginate(20)->withQueryString();
 
         return view('community-cash.expenses.index', compact('expenses', 'search'));
     }
 
     public function create()
     {
-        $categories = FundCategory::where('is_active', true)->get();
+        $user = auth()->user();
+        $rtId = $this->rtScope->getUserRtId($user);
+
+        $categories = FundCategory::where('is_active', true)
+            ->visibleToRt($rtId)
+            ->get();
+
         return view('community-cash.expenses.create', compact('categories'));
     }
 
     public function store(Request $request, CommunityCashService $service)
     {
+        $user = auth()->user();
+
         $validated = $request->validate([
             'fund_category_id' => 'required|exists:fund_categories,id',
             'amount' => 'required|numeric|min:1',
@@ -37,7 +54,13 @@ class CommunityExpenseController extends Controller
             'description' => 'required|string|max:255',
         ]);
 
-        $validated['recorded_by'] = auth()->id();
+        $validated['recorded_by'] = $user->id;
+
+        // Auto-fill rt_id jika admin_rt
+        $validated['rt_id'] = $this->rtScope->getUserRtId($user);
+
+        // Validasi category access (cegah URL tampering)
+        $this->validateCategoryAccess($validated['fund_category_id'], $user);
 
         try {
             $service->recordExpense($validated);
@@ -51,18 +74,29 @@ class CommunityExpenseController extends Controller
 
     public function edit(CommunityExpense $expense)
     {
-        $categories = FundCategory::where('is_active', true)->get();
+        $user = auth()->user();
+        $this->authorizeRtAccess($expense, $user);
+
+        $rtId = $this->rtScope->getUserRtId($user);
+        $categories = FundCategory::where('is_active', true)->visibleToRt($rtId)->get();
+
         return view('community-cash.expenses.edit', compact('expense', 'categories'));
     }
 
     public function update(Request $request, CommunityExpense $expense, CommunityCashService $service)
     {
+        $user = auth()->user();
+        $this->authorizeRtAccess($expense, $user);
+
         $validated = $request->validate([
             'fund_category_id' => 'required|exists:fund_categories,id',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
             'description' => 'required|string|max:255',
         ]);
+
+        // Validasi category access (cegah tampering)
+        $this->validateCategoryAccess($validated['fund_category_id'], $user);
 
         $oldCategoryId = $expense->fund_category_id;
         $newCategoryId = (int) $validated['fund_category_id'];
@@ -80,7 +114,6 @@ class CommunityExpenseController extends Controller
         DB::transaction(function () use ($expense, $validated, $oldCategoryId, $newCategoryId, $service) {
             $expense->update($validated);
 
-            // Update related ledger entry
             CommunityCashLedger::where('reference_type', 'expense')
                 ->where('reference_id', $expense->id)
                 ->update([
@@ -90,7 +123,6 @@ class CommunityExpenseController extends Controller
                     'description' => $validated['description'],
                 ]);
 
-            // Recalculate balances
             $service->recalculateBalancesForCategory($newCategoryId);
             if ($oldCategoryId !== $newCategoryId) {
                 $service->recalculateBalancesForCategory($oldCategoryId);
@@ -103,6 +135,9 @@ class CommunityExpenseController extends Controller
 
     public function destroy(CommunityExpense $expense, CommunityCashService $service)
     {
+        $user = auth()->user();
+        $this->authorizeRtAccess($expense, $user);
+
         $categoryId = $expense->fund_category_id;
 
         DB::transaction(function () use ($expense, $categoryId, $service) {
@@ -117,5 +152,38 @@ class CommunityExpenseController extends Controller
 
         return redirect()->route('community-cash.expenses.index')
             ->with('success', 'Pengeluaran berhasil dihapus.');
+    }
+
+    /**
+     * Cegah admin_rt mengakses data expense milik RT lain atau legacy (NULL).
+     */
+    private function authorizeRtAccess(CommunityExpense $expense, $user): void
+    {
+        if ($this->rtScope->isGlobal($user)) {
+            return;
+        }
+
+        if ($expense->rt_id === null || $expense->rt_id !== $user->rt_id) {
+            abort(403, 'Anda tidak memiliki izin untuk mengakses data ini.');
+        }
+    }
+
+    /**
+     * Validasi bahwa fund_category yang dipilih visible ke user ini (anti URL tampering).
+     */
+    private function validateCategoryAccess(int $categoryId, $user): void
+    {
+        if ($this->rtScope->isGlobal($user)) {
+            return;
+        }
+
+        $rtId = $user->rt_id;
+        $exists = FundCategory::where('id', $categoryId)
+            ->visibleToRt($rtId)
+            ->exists();
+
+        if (!$exists) {
+            abort(403, 'Kategori dana tidak dapat diakses oleh RT Anda.');
+        }
     }
 }

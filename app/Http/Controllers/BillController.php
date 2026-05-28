@@ -7,25 +7,34 @@ use App\Models\BillPayment;
 use App\Models\FundCategory;
 use App\Models\Rt;
 use App\Services\BillService;
+use App\Services\RtScopeService;
 use Illuminate\Http\Request;
 
 class BillController extends Controller
 {
     protected $billService;
+    protected $rtScope;
 
-    public function __construct(BillService $billService)
+    public function __construct(BillService $billService, RtScopeService $rtScope)
     {
         $this->billService = $billService;
+        $this->rtScope = $rtScope;
     }
 
     public function index(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
         $monthFilter = $request->input('month');
         $yearFilter = $request->input('year');
         $rtFilter = $request->input('rt_id');
         $statusFilter = $request->input('status');
         $categoryFilter = $request->input('fund_category_id');
+
+        // admin_rt: paksa rt filter ke RT mereka (cegah URL tampering)
+        if ($this->rtScope->isRtAdmin($user)) {
+            $rtFilter = $user->rt_id;
+        }
 
         $query = Bill::with(['kk.rt', 'fundCategory'])
             ->when($search, function ($q) use ($search) {
@@ -54,9 +63,9 @@ class BillController extends Controller
         $bills = $query->latest()->paginate(20)->withQueryString();
 
         // Load helpers/dropdown lists
-        $rts = Rt::orderBy('rt_number')->get();
+        $rts = $this->rtScope->isGlobal($user) ? Rt::orderBy('rt_number')->get() : collect();
         $categories = FundCategory::where('is_mandatory', true)->get();
-        
+
         // Months array for select options
         $months = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
@@ -64,8 +73,12 @@ class BillController extends Controller
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
         ];
 
-        // Stats calculation
-        $allBills = Bill::all();
+        // Stats — scoped ke RT user jika admin_rt
+        $statsQuery = Bill::query();
+        if ($this->rtScope->isRtAdmin($user)) {
+            $statsQuery = $this->rtScope->applyKkRtScope($statsQuery, $user);
+        }
+        $allBills = $statsQuery->get();
         $stats = [
             'total_bills' => $allBills->sum('amount'),
             'total_paid' => $allBills->where('status', 'paid')->sum('amount'),
@@ -150,6 +163,7 @@ class BillController extends Controller
 
     public function arrears(Request $request)
     {
+        $user = auth()->user();
         $search = $request->input('search');
         $monthFilter = $request->input('month');
         $yearFilter = $request->input('year');
@@ -157,6 +171,11 @@ class BillController extends Controller
         $statusFilter = $request->input('status');
         $categoryFilter = $request->input('fund_category_id');
         $overdueOnly = $request->boolean('overdue');
+
+        // admin_rt: paksa rt filter ke RT mereka (cegah URL tampering)
+        if ($this->rtScope->isRtAdmin($user)) {
+            $rtFilter = $user->rt_id;
+        }
 
         $query = Bill::with(['kk.rt', 'fundCategory', 'payments'])
             ->whereIn('status', ['unpaid', 'partially_paid'])
@@ -188,7 +207,7 @@ class BillController extends Controller
         $bills = $query->latest()->paginate(20)->withQueryString();
 
         // Dropdown data
-        $rts = Rt::orderBy('rt_number')->get();
+        $rts = $this->rtScope->isGlobal($user) ? Rt::orderBy('rt_number')->get() : collect();
         $categories = FundCategory::where('is_mandatory', true)->get();
         $months = [
             1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
@@ -196,7 +215,7 @@ class BillController extends Controller
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
         ];
 
-        // Summary cards calculation based on current filter query
+        // Summary cards — scoped
         $statsQuery = Bill::whereIn('status', ['unpaid', 'partially_paid'])
             ->when($search, function ($q) use ($search) {
                 $q->whereHas('kk', function ($qk) use ($search) {
@@ -204,27 +223,15 @@ class BillController extends Controller
                        ->orWhere('kk_number', 'like', "%{$search}%");
                 })->orWhere('bill_code', 'like', "%{$search}%");
             })
-            ->when($monthFilter, function ($q) use ($monthFilter) {
-                $q->where('month', $monthFilter);
-            })
-            ->when($yearFilter, function ($q) use ($yearFilter) {
-                $q->where('year', $yearFilter);
-            })
-            ->when($rtFilter, function ($q) use ($rtFilter) {
-                $q->whereHas('kk', fn($qk) => $qk->where('rt_id', $rtFilter));
-            })
-            ->when($statusFilter, function ($q) use ($statusFilter) {
-                $q->where('status', $statusFilter);
-            })
-            ->when($categoryFilter, function ($q) use ($categoryFilter) {
-                $q->where('fund_category_id', $categoryFilter);
-            })
-            ->when($overdueOnly, function ($q) {
-                $q->where('due_date', '<', now()->toDateString());
-            });
+            ->when($monthFilter, fn($q) => $q->where('month', $monthFilter))
+            ->when($yearFilter, fn($q) => $q->where('year', $yearFilter))
+            ->when($rtFilter, fn($q) => $q->whereHas('kk', fn($qk) => $qk->where('rt_id', $rtFilter)))
+            ->when($statusFilter, fn($q) => $q->where('status', $statusFilter))
+            ->when($categoryFilter, fn($q) => $q->where('fund_category_id', $categoryFilter))
+            ->when($overdueOnly, fn($q) => $q->where('due_date', '<', now()->toDateString()));
 
         $allArrears = $statsQuery->with('payments')->get();
-        
+
         $totalTunggakan = $allArrears->sum(fn($b) => $b->outstanding_balance);
         $jumlahKkMenunggak = $allArrears->pluck('kk_id')->unique()->count();
         $totalUnpaid = $allArrears->where('status', 'unpaid')->sum('amount');
