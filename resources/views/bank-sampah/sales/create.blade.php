@@ -3,7 +3,7 @@
         <x-form-card title="Catat Penjualan"><div class="p-6">
 
             <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis dari Harga Sampah. Kas Bank Sampah hanya menerima margin (selisih harga pengepul − harga nasabah).</p>
+                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis dari Harga Sampah. Kas Bank Sampah hanya menerima margin (selisih harga agregator − harga nasabah).</p>
             </div>
 
             <form method="POST" action="{{ route('bank-sampah.sales.store') }}" class="space-y-6">
@@ -21,9 +21,9 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Pengepul <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Agregator <span class="text-red-500">*</span></label>
                         <select name="collector_id" required x-model="collectorId" @change="updatePrices()" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih Pengepul --</option>
+                            <option value="">-- Pilih Agregator --</option>
                             @foreach($collectors as $collector)
                                 <option value="{{ $collector->id }}" @selected(old('collector_id') == $collector->id)>{{ $collector->name }}</option>
                             @endforeach
@@ -66,7 +66,7 @@
                                     <thead>
                                         <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase">
                                             <th class="pb-2 text-left">Kategori Sampah</th>
-                                            <th class="pb-2 text-left w-32">Harga Pengepul / kg</th>
+                                            <th class="pb-2 text-left w-32">Harga Agregator / kg</th>
                                             <th class="pb-2 text-left w-24">Berat (kg)</th>
                                             <th class="pb-2 text-right w-28">Subtotal</th>
                                             <th class="pb-2 text-right w-28">Margin</th>
@@ -118,7 +118,7 @@
                                         </div>
                                         <div class="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Harga Pengepul / kg</label>
+                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Harga Agregator / kg</label>
                                                 <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                             </div>
                                             <div>
@@ -134,7 +134,7 @@
                                             <span class="text-slate-500 dark:text-slate-400">Margin:</span>
                                             <span class="font-medium text-emerald-600 dark:text-emerald-400" x-text="formatRp(rowMargin(row))"></span>
                                         </div>
-                                        <span x-show="collectorId && !row.hasPrice" class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia untuk pengepul dan kategori ini.</span>
+                                        <span x-show="collectorId && !row.hasPrice" class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia untuk agregator dan kategori ini.</span>
                                     </div>
                                 </template>
                             </div>
@@ -144,7 +144,7 @@
                     {{-- Totals --}}
                     <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Penjualan ke Pengepul</span>
+                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Penjualan ke Agregator</span>
                             <span class="text-base font-bold text-slate-900 dark:text-slate-100" x-text="formatRp(grandTotal())"></span>
                         </div>
                         <div class="flex justify-between items-center">

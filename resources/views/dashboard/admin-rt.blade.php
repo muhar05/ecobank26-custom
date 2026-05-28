@@ -136,7 +136,7 @@
                 <div class="mt-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
                     <div class="bg-amber-500 h-1.5 rounded-full" style="width: 100%"></div>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-2 font-medium">Akumulasi ke pengepul</p>
+                <p class="text-[10px] text-slate-400 mt-2 font-medium">Akumulasi ke agregator</p>
             </div>
 
             {{-- Nasabah --}}

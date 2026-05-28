@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Import Harga Sampah">
-    <x-form-card title="Import Harga Sampah" description="Upload file CSV untuk memperbarui harga nasabah dan harga pengepul secara massal.">
+    <x-form-card title="Import Harga Sampah" description="Upload file CSV untuk memperbarui harga nasabah dan harga agregator secara massal.">
         
         @if(session('import_result'))
             @php $r = session('import_result'); @endphp
@@ -104,7 +104,7 @@
                     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
                         <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 font-bold text-sm">1</div>
                         <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Identifikasi Data</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Kolom <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">collector_name</code> dan <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">waste_category_name</code>. Pengepul dan Kategori akan otomatis dibuat jika belum ada.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Kolom <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">collector_name</code> dan <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">waste_category_name</code>. Agregator dan Kategori akan otomatis dibuat jika belum ada.</p>
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
                         <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 font-bold text-sm">2</div>
@@ -114,12 +114,12 @@
                     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
                         <div class="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3 font-bold text-sm">3</div>
                         <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Logika Harga</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400"><code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">collector_price</code> (Harga Pengepul) harus lebih besar dari <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">member_price</code> (Harga Nasabah) untuk menjaga margin.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400"><code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">collector_price</code> (Harga Agregator) harus lebih besar dari <code class="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">member_price</code> (Harga Nasabah) untuk menjaga margin.</p>
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
                         <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 font-bold text-sm">4</div>
                         <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">Update Otomatis</h4>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Jika kombinasi Pengepul dan Kategori sudah ada, harga akan langsung di-update.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Jika kombinasi Agregator dan Kategori sudah ada, harga akan langsung di-update.</p>
                     </div>
                 </div>
             </x-form-section>

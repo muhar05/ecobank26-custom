@@ -14,7 +14,7 @@
                 Setoran Baru
             </a>
             <a href="/bank-sampah/sales/create" class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-                Jual ke Pengepul
+                Jual ke Agregator
             </a>
         </div>
     </div>
@@ -77,9 +77,9 @@
                 </div>
             </div>
 
-            {{-- Penjualan Pengepul --}}
+            {{-- Penjualan Agregator --}}
             <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-[700ms] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 p-6 hover:shadow-md transition-shadow relative overflow-hidden">
-                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Penjualan Pengepul</p>
+                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Penjualan Agregator</p>
                 <p class="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1.5">Rp {{ number_format($totalSales, 0, ',', '.') }}</p>
                 <div class="mt-4 w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
                     <div class="bg-amber-500 h-1.5 rounded-full" style="width: 100%"></div>
@@ -171,7 +171,7 @@
                 <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Kategori Sampah</p>
             </a>
             <a href="/bank-sampah/collectors" class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60 p-4 hover:-translate-y-1 hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-300">
-                <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Pengepul</p>
+                <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Agregator</p>
             </a>
             <a href="/bank-sampah/waste-prices" class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60 p-4 hover:-translate-y-1 hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-800 transition-all duration-300">
                 <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Harga Sampah</p>

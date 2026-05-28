@@ -11,6 +11,18 @@
             <p class="mt-2 text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
                 Halaman audit read-only real-time untuk memantau integritas transaksi, saldo ledger, dan memvalidasi anomali sistem secara otomatis.
             </p>
+            <div class="mt-4 p-3 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-400">
+                <p class="font-semibold text-slate-700 dark:text-slate-300 mb-1">Sumber Data Monitoring:</p>
+                <p class="mb-1">Halaman ini mengambil data dari nasabah, setoran, penarikan, buku tabungan, dan audit consistency checker berdasarkan tabel berikut:</p>
+                <ul class="list-disc list-inside mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5">
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">waste_customers</code></li>
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">deposits</code></li>
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">withdrawals</code></li>
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">savings_ledgers</code></li>
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">audit service</code></li>
+                    <li><code class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">activity_logs</code></li>
+                </ul>
+            </div>
         </div>
 
         {{-- Audit Status Badge --}}

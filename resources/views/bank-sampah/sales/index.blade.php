@@ -1,9 +1,9 @@
-<x-layouts.dashboard title="Penjualan ke Pengepul">
+<x-layouts.dashboard title="Penjualan ke Agregator">
     <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Penjualan ke Pengepul</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola transaksi penjualan sampah dari bank sampah ke mitra pengepul</p>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Penjualan ke Agregator</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola transaksi penjualan sampah dari bank sampah ke mitra agregator</p>
             </div>
             <div class="flex items-center">
                 <a href="{{ route('bank-sampah.sales.create') }}" class="inline-flex items-center gap-2 bg-emerald-600 dark:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 shadow-sm hover:shadow transition w-full sm:w-auto justify-center">
@@ -32,7 +32,7 @@
                     <thead class="bg-white dark:bg-slate-900">
                         <tr>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tanggal</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pengepul</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Agregator</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Penjualan</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Catatan</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Aksi</th>

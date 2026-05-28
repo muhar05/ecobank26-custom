@@ -1,10 +1,10 @@
-<x-layouts.dashboard title="Tambah Pengepul">
-    <x-form-card title="Tambah Pengepul" description="Daftarkan pengepul baru untuk transaksi bank sampah.">
+<x-layouts.dashboard title="Tambah Agregator">
+    <x-form-card title="Tambah Agregator" description="Daftarkan agregator baru untuk transaksi bank sampah.">
         <form method="POST" action="{{ route('bank-sampah.collectors.store') }}">
             @csrf
-            <x-form-section title="Data Pengepul">
+            <x-form-section title="Data Agregator">
                 <div class="space-y-5">
-                    <x-field-group label="Nama Pengepul" name="name" required>
+                    <x-field-group label="Nama Agregator" name="name" required>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </x-field-group>
 
@@ -18,7 +18,7 @@
                 </div>
             </x-form-section>
 
-            <x-form-actions cancelUrl="{{ route('bank-sampah.collectors.index') }}" submitLabel="Simpan Pengepul" />
+            <x-form-actions cancelUrl="{{ route('bank-sampah.collectors.index') }}" submitLabel="Simpan Agregator" />
         </form>
     </x-form-card>
 </x-layouts.dashboard>

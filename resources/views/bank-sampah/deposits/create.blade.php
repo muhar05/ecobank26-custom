@@ -3,7 +3,7 @@
         <x-form-card title="Catat Setoran Sampah"><div class="p-6">
 
             <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis diambil dari menu Harga Sampah berdasarkan pengepul dan kategori.</p>
+                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis diambil dari menu Harga Sampah berdasarkan agregator dan kategori.</p>
             </div>
 
             <form method="POST" action="{{ route('bank-sampah.deposits.store') }}">
@@ -25,7 +25,7 @@
                         @error('waste_customer_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Pengepul <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Agregator <span class="text-red-500">*</span></label>
                         <select name="collector_id" required x-model="collectorId" @change="updatePrices()" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="">-- Pilih --</option>
                             @foreach($collectors as $c)

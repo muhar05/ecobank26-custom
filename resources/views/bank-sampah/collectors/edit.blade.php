@@ -1,10 +1,10 @@
-<x-layouts.dashboard title="Edit Pengepul">
-    <x-form-card title="Edit Pengepul" description="Perbarui data pengepul.">
+<x-layouts.dashboard title="Edit Agregator">
+    <x-form-card title="Edit Agregator" description="Perbarui data agregator.">
         <form method="POST" action="{{ route('bank-sampah.collectors.update', $collector) }}">
             @csrf @method('PUT')
-            <x-form-section title="Data Pengepul">
+            <x-form-section title="Data Agregator">
                 <div class="space-y-5">
-                    <x-field-group label="Nama Pengepul" name="name" required>
+                    <x-field-group label="Nama Agregator" name="name" required>
                         <input type="text" name="name" id="name" value="{{ old('name', $collector->name) }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </x-field-group>
 

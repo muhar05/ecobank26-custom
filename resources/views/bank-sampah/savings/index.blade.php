@@ -36,14 +36,22 @@
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         @forelse($balances as $b)
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition duration-150">
+                                @php
+                                    $customerName = $b->wasteCustomer ? $b->wasteCustomer->name : ($b->member->name ?? '-');
+                                    $customerCode = $b->wasteCustomer ? $b->wasteCustomer->customer_code : ($b->member->member_code ?? '-');
+                                    $customerInitial = substr($customerName !== '-' ? $customerName : '?', 0, 1);
+                                @endphp
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                            <span class="text-sm font-bold">{{ substr($b->member->name ?? '?', 0, 1) }}</span>
+                                            <span class="text-sm font-bold">{{ $customerInitial }}</span>
                                         </div>
                                         <div>
-                                            <div class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $b->member->name ?? '-' }}</div>
-                                            <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{{ $b->member->member_code ?? '-' }}</div>
+                                            <div class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $customerName }}</div>
+                                            <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{{ $customerCode }}</div>
+                                            @if($b->wasteCustomer && !$b->wasteCustomer->member_id)
+                                                <span class="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Mandiri</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
