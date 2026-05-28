@@ -155,6 +155,7 @@ Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-samp
     Route::get('waste-categories/import', [WasteCategoryImportController::class, 'showForm'])->name('waste-categories.import');
     Route::post('waste-categories/import', [WasteCategoryImportController::class, 'import'])->name('waste-categories.import.store');
     Route::get('waste-categories/import/template', [WasteCategoryImportController::class, 'template'])->name('waste-categories.import.template');
+    Route::get('waste-categories/import/failed-rows', [WasteCategoryImportController::class, 'downloadFailedRows'])->name('waste-categories.import.failed-rows');
     Route::get('waste-prices/import', [WastePriceImportController::class, 'showForm'])->name('waste-prices.import');
     Route::post('waste-prices/import', [WastePriceImportController::class, 'import'])->name('waste-prices.import.store');
     Route::get('waste-prices/import/template', [WastePriceImportController::class, 'template'])->name('waste-prices.import.template');

@@ -160,4 +160,75 @@ class DynamicWasteCategoryGroupsTest extends TestCase
         $this->assertEquals('Harga Jual ke Agregator harus lebih besar atau sama dengan Harga Beli dari Nasabah.', $failedRows[0][8]);
         $this->assertEquals('Kategori sampah belum terdaftar', $failedRows[1][8]);
     }
+
+    public function test_can_download_category_template()
+    {
+        $response = $this->actingAs($this->admin)->get(route('bank-sampah.waste-categories.import.template'));
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    public function test_category_import_modes_and_validations()
+    {
+        $groupPlastik = WasteCategoryGroup::where('code', 'PLS')->first();
+        WasteCategory::create([
+            'name' => 'Existing Botol',
+            'unit' => 'kg',
+            'code' => 'PLS.99',
+            'waste_category_group_id' => $groupPlastik->id,
+            'category_group' => $groupPlastik->name,
+        ]);
+
+        $importData = [
+            ['Kode Grup', 'Nama Grup', 'Kode Kategori', 'Nama Kategori Sampah', 'Satuan'],
+            ['PLS', 'Plastik', '', 'Botol Plastik Baru', 'kg'],
+            ['', 'Kertas', '', 'Buku Bekas', 'kg'],
+            ['XYZ', 'Khayalan', '', 'Sampah Aneh', 'kg'],
+            ['PLS', 'Plastik', 'PLS.99', 'Existing Botol Updated', 'pcs'],
+        ];
+
+        \Excel::fake();
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('test-import-cat.xlsx');
+
+        // Test Mode: insert_only
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'insert_only',
+        ]);
+
+        $response->assertRedirect();
+        $result = session('import_result');
+
+        $this->assertEquals(2, $result['created']); 
+        $this->assertEquals(0, $result['updated']);
+        $this->assertEquals(2, $result['failed']); 
+        $this->assertTrue(session()->has('waste_category_import_failed_rows'));
+
+        // Test Mode: insert_or_update
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $response2 = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'insert_or_update',
+        ]);
+
+        $result2 = session('import_result');
+        $this->assertEquals(1, $result2['updated']); 
+        
+        // Test Mode: skip_duplicate
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $response3 = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'skip_duplicate',
+        ]);
+
+        $result3 = session('import_result');
+        $this->assertEquals(1, $result3['skipped']); 
+    }
 }

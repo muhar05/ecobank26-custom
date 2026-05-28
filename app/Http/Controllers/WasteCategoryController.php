@@ -34,13 +34,23 @@ class WasteCategoryController extends Controller
 
         $categories = $query->latest()->paginate(20)->withQueryString();
 
-        // Dynamic group summaries
+        // Dynamic group summaries calculated in controller
         $groups = WasteCategoryGroup::withCount('wasteCategories')->orderBy('name')->get();
         $totalCategories = WasteCategory::count();
+        $totalActiveGroups = WasteCategoryGroup::active()->count();
         $uncategorizedCount = WasteCategory::whereNull('waste_category_group_id')->count();
 
+        $mostPopulousGroup = WasteCategoryGroup::withCount('wasteCategories')
+            ->orderBy('waste_categories_count', 'desc')
+            ->first();
+        
+        $mostPopulousGroupName = '-';
+        if ($mostPopulousGroup && $mostPopulousGroup->waste_categories_count > 0) {
+            $mostPopulousGroupName = "{$mostPopulousGroup->name} ({$mostPopulousGroup->waste_categories_count})";
+        }
+
         return view('bank-sampah.waste-categories.index', compact(
-            'categories', 'search', 'groupId', 'groups', 'totalCategories', 'uncategorizedCount'
+            'categories', 'search', 'groupId', 'groups', 'totalCategories', 'totalActiveGroups', 'uncategorizedCount', 'mostPopulousGroupName'
         ));
     }
 
