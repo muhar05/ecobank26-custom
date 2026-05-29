@@ -18,7 +18,7 @@ class FundCategoryController extends Controller
         $progress = $request->input('progress');
         $sort = $request->input('sort', 'latest');
 
-        $query = FundCategory::withSum('contributions', 'amount')
+        $query = FundCategory::query()->withSum('contributions', 'amount')
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%"))
             ->when($status === 'active', fn($q) => $q->where('is_active', true))
             ->when($status === 'inactive', fn($q) => $q->where('is_active', false));
@@ -36,7 +36,7 @@ class FundCategoryController extends Controller
         $categories = $query->paginate(20)->withQueryString()->fragment('table-section');
 
         // Stats — scope juga disesuaikan
-        $statsQuery = FundCategory::withSum('contributions', 'amount');
+        $statsQuery = FundCategory::query()->withSum('contributions', 'amount');
         $statsQuery = $this->rtScope->applyFundCategoryScope($statsQuery, $user);
         $allCategories = $statsQuery->get();
 
