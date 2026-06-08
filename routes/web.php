@@ -110,6 +110,9 @@ Route::get('/community-cash/report', [CommunityCashReportController::class, 'ind
 Route::get('/community-cash/report/export', [CommunityCashReportController::class, 'export'])
     ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report.export');
 
+Route::get('/community-cash/report/pdf', [CommunityCashReportController::class, 'pdf'])
+    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report.pdf');
+
 // Warga - Public Cash Report
 Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicReport'])
     ->middleware(['auth', 'permission:view_public_cash_report'])->name('warga.cash-report');
@@ -225,6 +228,9 @@ Route::get('/bank-sampah/cash-report', [WasteBankCashReportController::class, 'i
 
 Route::get('/bank-sampah/cash-report/export', [WasteBankCashReportController::class, 'export'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report.export');
+
+Route::get('/bank-sampah/cash-report/pdf', [WasteBankCashReportController::class, 'pdf'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report.pdf');
 
 // Admin RW - Audit Trail Logs
 Route::get('/admin/audit-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])

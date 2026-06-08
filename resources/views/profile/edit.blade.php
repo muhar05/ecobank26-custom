@@ -90,37 +90,5 @@
         </div>
     </div>
 
-    {{-- Delete Account --}}
-    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-300 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-red-200 dark:border-red-900/50 p-6 transition-colors">
-        <div class="max-w-xl">
-            <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">Hapus Akun</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Setelah akun dihapus, semua data akan hilang secara permanen.</p>
-
-            <x-danger-button x-data="" x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')">
-                Hapus Akun
-            </x-danger-button>
-
-            <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
-                <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
-                    @csrf
-                    @method('delete')
-
-                    <h2 class="text-lg font-medium text-slate-900 dark:text-slate-100">Yakin ingin menghapus akun?</h2>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Masukkan password untuk konfirmasi penghapusan akun.</p>
-
-                    <div class="mt-6">
-                        <input name="password" type="password" placeholder="Password" class="block w-3/4 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-red-500 focus:ring-red-500">
-                        @error('password', 'userDeletion') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="mt-6 flex justify-end gap-3">
-                        <x-secondary-button x-on:click="$dispatch('close')">Batal</x-secondary-button>
-                        <x-danger-button>Hapus Akun</x-danger-button>
-                    </div>
-                </form>
-            </x-modal>
-        </div>
-    </div>
-
 </div>
 </x-layouts.dashboard>

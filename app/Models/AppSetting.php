@@ -27,15 +27,21 @@ class AppSetting extends Model
      */
     public static function getValue(string $key, $default = null)
     {
-        $setting = Cache::remember("app_setting:{$key}", 3600, function () use ($key) {
-            return self::where('key', $key)->first();
-        });
+        try {
+            $setting = Cache::remember("app_setting:{$key}", 3600, function () use ($key) {
+                return self::where('key', $key)->first();
+            });
 
-        if (!$setting || is_null($setting->value)) {
+            if (!$setting || is_null($setting->value)) {
+                return $default;
+            }
+
+            return self::castValue($setting->value, $setting->type);
+        } catch (\Exception $e) {
+            // Log error silently or handle as needed
+            report($e);
             return $default;
         }
-
-        return self::castValue($setting->value, $setting->type);
     }
 
     /**
@@ -61,23 +67,28 @@ class AppSetting extends Model
      * @param mixed $value
      * @param string $type
      * @param string|null $settingGroup
-     * @return self
+     * @return self|null
      */
     public static function setValue(string $key, $value, string $type = 'string', ?string $settingGroup = null)
     {
-        $setting = self::updateOrCreate(
-            ['key' => $key],
-            [
-                'value' => (string) $value,
-                'type' => $type,
-                'setting_group' => $settingGroup,
-            ]
-        );
+        try {
+            $setting = self::updateOrCreate(
+                ['key' => $key],
+                [
+                    'value' => (string) $value,
+                    'type' => $type,
+                    'setting_group' => $settingGroup,
+                ]
+            );
 
-        // Clear cache instantly
-        Cache::forget("app_setting:{$key}");
+            // Clear cache instantly
+            Cache::forget("app_setting:{$key}");
 
-        return $setting;
+            return $setting;
+        } catch (\Exception $e) {
+            report($e);
+            return null;
+        }
     }
 
     /**

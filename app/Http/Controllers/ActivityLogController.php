@@ -12,10 +12,15 @@ class ActivityLogController extends Controller
     {
         $query = ActivityLog::with('user');
 
-        // Search event type
+        // Exclude internal/system technical logs if any (optional, currently most are business-relevant)
+        // $query->whereNotIn('event_type', ['system.debug', 'internal.exception']);
+
+        // Search event type or description
         if ($request->filled('search')) {
-            $query->where('event_type', 'like', "%{$request->search}%")
+            $query->where(function($q) use ($request) {
+                $q->where('event_type', 'like', "%{$request->search}%")
                   ->orWhere('description', 'like', "%{$request->search}%");
+            });
         }
 
         // Filter severity

@@ -27,6 +27,35 @@ class WasteBankCashReportController extends Controller
         return view('bank-sampah.cash-report.index', compact('ledgers', 'totalIn', 'totalOut', 'balance'));
     }
 
+    public function pdf(Request $request)
+    {
+        $query = WasteBankCashLedger::query();
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        $ledgers = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
+        $totalIn = (clone $query)->where('type', 'in')->sum('amount');
+        $totalOut = (clone $query)->where('type', 'out')->sum('amount');
+        
+        $dateLabel = '';
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $dateLabel = $request->date_from . ' sd ' . $request->date_to;
+        } elseif ($request->filled('date_from')) {
+            $dateLabel = 'Mulai ' . $request->date_from;
+        } elseif ($request->filled('date_to')) {
+            $dateLabel = 'Sampai ' . $request->date_to;
+        } else {
+            $dateLabel = 'Seluruh Waktu';
+        }
+
+        return view('bank-sampah.cash-report.pdf', compact('ledgers', 'totalIn', 'totalOut', 'dateLabel'));
+    }
+
     public function export(Request $request)
     {
         $query = WasteBankCashLedger::query();

@@ -5,10 +5,14 @@
                 <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Laporan Kas Bank Sampah</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Laporan arus kas masuk (margin/operasional) dan keluar</p>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center gap-2">
                 <a href="{{ route('bank-sampah.cash-report.export', request()->only(['date_from', 'date_to'])) }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition w-full sm:w-auto justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                    Export Laporan
+                    Export CSV
+                </a>
+                <a href="{{ route('bank-sampah.cash-report.pdf', request()->all()) }}" target="_blank" class="inline-flex items-center gap-2 bg-rose-600 dark:bg-rose-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-rose-700 dark:hover:bg-rose-400 shadow-sm transition w-full sm:w-auto justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    Download PDF
                 </a>
             </div>
         </div>

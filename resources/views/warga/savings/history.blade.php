@@ -1,150 +1,97 @@
 <x-layouts.dashboard title="Riwayat Tabungan">
     @if(!$member)
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 text-center transition-colors duration-300">
-            <p class="text-slate-500 dark:text-slate-400">Akun Anda belum terhubung dengan data warga/nasabah.</p>
-            <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Hubungi admin untuk menghubungkan akun.</p>
+        <div class="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+            <div class="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mb-6 ring-8 ring-rose-50/50">
+                <svg class="w-12 h-12 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h2 class="text-3xl font-extrabold text-slate-900 mb-4">Akun Belum Terhubung</h2>
+            <p class="text-lg text-slate-600 max-w-lg mx-auto mb-10 leading-relaxed">
+                Akun Anda belum dikaitkan dengan data nasabah Bank Sampah. Mohon hubungi administrator untuk menghubungkan akun agar dapat melihat riwayat tabungan Anda.
+            </p>
+            <a href="{{ route('warga.dashboard') }}" class="inline-flex items-center justify-center bg-slate-900 text-white px-8 py-4 rounded-2xl text-base font-bold hover:bg-slate-800 transition">
+                Kembali ke Beranda
+            </a>
         </div>
     @else
-        <div class="space-y-6" x-data="{ isSubmitting: false, datePreset: '{{ request('date_preset') }}' }">
-            {{-- Filter Toolbar --}}
-            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 transition-colors duration-300">
-                <form method="GET" action="{{ route('warga.savings.history') }}" @submit="isSubmitting = true" class="flex flex-col gap-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {{-- Search --}}
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Pencarian</label>
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari keterangan / nominal..." class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                        </div>
-                        
-                        {{-- Type --}}
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Jenis Transaksi</label>
-                            <select name="type" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                                <option value="">Semua Transaksi</option>
-                                <option value="credit" {{ request('type') === 'credit' ? 'selected' : '' }}>Kredit (Pemasukan)</option>
-                                <option value="debit" {{ request('type') === 'debit' ? 'selected' : '' }}>Debit (Penarikan)</option>
-                            </select>
-                        </div>
-                        
-                        {{-- Sort --}}
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Urutkan</label>
-                            <select name="sort" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                                <option value="latest" {{ request('sort') === 'latest' ? 'selected' : '' }}>Tanggal Terbaru</option>
-                                <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>Tanggal Terlama</option>
-                                <option value="amount_desc" {{ request('sort') === 'amount_desc' ? 'selected' : '' }}>Nominal Terbesar</option>
-                                <option value="amount_asc" {{ request('sort') === 'amount_asc' ? 'selected' : '' }}>Nominal Terkecil</option>
-                            </select>
-                        </div>
+        <div class="space-y-8 mx-auto">
+            {{-- Header --}}
+            <div>
+                <h2 class="text-3xl font-extrabold text-slate-900">Riwayat Tabungan</h2>
+                <p class="text-base text-slate-600 mt-2">Daftar lengkap setoran dan penarikan tabungan bank sampah Anda.</p>
+            </div>
 
-                        {{-- Date Preset --}}
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Waktu</label>
-                            <select name="date_preset" x-model="datePreset" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                                <option value="">Semua Waktu</option>
-                                <option value="today">Hari ini</option>
-                                <option value="last_week">Minggu lalu</option>
-                                <option value="last_month">Sebulan lalu</option>
-                                <option value="custom">Kustom Tanggal</option>
-                            </select>
-                        </div>
+            {{-- Summary Cards (Large & Clear) --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-emerald-600 rounded-3xl p-8 shadow-lg text-white">
+                    <p class="text-sm font-bold text-emerald-100 uppercase tracking-wider mb-2">Saldo Saat Ini</p>
+                    <p class="text-5xl font-extrabold">Rp {{ number_format($balance ?? 0, 0, ',', '.') }}</p>
+                </div>
+                <div class="bg-slate-100 rounded-3xl p-8 border border-slate-200">
+                    <p class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">Total Transaksi</p>
+                    <p class="text-4xl font-extrabold text-slate-900">{{ $totalTransactions ?? 0 }} <span class="text-xl font-normal">Kali</span></p>
+                </div>
+            </div>
+
+            {{-- Filter Toolbar --}}
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+                <form method="GET" action="{{ route('warga.savings.history') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Jenis Transaksi</label>
+                        <select name="type" class="w-full rounded-2xl border-slate-300 bg-slate-50 text-slate-900 h-14 px-4 text-base font-medium">
+                            <option value="">Semua</option>
+                            <option value="credit" {{ request('type') === 'credit' ? 'selected' : '' }}>Setoran</option>
+                            <option value="debit" {{ request('type') === 'debit' ? 'selected' : '' }}>Penarikan</option>
+                        </select>
                     </div>
                     
-                    {{-- Custom Date Fields --}}
-                    <div x-show="datePreset === 'custom'" style="display: none;" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Dari Tanggal</label>
-                            <input type="date" name="start_date" value="{{ request('start_date') }}" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Sampai Tanggal</label>
-                            <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 h-10">
-                        </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Dari Tanggal</label>
+                        <input type="date" name="start_date" value="{{ request('start_date') }}" class="w-full rounded-2xl border-slate-300 bg-slate-50 text-slate-900 h-14 px-4 text-base font-medium">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Sampai Tanggal</label>
+                        <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full rounded-2xl border-slate-300 bg-slate-50 text-slate-900 h-14 px-4 text-base font-medium">
                     </div>
 
-                    {{-- Actions --}}
-                    <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <button type="submit" :disabled="isSubmitting" :class="{'opacity-75 cursor-not-allowed': isSubmitting}" class="h-10 bg-emerald-600 dark:bg-emerald-500 text-white px-5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 transition shadow-sm w-full sm:w-auto flex justify-center items-center">
-                            <span x-text="isSubmitting ? 'Memfilter...' : 'Terapkan Filter'"></span>
-                        </button>
-                        @if(request()->hasAny(['search', 'type', 'sort', 'date_preset']))
-                            <a href="{{ route('warga.savings.history') }}" class="h-10 inline-flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-5 rounded-lg text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition w-full sm:w-auto">
-                                Reset
-                            </a>
-                        @endif
-                    </div>
+                    <button type="submit" class="h-14 bg-emerald-600 text-white rounded-2xl text-base font-bold hover:bg-emerald-700 transition">
+                        Tampilkan Riwayat
+                    </button>
                 </form>
             </div>
 
-            <div id="table-section" 
-                 x-data="{ tableLoading: false }" 
-                 @click="if($event.target.closest('nav[role=\'navigation\'] a') || $event.target.closest('a.page-link')) tableLoading = true" 
-                 :class="{'opacity-70 cursor-wait pointer-events-none': tableLoading}"
-                 class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300 relative">
-                 
-                {{-- Top Loading Bar --}}
-                <div x-show="tableLoading" style="display: none;" class="absolute top-0 inset-x-0 h-1 z-50 bg-emerald-100 dark:bg-emerald-900/30">
-                    <div class="h-full bg-emerald-500 w-full animate-pulse"></div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                        <thead class="bg-slate-50 dark:bg-slate-800">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Tanggal</th>
-                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Keterangan</th>
-                                <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Kredit</th>
-                                <th class="px-6 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase">Debit</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                            @forelse($ledgers as $l)
-                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                                    <td class="px-6 py-4 text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap">{{ $l->created_at->format('d/m/Y') }}</td>
-                                    <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
-                                        {{ $l->description }}
-                                        @if($l->reference_type)
-                                            @php
-                                                $refType = class_basename($l->reference_type);
-                                                $refName = match($refType) {
-                                                    'Deposit' => 'Setoran',
-                                                    'Withdrawal' => 'Penarikan',
-                                                    'WasteSale' => 'Penjualan',
-                                                    default => $refType
-                                                };
-                                            @endphp
-                                            <span class="block text-xs text-slate-400 mt-0.5 font-mono">{{ $refName }} #{{ $l->reference_id }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-sm text-right text-emerald-700 dark:text-emerald-400 font-medium whitespace-nowrap">{{ $l->type === 'credit' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '' }}</td>
-                                    <td class="px-6 py-4 text-sm text-right text-red-600 dark:text-red-400 font-medium whitespace-nowrap">{{ $l->type === 'debit' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-6 py-12 text-center">
-                                        <div class="flex flex-col items-center justify-center">
-                                            <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                                <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                            </div>
-                                            <p class="text-slate-500 dark:text-slate-400 text-sm">Belum ada riwayat transaksi yang sesuai.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if(method_exists($ledgers, 'hasPages') && $ledgers->hasPages())
-                    <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-                        {{ $ledgers->links() }}
+            {{-- Transactions List (Card-based) --}}
+            <div class="space-y-4">
+                @forelse($ledgers as $l)
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 {{ $l->type === 'credit' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
+                                <span class="text-xs font-bold uppercase">{{ $l->type === 'credit' ? 'Masuk' : 'Keluar' }}</span>
+                            </div>
+                            <div>
+                                <p class="text-base font-bold text-slate-900">{{ $l->description }}</p>
+                                <p class="text-sm text-slate-500 mt-1">{{ $l->created_at->format('d/m/Y, H:i') }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-extrabold {{ $l->type === 'credit' ? 'text-emerald-700' : 'text-rose-700' }}">
+                                {{ $l->type === 'credit' ? '+' : '-' }}Rp {{ number_format($l->amount, 0, ',', '.') }}
+                            </p>
+                        </div>
                     </div>
-                @elseif(!method_exists($ledgers, 'hasPages') && $ledgers instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                    <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-                        {{ $ledgers->links() }}
+                @empty
+                    <div class="bg-slate-50 p-12 rounded-3xl text-center border-2 border-dashed border-slate-200">
+                        <p class="text-lg font-bold text-slate-600">Belum ada riwayat tabungan pada periode ini.</p>
                     </div>
-                @endif
+                @endforelse
             </div>
+
+            {{-- Pagination --}}
+            @if($ledgers->hasPages())
+                <div class="pt-4">
+                    {{ $ledgers->links() }}
+                </div>
+            @endif
         </div>
     @endif
 </x-layouts.dashboard>
