@@ -9,11 +9,38 @@ class MemberController extends Controller
 {
     public function index(Request $request)
     {
+        $members = $this->applyFilters($request);
+        $members = $members->latest()->paginate(20)->withQueryString();
+
+        $rts = \App\Models\Rt::orderBy('rt_number')->get();
+        $kks = \App\Models\Kk::orderBy('family_head')->get();
+
         $search = $request->input('search');
         $rtFilter = $request->input('rt_id');
         $kkFilter = $request->input('kk_id');
+        $genderFilter = $request->input('gender');
+        $statusFilter = $request->input('status');
+        $ageCategory = $request->input('age_category');
 
-        $members = Member::with(['user', 'kk.rt'])
+        return view('members.index', compact('members', 'search', 'rts', 'kks', 'rtFilter', 'kkFilter', 'genderFilter', 'statusFilter', 'ageCategory'));
+    }
+
+    public function export(Request $request)
+    {
+        $membersQuery = $this->applyFilters($request);
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\MembersExport($membersQuery), 'data-warga-' . now()->format('Y-m-d') . '.xlsx');
+    }
+
+    private function applyFilters(Request $request)
+    {
+        $search = $request->input('search');
+        $rtFilter = $request->input('rt_id');
+        $kkFilter = $request->input('kk_id');
+        $genderFilter = $request->input('gender');
+        $statusFilter = $request->input('status');
+        $ageCategory = $request->input('age_category');
+
+        return Member::with(['kk.rt'])
             ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%")
                 ->orWhere('member_code', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")
@@ -24,12 +51,23 @@ class MemberController extends Controller
             ->when($kkFilter, function ($q) use ($kkFilter) {
                 $q->where('kk_id', $kkFilter);
             })
-            ->latest()->paginate(20)->withQueryString();
-
-        $rts = \App\Models\Rt::orderBy('rt_number')->get();
-        $kks = \App\Models\Kk::orderBy('family_head')->get();
-
-        return view('members.index', compact('members', 'search', 'rts', 'kks', 'rtFilter', 'kkFilter'));
+            ->when($genderFilter, function ($q) use ($genderFilter) {
+                $q->whereIn('gender', $genderFilter === 'L' ? ['L', 'Laki-laki'] : ['P', 'Perempuan']);
+            })
+            ->when($statusFilter, function ($q) use ($statusFilter) {
+                // Assuming status is on KK model
+                $q->whereHas('kk', fn($qk) => $qk->where('status', $statusFilter));
+            })
+            ->when($ageCategory, function ($q) use ($ageCategory) {
+                $now = \Carbon\Carbon::now();
+                if ($ageCategory === 'anak') {
+                    $q->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, ?) < 17', [$now]);
+                } elseif ($ageCategory === 'dewasa') {
+                    $q->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, ?) BETWEEN 17 AND 59', [$now]);
+                } elseif ($ageCategory === 'lansia') {
+                    $q->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, ?) >= 60', [$now]);
+                }
+            });
     }
 
     public function create()

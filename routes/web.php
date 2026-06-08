@@ -146,6 +146,7 @@ Route::middleware(['auth', 'permission:manage_members'])->group(function () {
     Route::post('members/import', [MemberImportController::class, 'import'])->name('members.import.store');
     Route::get('members/import/template', [MemberImportController::class, 'template'])->name('members.import.template');
     Route::resource('members', MemberController::class);
+    Route::get('members/export', [MemberController::class, 'export'])->name('members.export');
     Route::post('members/{member}/reset-password', [MemberController::class, 'resetPassword'])->name('members.reset-password');
     Route::post('members/{member}/create-login-account', [MemberController::class, 'createLoginAccount'])->name('members.create-login-account');
     
