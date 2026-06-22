@@ -46,9 +46,9 @@
                 @csrf
 
                 <div>
-                    <label for="login" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No. HP atau Username (Kode Warga)</label>
-                    <input id="login" type="text" name="login" value="{{ old('login') }}" required autofocus autocomplete="username" placeholder="08123456789 atau MBR-26-001" class="block w-full rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 transition-colors duration-300">
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Gunakan nomor HP (08x) atau kode warga (MBR-x-x).</p>
+                    <label for="login" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">No. Telepon</label>
+                    <input id="login" type="text" name="login" value="{{ old('login') }}" required autofocus autocomplete="username" placeholder="08123456789" class="block w-full rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 transition-colors duration-300">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Contoh: <span class="font-medium">08123456789</span></p>
                     @error('login') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 

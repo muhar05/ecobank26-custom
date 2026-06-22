@@ -58,15 +58,20 @@ class KkController extends Controller
     {
         $kk = Kk::create($request->validated());
 
-        // Otomatis tambahkan Kepala Keluarga ke daftar warga
-        \App\Models\Member::create([
-            'kk_id' => $kk->id,
-            'member_code' => \App\Models\Member::generateNextCode(),
-            'name' => $kk->family_head,
-            'address' => $kk->address,
-            'phone' => $kk->phone,
-            'relationship' => 'Kepala Keluarga',
-        ]);
+        try {
+            // Kita coba buat warga dan tangkap jika ada error
+            \App\Models\Member::create([
+                'kk_id' => $kk->id,
+                'member_code' => \App\Models\Member::generateNextCode(),
+                'name' => $kk->family_head,
+                'address' => $kk->address,
+                'phone' => $kk->phone ?? null, // Berjaga-jaga jika phone kosong
+                'relationship' => 'Kepala Keluarga',
+            ]);
+        } catch (\Exception $e) {
+            // Jika gagal, layar akan blank putih dan memunculkan tulisan error aslinya!
+            dd('ERROR SAAT BUAT WARGA: ' . $e->getMessage());
+        }
 
         return redirect()->route('kks.index')
             ->with('success', 'Data Kartu Keluarga berhasil ditambahkan dan Kepala Keluarga otomatis terdaftar.');

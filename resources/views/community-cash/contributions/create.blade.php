@@ -2,19 +2,22 @@
     <x-form-card title="Catat Iuran Warga" description="Catat pemasukan iuran dari warga ke kas RT/RW.">
         <form method="POST" action="{{ route('community-cash.contributions.store') }}">
             @csrf
-            <x-form-section title="Data Warga" description="Pilih warga terdaftar atau isi nama manual.">
+            <x-form-section title="Data Warga" description="Pilih warga yang melakukan pembayaran iuran.">
                 <div class="space-y-5">
-                    <x-field-group label="Warga Terdaftar" name="member_id" helper="Pilih dari daftar warga yang sudah terdaftar di sistem.">
-                        <select name="member_id" id="member_id" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Tidak memilih --</option>
+                    <x-field-group label="Pilih Warga Terdaftar" name="member_id" required>
+                        <select name="member_id" id="member_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">-- Pilih Warga --</option>
                             @foreach($members as $member)
                                 <option value="{{ $member->id }}" {{ old('member_id') == $member->id ? 'selected' : '' }}>{{ $member->name }}</option>
                             @endforeach
                         </select>
-                    </x-field-group>
-
-                    <x-field-group label="Nama Manual" name="member_name" helper="Isi jika warga belum terdaftar di sistem.">
-                        <input type="text" name="member_name" id="member_name" value="{{ old('member_name') }}" placeholder="Nama warga" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        {{-- Link helper untuk menambahkan warga baru --}}
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                            Nama warga tidak ada di pilihan? 
+                            <a href="{{ route('members.create') }}" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline transition">
+                                + Tambah Data Warga Baru
+                            </a>
+                        </p>
                     </x-field-group>
                 </div>
             </x-form-section>
@@ -41,7 +44,7 @@
                     </div>
 
                     <x-field-group label="Keterangan" name="description">
-                        <input type="text" name="description" id="description" value="{{ old('description') }}" placeholder="Opsional" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" name="description" id="description" value="{{ old('description') }}" placeholder="Opsional (Misal: Iuran bulan Juni)" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
                     </x-field-group>
                 </div>
             </x-form-section>
