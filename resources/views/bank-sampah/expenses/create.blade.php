@@ -24,11 +24,29 @@
                     </div>
 
                     <x-field-group label="Nominal (Rp)" name="amount" required>
-                        <div class="relative">
+                        <div class="relative" x-data="{ 
+                            rawAmount: '{{ old('amount', '') }}',
+                            formattedAmount: '',
+                            formatAmount() {
+                                let val = this.formattedAmount.replace(/\D/g, '');
+                                this.rawAmount = val;
+                                if(val) {
+                                    this.formattedAmount = new Intl.NumberFormat('id-ID').format(val);
+                                } else {
+                                    this.formattedAmount = '';
+                                }
+                            },
+                            init() {
+                                if(this.rawAmount) {
+                                    this.formattedAmount = new Intl.NumberFormat('id-ID').format(this.rawAmount);
+                                }
+                            }
+                        }">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <span class="text-slate-500 dark:text-slate-400 sm:text-sm">Rp</span>
                             </div>
-                            <input type="number" name="amount" id="amount" value="{{ old('amount') }}" required min="1" class="block w-full pl-10 rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0">
+                            <input type="hidden" name="amount" x-model="rawAmount">
+                            <input type="text" x-model="formattedAmount" @input="formatAmount" required class="block w-full pl-10 rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0">
                         </div>
                     </x-field-group>
 
@@ -36,9 +54,15 @@
                         <textarea name="description" id="description" rows="3" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('description') }}</textarea>
                     </x-field-group>
 
-                    <x-field-group label="Upload Bukti Nota/Struk (Opsional)" name="proof" helper="Format: JPG, PNG, PDF. Maks 2MB.">
-                        <input type="file" name="proof" id="proof" accept=".jpg,.jpeg,.png,.pdf" class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400 dark:hover:file:bg-emerald-900/50 transition">
-                    </x-field-group>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <x-field-group label="Upload Bukti Nota/Struk" name="proof" helper="Format: JPG, PNG, PDF. Maks 2MB. Wajib diisi jika keterangan hilang kosong.">
+                            <input type="file" name="proof" id="proof" accept=".jpg,.jpeg,.png,.pdf" class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400 dark:hover:file:bg-emerald-900/50 transition">
+                        </x-field-group>
+
+                        <x-field-group label="Keterangan Nota Hilang" name="proof_explanation" helper="Isi field ini jika nota fisik hilang (misal: 'Nota rusak basah').">
+                            <input type="text" name="proof_explanation" id="proof_explanation" value="{{ old('proof_explanation') }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        </x-field-group>
+                    </div>
                 </div>
             </x-form-section>
 

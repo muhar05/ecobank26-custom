@@ -91,13 +91,13 @@
                                 {{ $l->type === 'in' ? 'Masuk' : 'Keluar' }}
                             </span>
                         </td>
-                        <td class="px-6 py-5 text-right text-base font-bold {{ $l->type === 'in' ? 'text-emerald-700' : 'text-rose-700' }}">
+                        <td class="px-6 py-5 text-right text-base font-bold {{ $l->type === 'in' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400' }}">
                             {{ $l->type === 'in' ? '+' : '-' }} Rp {{ number_format($l->amount, 0, ',', '.') }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-6 py-12 text-center text-base text-slate-500">
+                        <td colspan="4" class="px-6 py-12 text-center text-base text-slate-500 dark:text-slate-400">
                             Belum ada transaksi kas pada periode ini.
                         </td>
                     </tr>
@@ -111,18 +111,18 @@
         @forelse($ledgers as $l)
             <div class="p-6">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-sm font-bold text-slate-500">{{ $l->date->format('d/m/Y') }}</span>
+                    <span class="text-sm font-bold text-slate-500 dark:text-slate-400">{{ $l->date->format('d/m/Y') }}</span>
                     <span class="px-3 py-1 rounded-full text-xs font-bold {{ $l->type === 'in' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
                         {{ $l->type === 'in' ? 'Masuk' : 'Keluar' }}
                     </span>
                 </div>
                 <p class="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">{{ $l->description }}</p>
-                <p class="text-lg font-extrabold {{ $l->type === 'in' ? 'text-emerald-700' : 'text-rose-700' }}">
+                <p class="text-lg font-extrabold {{ $l->type === 'in' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400' }}">
                     {{ $l->type === 'in' ? '+' : '-' }} Rp {{ number_format($l->amount, 0, ',', '.') }}
                 </p>
             </div>
         @empty
-            <p class="p-6 text-center text-base text-slate-500">Belum ada transaksi kas pada periode ini.</p>
+            <p class="p-6 text-center text-base text-slate-500 dark:text-slate-400">Belum ada transaksi kas pada periode ini.</p>
         @endforelse
     </div>
 </div>

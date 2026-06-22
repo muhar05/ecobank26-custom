@@ -96,7 +96,19 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
             ];
         });
 
-        $cashbook = $salesList->concat($expensesList)->sortBy('date')->values();
+        $depositsList = \App\Models\Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+            return [
+                'date' => Carbon::instance($item->date)->toDateString(),
+                'code' => 'DEP-' . str_pad($item->id, 5, '0', STR_PAD_LEFT),
+                'type' => 'Setoran',
+                'description' => 'Setoran sampah (' . $name . ')',
+                'in' => 0.0,
+                'out' => (float) $item->total_amount
+            ];
+        });
+
+        $cashbook = $salesList->concat($expensesList)->concat($depositsList)->sortBy('date')->values();
 
         $rows = [];
         $totalIn = 0;

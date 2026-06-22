@@ -89,7 +89,7 @@
                                                     <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" :class="row.hasPrice && collectorId ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : ''" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                                 </td>
                                                 <td class="pr-2 py-2">
-                                                    <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                                    <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                                 </td>
                                                 <td class="py-2 text-right text-sm font-medium text-slate-700 dark:text-slate-300 pr-1">
                                                     <span x-text="formatRp(row.weight * row.price)"></span>
@@ -122,7 +122,7 @@
                                             </div>
                                             <div>
                                                 <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Berat (kg)</label>
-                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                             </div>
                                         </div>
                                         <div class="flex justify-between items-center text-sm">
@@ -200,8 +200,15 @@
                 loadPrices() {
                     this.rows.forEach(row => {
                         const cp = this.prices[this.collectorId];
-                        if (cp && cp[row.catId]) { row.hasPrice = true; }
-                        else { row.hasPrice = false; }
+                        if (cp && cp[row.catId]) {
+                            row.hasPrice = true;
+                            // Jika bukan manual override, sinkronisasi harga otomatis
+                            if (!row.manualOverride) {
+                                row.price = Math.round(cp[row.catId].member_price);
+                            }
+                        } else {
+                            row.hasPrice = false;
+                        }
                     });
                 },
                 filteredCategories() {
@@ -214,7 +221,8 @@
                         if (this.isAlreadySelected(catId)) return;
                         const cat = allCategories.find(c => c.id == catId);
                         if (!cat) return;
-                        const row = { catId: cat.id, name: cat.name, unit: cat.unit, price: 0, weight: 0, hasPrice: false, manualOverride: false };
+                        // BUG FIX #1/#4 (edit): row baru via modal selalu mulai di mode Auto
+                        const row = { catId: cat.id, name: cat.name, unit: cat.unit, price: 0, weight: 0, hasPrice: false, manualOverride: false, weightTouched: false };
                         this.fillRowPrice(row);
                         this.rows.push(row);
                     });
@@ -227,9 +235,27 @@
                     if (cp && cp[row.catId]) { if (!row.manualOverride) row.price = Math.round(cp[row.catId].member_price); row.hasPrice = true; }
                     else { row.hasPrice = false; }
                 },
-                updatePrices() { this.rows.forEach(row => { row.manualOverride = false; this.fillRowPrice(row); }); },
+                // BUG FIX #4 (edit): updatePrices() dipanggil saat user mengganti Agregator.
+                // SEBELUMNYA: reset manualOverride=false untuk SEMUA baris termasuk existing data
+                // dari DB, sehingga harga tersimpan ditimpa harga otomatis dari Agregator baru.
+                // SESUDAHNYA: baris Manual (existing DB data atau input manual) dipertahankan;
+                // hanya baris Auto yang di-refresh harganya.
+                updatePrices() {
+                    this.rows.forEach(row => {
+                        if (!row.manualOverride) {
+                            // Baris Auto: refresh harga dari Agregator baru
+                            this.fillRowPrice(row);
+                        } else {
+                            // Baris Manual/Existing: hanya update flag hasPrice, harga tidak ditimpa
+                            const cp = this.prices[this.collectorId];
+                            row.hasPrice = !!(cp && cp[row.catId]);
+                        }
+                    });
+                },
                 grandTotal() { return this.rows.reduce((s, r) => s + (r.weight * r.price || 0), 0); },
-                formatRp(v) { return v ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
+                // BUG FIX #3 (edit): Tampilkan 'Rp 0' untuk nilai nol agar user bisa membedakan
+                // antara belum dihitung vs sudah dihitung hasilnya 0.
+                formatRp(v) { return (v !== null && v !== undefined) ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
             }
         }
     </script>

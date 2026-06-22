@@ -54,13 +54,21 @@ class WasteBankExpenseController extends Controller
             'amount' => 'required|numeric|min:1',
             'expense_date' => 'required|date|before_or_equal:today',
             'description' => 'required|string|max:500',
-            'proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'proof' => 'required_without:proof_explanation|nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'proof_explanation' => 'required_without:proof|nullable|string|max:255',
+        ], [
+            'proof.required_without' => 'Bukti nota wajib diunggah. Jika tidak ada, wajib mengisi keterangan nota hilang.',
+            'proof_explanation.required_without' => 'Keterangan nota hilang wajib diisi jika bukti nota tidak diunggah.',
         ]);
 
         try {
             if ($request->hasFile('proof')) {
                 $path = $request->file('proof')->store('expenses', 'public');
                 $validated['proof_path'] = $path;
+            }
+
+            if ($request->filled('proof_explanation')) {
+                $validated['description'] .= "\n\n(Catatan Nota Hilang: " . $request->input('proof_explanation') . ")";
             }
 
             $service->recordExpense($validated);

@@ -23,26 +23,18 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string'],
+            'login' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Normalize phone number before validation.
+     * Normalize login input before validation.
      */
     protected function prepareForValidation(): void
     {
-        if ($this->phone) {
-            $phone = preg_replace('/[^0-9]/', '', $this->phone);
-            // Convert 620 to 0 and 62 to 0
-            if (str_starts_with($phone, '620')) {
-                $phone = '0' . substr($phone, 3);
-            } elseif (str_starts_with($phone, '62')) {
-                $phone = '0' . substr($phone, 2);
-            }
-            $this->merge(['phone' => $phone]);
-        }
+        // No normalization needed here because login can be either phone or username.
+        // We will handle normalization in the authenticate method.
     }
 
     /**
@@ -52,11 +44,26 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('phone', 'password'), $this->boolean('remember'))) {
+        $login = $this->input('login');
+        
+        $phone = preg_replace('/[^0-9]/', '', $login);
+        if (str_starts_with($phone, '620')) {
+            $phone = '0' . substr($phone, 3);
+        } elseif (str_starts_with($phone, '62')) {
+            $phone = '0' . substr($phone, 2);
+        }
+
+        $user = \App\Models\User::where('username', $login)
+            ->when($phone, function($query) use ($phone) {
+                return $query->orWhere('phone', $phone);
+            })
+            ->first();
+
+        if (! $user || ! Auth::attempt(['id' => $user->id, 'password' => $this->input('password')], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'phone' => 'Nomor telepon atau password salah.',
+                'login' => 'Username/No.Telepon atau password salah.',
             ]);
         }
 
@@ -77,7 +84,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'phone' => trans('auth.throttle', [
+            'login' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -86,6 +93,6 @@ class LoginRequest extends FormRequest
 
     public function throttleKey(): string
     {
-        return Str::transliterate($this->string('phone') . '|' . $this->ip());
+        return Str::transliterate($this->string('login') . '|' . $this->ip());
     }
 }

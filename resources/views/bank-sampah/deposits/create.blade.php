@@ -90,7 +90,7 @@
                                                     <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" :class="row.hasPrice && collectorId ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : ''" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                                 </td>
                                                 <td class="pr-2 py-2">
-                                                    <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                                    <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                                 </td>
                                                 <td class="py-2 text-right text-sm font-medium text-slate-700 dark:text-slate-300 pr-1">
                                                     <span x-text="formatRp(row.weight * row.price)"></span>
@@ -127,7 +127,7 @@
                                             </div>
                                             <div>
                                                 <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Berat (kg)</label>
-                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
                                             </div>
                                         </div>
                                         <div class="flex justify-between items-center text-sm">
@@ -216,7 +216,8 @@
                         if (this.isAlreadySelected(catId)) return;
                         const cat = allCategories.find(c => c.id == catId);
                         if (!cat) return;
-                        const row = { catId: cat.id, name: cat.name, unit: cat.unit, price: 0, weight: 0, hasPrice: false, manualOverride: false };
+                        // BUG FIX #1 (partial): row baru selalu mulai di mode Auto (manualOverride=false, weightTouched=false)
+                        const row = { catId: cat.id, name: cat.name, unit: cat.unit, price: 0, weight: 0, hasPrice: false, manualOverride: false, weightTouched: false };
                         this.fillRowPrice(row);
                         this.rows.push(row);
                     });
@@ -233,11 +234,28 @@
                         row.hasPrice = true;
                     } else { row.hasPrice = false; }
                 },
+                // BUG FIX #1: updatePrices() dipanggil saat Agregator berubah.
+                // SEBELUMNYA: reset manualOverride=false untuk SEMUA baris, sehingga harga yang
+                // sudah diketik manual user akan ditimpa harga otomatis (data hilang).
+                // SESUDAHNYA: hanya baris yang belum pernah diubah manual (Auto) yang di-update
+                // harganya. Baris dengan manualOverride=true dipertahankan harga manualnya.
                 updatePrices() {
-                    this.rows.forEach(row => { row.manualOverride = false; this.fillRowPrice(row); });
+                    this.rows.forEach(row => {
+                        if (!row.manualOverride) {
+                            // Hanya reset dan isi ulang baris yang masih dalam mode Auto
+                            this.fillRowPrice(row);
+                        } else {
+                            // Baris manual: hanya update flag hasPrice tanpa menimpa harga
+                            const cp = this.prices[this.collectorId];
+                            row.hasPrice = !!(cp && cp[row.catId]);
+                        }
+                    });
                 },
                 grandTotal() { return this.rows.reduce((s, r) => s + (r.weight * r.price || 0), 0); },
-                formatRp(v) { return v ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
+                // BUG FIX #3: Tampilkan 'Rp 0' untuk nilai nol agar user bisa membedakan
+                // antara belum dihitung vs sudah dihitung hasilnya 0.
+                // SEBELUMNYA: return '-' untuk nilai 0 (falsy), membingungkan UX.
+                formatRp(v) { return (v !== null && v !== undefined) ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
             }
         }
     </script>

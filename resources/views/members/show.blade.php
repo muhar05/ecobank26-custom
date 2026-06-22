@@ -171,15 +171,12 @@
                                                 <h3 class="text-lg font-medium leading-6 text-slate-900 dark:text-slate-100" id="modal-title">Buat Akun Login Baru</h3>
                                                 <div class="mt-2 text-left">
                                                     <p class="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
-                                                        Warga akan login menggunakan nomor telepon dan password sementara ini. Role yang diberikan adalah <strong>warga</strong>.
+                                                        Warga akan login menggunakan username (kode warga) dan password sementara ini. Role yang diberikan adalah <strong>warga</strong>.
                                                     </p>
                                                     <div class="space-y-4">
                                                         <div>
-                                                            <label for="phone" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nomor Telepon Login</label>
-                                                            <input type="text" name="phone" id="phone" required value="{{ old('phone', preg_replace('/[^0-9]/', '', $member->phone ?? '')) }}" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm h-10" placeholder="Contoh: 08123456789">
-                                                            @error('phone')
-                                                                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                                                            @enderror
+                                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Username (Kode Warga)</label>
+                                                            <input type="text" name="username" readonly value="{{ $member->member_code }}" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm h-10 cursor-not-allowed">
                                                         </div>
                                                         <div>
                                                             <label for="password_new" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password Sementara</label>

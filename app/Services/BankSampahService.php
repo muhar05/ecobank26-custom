@@ -17,60 +17,78 @@ class BankSampahService
     public const MIN_DEPOSITS_BEFORE_WITHDRAWAL = 2;
     public function recordDeposit(array $data): Deposit
     {
-        return DB::transaction(function () use ($data) {
+        // BUG FIX #4: Pisahkan activity logging dari DB::transaction.
+        // Jika logging dilakukan di dalam transaction dan terjadi exception setelah logging
+        // (misalnya di hook/observer lain), log ikut dirollback sehingga transaksi
+        // yang berhasil tidak pernah tercatat sama sekali (silent data loss).
+        $deposit = DB::transaction(function () use ($data) {
             $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
             $memberId = $customer->member_id;
-            
+
             $totalAmount = collect($data['details'])->sum('subtotal');
 
             $deposit = Deposit::create([
-                'member_id' => $memberId,
-                'waste_customer_id' => $customer->id,
-                'collector_id' => $data['collector_id'],
-                'date' => $data['date'],
-                'total_amount' => $totalAmount,
-                'notes' => $data['notes'] ?? null,
+                'member_id'        => $memberId,
+                'waste_customer_id'=> $customer->id,
+                'collector_id'     => $data['collector_id'],
+                'date'             => $data['date'],
+                'total_amount'     => $totalAmount,
+                'notes'            => $data['notes'] ?? null,
             ]);
 
             foreach ($data['details'] as $detail) {
                 DepositDetail::create([
-                    'deposit_id' => $deposit->id,
+                    'deposit_id'        => $deposit->id,
                     'waste_category_id' => $detail['waste_category_id'],
-                    'weight' => $detail['weight'],
-                    'price_per_unit' => $detail['price_per_unit'],
-                    'subtotal' => $detail['subtotal'],
+                    'weight'            => $detail['weight'],
+                    'price_per_unit'    => $detail['price_per_unit'],
+                    'subtotal'          => $detail['subtotal'],
                 ]);
             }
 
             SavingsLedger::create([
-                'member_id' => $memberId,
-                'waste_customer_id' => $customer->id,
-                'type' => 'credit',
-                'amount' => $totalAmount,
-                'description' => 'Setoran sampah',
-                'reference_type' => Deposit::class,
-                'reference_id' => $deposit->id,
+                'member_id'        => $memberId,
+                'waste_customer_id'=> $customer->id,
+                'type'             => 'credit',
+                'amount'           => $totalAmount,
+                'description'      => 'Setoran sampah',
+                'reference_type'   => Deposit::class,
+                'reference_id'     => $deposit->id,
             ]);
 
-            // EXPLICIT TRANSACTION LOGGING: deposit.create
-            app(\App\Services\ActivityLogService::class)->logInfo(
-                'deposit.create',
-                "Mencatat setoran sampah sebesar Rp " . number_format($totalAmount, 0, ',', '.') . " untuk nasabah {$customer->name}.",
-                [
-                    'deposit_id' => $deposit->id,
-                    'waste_customer_id' => $customer->id,
-                    'total_amount' => $totalAmount,
-                    'details' => $data['details']
-                ]
-            );
+            // Simpan referensi ke deposit agar bisa diakses setelah transaction commit.
+            $deposit->_customer = $customer;
+            $deposit->_totalAmount = $totalAmount;
 
             return $deposit;
         });
+
+        // BUG FIX #1 & #4: Activity log ditulis SETELAH transaction commit.
+        // Tambahkan 'customer_name' ke payload — kunci ini dibaca oleh
+        // ActivityLog::getHumanDescriptionAttribute() untuk menampilkan nama nasabah.
+        // Sebelumnya key ini tidak ada, sehingga log selalu menampilkan 'Warga' (fallback).
+        $customer    = $deposit->_customer;
+        $totalAmount = $deposit->_totalAmount;
+
+        app(\App\Services\ActivityLogService::class)->logInfo(
+            'deposit.create',
+            "Mencatat setoran sampah sebesar Rp " . number_format($totalAmount, 0, ',', '.') . " untuk nasabah {$customer->name}.",
+            [
+                'deposit_id'       => $deposit->id,
+                'waste_customer_id'=> $customer->id,
+                'customer_name'    => $customer->name,   // ✅ BUG FIX #1: key yang hilang
+                'total_amount'     => (float) $totalAmount,
+                'details'          => $data['details'],
+            ]
+        );
+
+        return $deposit;
     }
 
     public function recordWithdrawal(array $data): Withdrawal
     {
-        return DB::transaction(function () use ($data) {
+        // BUG FIX #4: Pisahkan activity logging dari DB::transaction (sama dengan recordDeposit).
+        $result = DB::transaction(function () use ($data) {
             $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
             $memberId = $customer->member_id;
 
@@ -92,36 +110,45 @@ class BankSampahService
             }
 
             $withdrawal = Withdrawal::create([
-                'member_id' => $memberId,
-                'waste_customer_id' => $customer->id,
-                'amount' => $data['amount'],
-                'date' => $data['date'],
-                'notes' => $data['notes'] ?? null,
+                'member_id'        => $memberId,
+                'waste_customer_id'=> $customer->id,
+                'amount'           => $data['amount'],
+                'date'             => $data['date'],
+                'notes'            => $data['notes'] ?? null,
             ]);
 
             SavingsLedger::create([
-                'member_id' => $memberId,
-                'waste_customer_id' => $customer->id,
-                'type' => 'debit',
-                'amount' => $data['amount'],
-                'description' => $data['notes'] ?? 'Penarikan saldo',
-                'reference_type' => Withdrawal::class,
-                'reference_id' => $withdrawal->id,
+                'member_id'        => $memberId,
+                'waste_customer_id'=> $customer->id,
+                'type'             => 'debit',
+                'amount'           => $data['amount'],
+                'description'      => $data['notes'] ?? 'Penarikan saldo',
+                'reference_type'   => Withdrawal::class,
+                'reference_id'     => $withdrawal->id,
             ]);
 
-            // EXPLICIT TRANSACTION LOGGING: withdrawal.create
-            app(\App\Services\ActivityLogService::class)->logInfo(
-                'withdrawal.create',
-                "Mencatat penarikan saldo sebesar Rp " . number_format($data['amount'], 0, ',', '.') . " untuk nasabah {$customer->name}.",
-                [
-                    'withdrawal_id' => $withdrawal->id,
-                    'waste_customer_id' => $customer->id,
-                    'amount' => $data['amount']
-                ]
-            );
-
-            return $withdrawal;
+            return ['withdrawal' => $withdrawal, 'customer' => $customer];
         });
+
+        $withdrawal = $result['withdrawal'];
+        $customer   = $result['customer'];
+
+        // BUG FIX #2 & #4: Activity log ditulis SETELAH transaction commit.
+        // Tambahkan 'customer_name' ke payload — kunci ini dibaca oleh
+        // ActivityLog::getHumanDescriptionAttribute() untuk menampilkan nama nasabah.
+        // Sebelumnya key ini tidak ada, sehingga log selalu menampilkan 'Warga' (fallback).
+        app(\App\Services\ActivityLogService::class)->logInfo(
+            'withdrawal.create',
+            "Mencatat penarikan saldo sebesar Rp " . number_format($data['amount'], 0, ',', '.') . " untuk nasabah {$customer->name}.",
+            [
+                'withdrawal_id'    => $withdrawal->id,
+                'waste_customer_id'=> $customer->id,
+                'customer_name'    => $customer->name,   // ✅ BUG FIX #2: key yang hilang
+                'amount'           => (float) $data['amount'],
+            ]
+        );
+
+        return $withdrawal;
     }
 
     public function getCustomerBalance(int $customerId): float

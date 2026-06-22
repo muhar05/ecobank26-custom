@@ -228,7 +228,7 @@
                             <td class="px-5 py-3.5 text-right text-slate-600 dark:text-slate-300 font-medium">{{ $rt->kks_count }}</td>
                             <td class="px-5 py-3.5 text-right text-slate-600 dark:text-slate-300">Rp {{ number_format($rt->bills_amount, 0, ',', '.') }}</td>
                             <td class="px-5 py-3.5 text-right text-emerald-600 dark:text-emerald-400 font-medium">Rp {{ number_format($rt->payments_amount, 0, ',', '.') }}</td>
-                            <td class="px-5 py-3.5 text-right {{ $rt->arrears_amount > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-400' }}">
+                            <td class="px-5 py-3.5 text-right {{ $rt->arrears_amount > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-400 dark:text-slate-500' }}">
                                 Rp {{ number_format($rt->arrears_amount, 0, ',', '.') }}
                             </td>
                             <td class="px-5 py-3.5 text-center">
@@ -242,7 +242,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400 text-sm">Belum ada data RT.</td></tr>
+                        <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400 dark:text-slate-500 text-sm">Belum ada data RT.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

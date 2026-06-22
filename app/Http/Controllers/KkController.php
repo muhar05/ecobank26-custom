@@ -56,10 +56,20 @@ class KkController extends Controller
 
     public function store(StoreKkRequest $request)
     {
-        Kk::create($request->validated());
+        $kk = Kk::create($request->validated());
+
+        // Otomatis tambahkan Kepala Keluarga ke daftar warga
+        \App\Models\Member::create([
+            'kk_id' => $kk->id,
+            'member_code' => \App\Models\Member::generateNextCode(),
+            'name' => $kk->family_head,
+            'address' => $kk->address,
+            'phone' => $kk->phone,
+            'relationship' => 'Kepala Keluarga',
+        ]);
 
         return redirect()->route('kks.index')
-            ->with('success', 'Data Kartu Keluarga berhasil ditambahkan.');
+            ->with('success', 'Data Kartu Keluarga berhasil ditambahkan dan Kepala Keluarga otomatis terdaftar.');
     }
 
     public function show(Kk $kk)
@@ -80,8 +90,30 @@ class KkController extends Controller
     {
         $kk->update($request->validated());
 
+        // Sinkronisasi data Kepala Keluarga di tabel warga
+        $head = \App\Models\Member::where('kk_id', $kk->id)
+            ->where('relationship', 'Kepala Keluarga')
+            ->first();
+
+        if ($head) {
+            $head->update([
+                'name' => $kk->family_head,
+                'address' => $kk->address,
+                'phone' => $kk->phone,
+            ]);
+        } else {
+            \App\Models\Member::create([
+                'kk_id' => $kk->id,
+                'member_code' => \App\Models\Member::generateNextCode(),
+                'name' => $kk->family_head,
+                'address' => $kk->address,
+                'phone' => $kk->phone,
+                'relationship' => 'Kepala Keluarga',
+            ]);
+        }
+
         return redirect()->route('kks.index')
-            ->with('success', 'Data Kartu Keluarga berhasil diperbarui.');
+            ->with('success', 'Data Kartu Keluarga dan warga (Kepala Keluarga) berhasil diperbarui.');
     }
 
     public function destroy(Kk $kk)

@@ -92,7 +92,10 @@ class BillService
      */
     public function payBill(int $billId, array $data): \App\Models\BillPayment
     {
-        return DB::transaction(function () use ($billId, $data) {
+        // BUG FIX #3 & #4: Pisahkan activity logging dari DB::transaction.
+        // Jika logging di dalam transaction dan ada exception setelah log ditulis,
+        // log ikut dirollback → transaksi berhasil tapi tidak tercatat (silent data loss).
+        $result = DB::transaction(function () use ($billId, $data) {
             $bill = Bill::findOrFail($billId);
             $amountPaid = (float) $data['amount_paid'];
 
@@ -115,7 +118,7 @@ class BillService
 
             // 4. Record contribution into the community cash ledger using CommunityCashService
             $cashService = app(\App\Services\CommunityCashService::class);
-            
+
             $monthName = [
                 1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
                 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
@@ -123,29 +126,28 @@ class BillService
             ][$bill->month] ?? $bill->month;
 
             $description = "Pembayaran " . $bill->fundCategory->name . " Periode " . $monthName . " " . $bill->year . " - KK " . $kk->family_head . " (" . $bill->bill_code . ")";
-            
+
             $contribution = $cashService->recordContribution([
                 'fund_category_id' => $bill->fund_category_id,
-                'member_id' => $member ? $member->id : null,
-                'member_name' => $kk->family_head,
-                'amount' => $amountPaid,
-                'date' => $data['paid_at'] ?? now()->toDateString(),
-                'description' => $description,
-                'recorded_by' => auth()->id(),
+                'member_id'        => $member ? $member->id : null,
+                'member_name'      => $kk->family_head,
+                'amount'           => $amountPaid,
+                'date'             => $data['paid_at'] ?? now()->toDateString(),
+                'description'      => $description,
+                'recorded_by'      => auth()->id(),
             ]);
 
             // 5. Save payment to bill_payments
             $payment = \App\Models\BillPayment::create([
-                'bill_id' => $bill->id,
+                'bill_id'                   => $bill->id,
                 'community_contribution_id' => $contribution->id,
-                'receipt_number' => $receiptNumber,
-                'amount_paid' => $amountPaid,
-                'payment_method' => $data['payment_method'],
-                'paid_at' => $data['paid_at'] ?? now(),
+                'receipt_number'            => $receiptNumber,
+                'amount_paid'               => $amountPaid,
+                'payment_method'            => $data['payment_method'],
+                'paid_at'                   => $data['paid_at'] ?? now(),
             ]);
 
             // 6. Update bill status based on total paid
-            // Wait, we need to refresh the relation or calculate outstanding balance manually to avoid stale model cache
             $currentTotalPaid = (float) \App\Models\BillPayment::where('bill_id', $bill->id)->sum('amount_paid');
             if ($currentTotalPaid >= (float) $bill->amount) {
                 $bill->update(['status' => 'paid']);
@@ -153,20 +155,41 @@ class BillService
                 $bill->update(['status' => 'partially_paid']);
             }
 
-            // EXPLICIT TRANSACTION LOGGING: bill.payment
-            app(\App\Services\ActivityLogService::class)->logInfo(
-                'bill.payment',
-                "Mencatat pembayaran tagihan {$bill->bill_code} sebesar Rp " . number_format($amountPaid, 0, ',', '.') . " untuk KK {$kk->family_head}.",
-                [
-                    'bill_id' => $bill->id,
-                    'bill_code' => $bill->bill_code,
-                    'receipt_number' => $receiptNumber,
-                    'amount_paid' => $amountPaid,
-                    'payment_method' => $data['payment_method'],
-                ]
-            );
- 
-            return $payment;
+            // Kembalikan semua data yang dibutuhkan untuk logging SETELAH transaction commit.
+            return [
+                'payment'        => $payment,
+                'bill'           => $bill,
+                'kk'             => $kk,
+                'receiptNumber'  => $receiptNumber,
+                'amountPaid'     => $amountPaid,
+            ];
         });
+
+        $payment       = $result['payment'];
+        $bill          = $result['bill'];
+        $kk            = $result['kk'];
+        $receiptNumber = $result['receiptNumber'];
+        $amountPaid    = $result['amountPaid'];
+
+        // BUG FIX #3 & #4: Activity log ditulis SETELAH transaction commit.
+        // Ditambahkan 'kk_number' dan 'amount' ke payload — kedua kunci ini dibaca oleh
+        // ActivityLog::getHumanDescriptionAttribute() untuk menampilkan nomor KK dan nominal.
+        // Sebelumnya 'kk_number' tidak ada sehingga log menampilkan 'KK —' (fallback),
+        // dan 'amount' tidak ada sehingga nominal selalu tampil Rp0.
+        app(\App\Services\ActivityLogService::class)->logInfo(
+            'bill.payment',
+            "Mencatat pembayaran tagihan {$bill->bill_code} sebesar Rp " . number_format($amountPaid, 0, ',', '.') . " untuk KK {$kk->family_head}.",
+            [
+                'bill_id'        => $bill->id,
+                'bill_code'      => $bill->bill_code,
+                'receipt_number' => $receiptNumber,
+                'amount_paid'    => $amountPaid,
+                'amount'         => $amountPaid,          // ✅ BUG FIX #3a: alias 'amount' untuk getHumanDescriptionAttribute
+                'kk_number'      => $kk->kk_number ?? $kk->family_head, // ✅ BUG FIX #3b: key yang hilang
+                'payment_method' => $data['payment_method'],
+            ]
+        );
+
+        return $payment;
     }
 }

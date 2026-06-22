@@ -512,11 +512,15 @@ class WasteBankReportController extends Controller
             return back()->withErrors(['date_range' => $e->getMessage()]);
         }
 
-        // Cashflow is strictly Penjualan (Pemasukan) vs Operational Expenses (Pengeluaran)
+        // Cashflow is strictly Penjualan (Pemasukan) vs Operational Expenses (Pengeluaran) + Setoran Sampah
         // Penjualan ke Agregator
         $totalPemasukan = Sale::whereBetween('date', [$startDate, $endDate])->sum('total_amount');
         // Pengeluaran Operasional
-        $totalPengeluaran = WasteBankExpense::whereBetween('expense_date', [$startDate, $endDate])->sum('amount');
+        $totalPengeluaranOperasional = WasteBankExpense::whereBetween('expense_date', [$startDate, $endDate])->sum('amount');
+        // Setoran Sampah (Hutang yang menambah liabilitas/pengeluaran)
+        $totalSetoranSampah = Deposit::whereBetween('date', [$startDate, $endDate])->sum('total_amount');
+        
+        $totalPengeluaran = $totalPengeluaranOperasional + $totalSetoranSampah;
 
         $saldoAkhir = $totalPemasukan - $totalPengeluaran;
 
@@ -548,6 +552,14 @@ class WasteBankReportController extends Controller
             }
         }
 
+        $depositsGrouped = Deposit::whereBetween('date', [$startDate, $endDate])->get();
+        foreach ($depositsGrouped as $deposit) {
+            $key = Carbon::instance($deposit->date)->format('Y-m');
+            if (isset($months[$key])) {
+                $months[$key]['pengeluaran'] += (float) $deposit->total_amount;
+            }
+        }
+
         foreach ($months as &$m) {
             $m['net'] = $m['pemasukan'] - $m['pengeluaran'];
         }
@@ -575,7 +587,19 @@ class WasteBankReportController extends Controller
             ];
         });
 
-        $cashbook = $salesList->concat($expensesList)->sortByDesc('date')->values();
+        $depositsList = Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+            return [
+                'date' => $item->date,
+                'type' => 'Setoran',
+                'code' => 'DEP-' . str_pad($item->id, 5, '0', STR_PAD_LEFT),
+                'description' => 'Setoran sampah (' . $name . ')',
+                'amount' => (float) $item->total_amount,
+                'is_in' => false
+            ];
+        });
+
+        $cashbook = $salesList->concat($expensesList)->concat($depositsList)->sortByDesc('date')->values();
 
         return view('bank-sampah.reports.cashflow', compact(
             'startDate', 'endDate', 'totalPemasukan', 'totalPengeluaran', 'saldoAkhir', 'months', 'cashbook'
@@ -612,7 +636,9 @@ class WasteBankReportController extends Controller
         ]);
 
         $totalPemasukan = Sale::whereBetween('date', [$startDate, $endDate])->sum('total_amount');
-        $totalPengeluaran = WasteBankExpense::whereBetween('expense_date', [$startDate, $endDate])->sum('amount');
+        $totalPengeluaranOperasional = WasteBankExpense::whereBetween('expense_date', [$startDate, $endDate])->sum('amount');
+        $totalSetoranSampah = Deposit::whereBetween('date', [$startDate, $endDate])->sum('total_amount');
+        $totalPengeluaran = $totalPengeluaranOperasional + $totalSetoranSampah;
         $saldoAkhir = $totalPemasukan - $totalPengeluaran;
 
         $salesList = Sale::with('collector')->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
@@ -637,7 +663,19 @@ class WasteBankReportController extends Controller
             ];
         });
 
-        $cashbook = $salesList->concat($expensesList)->sortByDesc('date')->values();
+        $depositsList = Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+            return [
+                'date' => $item->date,
+                'type' => 'Setoran',
+                'code' => 'DEP-' . str_pad($item->id, 5, '0', STR_PAD_LEFT),
+                'description' => 'Setoran sampah (' . $name . ')',
+                'amount' => (float) $item->total_amount,
+                'is_in' => false
+            ];
+        });
+
+        $cashbook = $salesList->concat($expensesList)->concat($depositsList)->sortByDesc('date')->values();
 
         return view('bank-sampah.reports.cashflow_print', compact(
             'startDate', 'endDate', 'totalPemasukan', 'totalPengeluaran', 'saldoAkhir', 'cashbook'
