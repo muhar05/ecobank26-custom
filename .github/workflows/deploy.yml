@@ -1,0 +1,31 @@
+name: Deploy ECO BANK 26 to Hostinger Business
+
+on:
+  push:
+    branches:
+      - main  # Ganti ke 'master' jika branch utama di GitHub Anda namanya master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mengambil kode terbaru dari GitHub
+        uses: actions/checkout@v4
+
+      - name: Eksekusi SSH dan Pull Code di Hostinger
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002  # Port SSH standar hPanel Hostinger
+          script: |
+            # 1. Masuk ke folder public_html aplikasi Anda
+            cd domains/ecobank026.my.id/public_html
+            
+            # 2. Tarik perubahan kode terbaru dari GitHub server
+            git pull origin main
+            
+            # 3. Bersihkan cache Laravel agar perubahan langsung aktif
+            /opt/alt/php84/usr/bin/php artisan optimize:clear
