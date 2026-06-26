@@ -41,34 +41,39 @@ class LoginRequest extends FormRequest
      * @throws ValidationException
      */
     public function authenticate(): void
-    {
-        $this->ensureIsNotRateLimited();
+{
+    $this->ensureIsNotRateLimited();
 
-        $login = $this->input('login');
-        
-        $phone = preg_replace('/[^0-9]/', '', $login);
-        if (str_starts_with($phone, '620')) {
-            $phone = '0' . substr($phone, 3);
-        } elseif (str_starts_with($phone, '62')) {
-            $phone = '0' . substr($phone, 2);
-        }
-
-        $user = \App\Models\User::where('username', $login)
-            ->when($phone, function($query) use ($phone) {
-                return $query->orWhere('phone', $phone);
-            })
-            ->first();
-
-        if (! $user || ! Auth::attempt(['id' => $user->id, 'password' => $this->input('password')], $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'login' => 'Username/No.Telepon atau password salah.',
-            ]);
-        }
-
-        RateLimiter::clear($this->throttleKey());
+    $login = $this->input('login');
+    
+    // 1. Normalisasi nomor telepon
+    $phone = preg_replace('/[^0-9]/', '', $login);
+    if (str_starts_with($phone, '620')) {
+        $phone = '0' . substr($phone, 3);
+    } elseif (str_starts_with($phone, '62')) {
+        $phone = '0' . substr($phone, 2);
     }
+
+    // 2. Cari user murni berdasarkan phone atau kolom alternatif (misal name/email jika ada)
+    // Tanpa menyentuh kolom 'username' yang tidak ada di database
+    $user = \App\Models\User::where('phone', $phone)
+        ->orWhere('name', $login) // Opsional: Berjaga-jaga jika admin ingin login pakai Nama Akun
+        ->first();
+
+    // 3. Verifikasi user dan kecocokan password teks mentahnya
+    if (! $user || ! \Illuminate\Support\Facades\Hash::check($this->input('password'), $user->password)) {
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'login' => 'No. Telepon/Nama atau password salah.',
+        ]);
+    }
+
+    // 4. Jika password cocok, lakukan login langsung menggunakan objek User
+    Auth::login($user, $this->boolean('remember'));
+
+    RateLimiter::clear($this->throttleKey());
+}
 
     /**
      * @throws ValidationException
