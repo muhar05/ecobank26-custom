@@ -56,7 +56,7 @@ class WasteBankCashReportController extends Controller
         return view('bank-sampah.cash-report.pdf', compact('ledgers', 'totalIn', 'totalOut', 'dateLabel'));
     }
 
-    public function export(Request $request)
+   public function export(Request $request)
     {
         $query = WasteBankCashLedger::query();
 
@@ -72,17 +72,31 @@ class WasteBankCashReportController extends Controller
 
         return response()->streamDownload(function () use ($ledgers) {
             $handle = fopen('php://output', 'w');
+            
+            // PENTING: Tambahkan BOM UTF-8 agar Microsoft Excel langsung mendeteksi pemisah kolom & teks dengan benar
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Header CSV
             fputcsv($handle, ['Tanggal', 'Keterangan', 'Masuk', 'Keluar', 'Saldo Berjalan']);
+            
             foreach ($ledgers as $l) {
+                // Atur format nominal rupiah untuk masing-masing kolom angka
+                $masuk = $l->type === 'in' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '-';
+                $keluar = $l->type === 'out' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '-';
+                $saldo = 'Rp ' . number_format($l->balance, 0, ',', '.');
+
                 fputcsv($handle, [
                     $l->date->format('Y-m-d'),
                     $l->description,
-                    $l->type === 'in' ? $l->amount : 0,
-                    $l->type === 'out' ? $l->amount : 0,
-                    $l->balance,
+                    $masuk,
+                    $keluar,
+                    $saldo,
                 ]);
             }
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }
