@@ -11,7 +11,7 @@ class Member extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['user_id', 'kk_id', 'member_code', 'name', 'phone', 'birth_date', 'gender', 'address', 'relationship'];
+    protected $fillable = ['user_id', 'member_code', 'name', 'phone', 'birth_date', 'gender', 'address', 'relationship'];
 
     protected $casts = [
         'birth_date' => 'date',
@@ -48,16 +48,6 @@ class Member extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function kk(): BelongsTo
-    {
-        return $this->belongsTo(Kk::class, 'kk_id');
-    }
-
-    public function contributions(): HasMany
-    {
-        return $this->hasMany(CommunityContribution::class);
     }
 
     public function wasteCustomers(): HasMany

@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolePermissionSeeder::class,
-            FundCategorySeeder::class,
             DefaultAdminSeeder::class,
             DefaultAppSettingsSeeder::class,
             DefaultWasteCategoryGroupSeeder::class,

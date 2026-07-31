@@ -1,22 +1,12 @@
 <?php
 
 use App\Http\Controllers\CollectorController;
-use App\Http\Controllers\RtController;
-use App\Http\Controllers\KkController;
-use App\Http\Controllers\BillController;
-use App\Http\Controllers\CommunityContributionController;
-use App\Http\Controllers\CommunityExpenseController;
-use App\Http\Controllers\CommunityCashReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepositController;
-use App\Http\Controllers\FundCategoryController;
-use App\Http\Controllers\MemberController;
-use App\Http\Controllers\MemberImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SavingsReportController;
 use App\Http\Controllers\WargaSavingsController;
-use App\Http\Controllers\WargaBillController;
 use App\Http\Controllers\WasteBankCashReportController;
 use App\Http\Controllers\WasteCategoryController;
 use App\Http\Controllers\WastePriceController;
@@ -32,32 +22,21 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Main dashboard route - redirects based on role
+// Main dashboard route - land per-role on a page they can access
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
-    if ($user->hasRole('admin_rw')) {
-        return app(DashboardController::class)->adminRw();
-    }
-    if ($user->hasRole('admin_rt')) {
-        return app(DashboardController::class)->adminRt();
-    }
-    if ($user->hasRole('bendahara') || $user->hasRole('bendahara_rw')) {
-        return redirect()->route('bendahara.dashboard');
-    }
-    if ($user->hasRole('admin_bank_sampah')) {
+    if ($user->can('view_waste_bank')) {
         return redirect()->route('bank-sampah.dashboard');
     }
+
     if ($user->hasRole('warga')) {
-        return redirect()->route('warga.dashboard');
+        return redirect()->route('warga.savings');
     }
 
-    return app(DashboardController::class)->adminRt();
+    // Roles with no RT/RW module pages anymore (bendahara, bendahara_rw)
+    return redirect()->route('profile.edit');
 })->middleware(['auth', 'verified'])->name('dashboard');
-
-// Bendahara dashboard
-Route::get('/bendahara/dashboard', [DashboardController::class, 'bendahara'])
-    ->middleware(['auth', 'permission:view_community_cash'])->name('bendahara.dashboard');
 
 // Bank Sampah dashboard
 Route::get('/bank-sampah/dashboard', [DashboardController::class, 'bankSampah'])
@@ -68,9 +47,8 @@ Route::get('/bank-sampah/monitoring', [\App\Http\Controllers\BankSampahMonitorin
     ->middleware(['auth', 'role:admin_bank_sampah|admin_rw'])
     ->name('bank-sampah.monitoring');
 
-// Warga dashboard
-Route::get('/warga/dashboard', [DashboardController::class, 'warga'])
-    ->middleware(['auth', 'permission:view_own_dashboard'])->name('warga.dashboard');
+// Warga dashboard - redirect to Bank Sampah dashboard
+Route::redirect('/warga/dashboard', '/bank-sampah/dashboard')->name('warga.dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -78,81 +56,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Community Cash - Fund Categories
-Route::middleware(['auth', 'permission:manage_fund_categories'])->prefix('community-cash')->name('community-cash.')->group(function () {
-    Route::resource('categories', FundCategoryController::class)->except(['show']);
-});
-
-// Community Cash - Contributions
-Route::middleware(['auth', 'permission:manage_contributions'])->prefix('community-cash')->name('community-cash.')->group(function () {
-    Route::resource('contributions', CommunityContributionController::class)->except(['show']);
-});
-
-// Modul Tagihan Bulanan (Topic 15)
-Route::middleware(['auth', 'permission:manage_contributions'])->prefix('iuran')->name('iuran.')->group(function () {
-    Route::get('tagihan', [BillController::class, 'index'])->name('bills.index');
-    Route::get('tagihan/generate', [BillController::class, 'create'])->name('bills.generate.form');
-    Route::post('tagihan/generate', [BillController::class, 'generate'])->name('bills.generate');
-    Route::post('tagihan/{bill}/pay', [BillController::class, 'pay'])->name('bills.pay');
-    Route::get('tunggakan', [BillController::class, 'arrears'])->name('bills.arrears');
-    Route::get('laporan-tahunan', [BillController::class, 'annualReport'])->name('bills.annual_report');
-});
-
-// Community Cash - Expenses
-Route::middleware(['auth', 'permission:manage_expenses'])->prefix('community-cash')->name('community-cash.')->group(function () {
-    Route::resource('expenses', CommunityExpenseController::class)->except(['show']);
-});
-
-// Community Cash - Report (Admin/Bendahara)
-Route::get('/community-cash/report', [CommunityCashReportController::class, 'index'])
-    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report');
-
-Route::get('/community-cash/report/export', [CommunityCashReportController::class, 'export'])
-    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report.export');
-
-Route::get('/community-cash/report/pdf', [CommunityCashReportController::class, 'pdf'])
-    ->middleware(['auth', 'permission:view_cash_reports'])->name('community-cash.report.pdf');
-
-// Warga - Public Cash Report
-Route::get('/warga/cash-report', [CommunityCashReportController::class, 'publicReport'])
-    ->middleware(['auth', 'permission:view_public_cash_report'])->name('warga.cash-report');
-
 // Warga - Bank Sampah Savings
 Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
     Route::get('/warga/savings', [WargaSavingsController::class, 'index'])->name('warga.savings');
     Route::get('/warga/savings/history', [WargaSavingsController::class, 'history'])->name('warga.savings.history');
-});
-
-// Warga - Billing Portal
-Route::middleware(['auth', 'permission:view_own_dashboard'])->group(function () {
-    Route::get('/warga/tagihan', [WargaBillController::class, 'index'])->name('warga.bills');
-});
-
-// Members / Data Warga
-Route::middleware(['auth', 'permission:manage_members'])->group(function () {
-    // KK Import
-    Route::get('kks/import', [\App\Http\Controllers\KkImportController::class, 'showForm'])->name('kks.import');
-    Route::post('kks/import', [\App\Http\Controllers\KkImportController::class, 'import'])->name('kks.import.store');
-    Route::get('kks/import/template', [\App\Http\Controllers\KkImportController::class, 'downloadTemplate'])->name('kks.import.template');
-    Route::get('kks/import/failed-download', [\App\Http\Controllers\KkImportController::class, 'downloadFailed'])->name('kks.import.failed-download');
-
-    // Members / Data Warga Import Upgraded
-    Route::get('members/import-v2', [\App\Http\Controllers\MemberImportControllerV2::class, 'showForm'])->name('members.import-v2');
-    Route::post('members/import-v2', [\App\Http\Controllers\MemberImportControllerV2::class, 'import'])->name('members.import-v2.store');
-    Route::get('members/import-v2/template', [\App\Http\Controllers\MemberImportControllerV2::class, 'downloadTemplate'])->name('members.import-v2.template');
-    Route::get('members/import-v2/failed-download', [\App\Http\Controllers\MemberImportControllerV2::class, 'downloadFailed'])->name('members.import-v2.failed-download');
-
-    Route::get('members/import', [MemberImportController::class, 'showForm'])->name('members.import');
-    Route::post('members/import', [MemberImportController::class, 'import'])->name('members.import.store');
-    Route::get('members/import/template', [MemberImportController::class, 'template'])->name('members.import.template');
-    Route::resource('members', MemberController::class);
-    Route::get('members/export', [MemberController::class, 'export'])->name('members.export');
-    Route::post('members/{member}/reset-password', [MemberController::class, 'resetPassword'])->name('members.reset-password');
-    Route::post('members/{member}/create-login-account', [MemberController::class, 'createLoginAccount'])->name('members.create-login-account');
-    
-    // RT & KK CRUD
-    Route::resource('rts', RtController::class)->except(['show']);
-    Route::resource('kks', KkController::class);
 });
 
 // Bank Sampah - Waste Categories

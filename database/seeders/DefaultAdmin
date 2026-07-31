@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Member;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -42,7 +41,6 @@ class DefaultAdminSeeder extends Seeder
         ];
 
         // Create users
-        $createdUsers = [];
         foreach ($demoUsers as $du) {
             $phone = $this->normalizePhone($du['raw_phone']);
 
@@ -58,20 +56,7 @@ class DefaultAdminSeeder extends Seeder
 
             // Assign roles
             $user->syncRoles($du['roles']);
-            $createdUsers[$du['raw_phone']] = $user;
         }
-
-        // Connected member for warga (RT/KK module removed)
-        $wargaUser = $createdUsers['620855555555'];
-        Member::updateOrCreate(
-            ['user_id' => $wargaUser->id],
-            [
-                'member_code' => 'WRG026',
-                'name' => 'Warga Demo',
-                'phone' => '0855555555',
-                'address' => 'Jl. Kebersihan No. 26',
-            ]
-        );
     }
 
     /**
