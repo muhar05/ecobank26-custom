@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('waste_customers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
             $table->string('customer_code')->unique();
             $table->string('name');
             $table->string('phone')->nullable();

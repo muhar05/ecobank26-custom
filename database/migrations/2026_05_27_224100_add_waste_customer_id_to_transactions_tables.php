@@ -9,15 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('deposits', function (Blueprint $table) {
-            $table->foreignId('waste_customer_id')->nullable()->after('member_id')->constrained('waste_customers')->nullOnDelete();
+            $table->foreignId('waste_customer_id')->nullable()->after('id')->constrained('waste_customers')->nullOnDelete();
         });
 
         Schema::table('withdrawals', function (Blueprint $table) {
-            $table->foreignId('waste_customer_id')->nullable()->after('member_id')->constrained('waste_customers')->nullOnDelete();
+            $table->foreignId('waste_customer_id')->nullable()->after('id')->constrained('waste_customers')->nullOnDelete();
         });
 
         Schema::table('savings_ledgers', function (Blueprint $table) {
-            $table->foreignId('waste_customer_id')->nullable()->after('member_id')->constrained('waste_customers')->nullOnDelete();
+            $table->foreignId('waste_customer_id')->nullable()->after('id')->constrained('waste_customers')->nullOnDelete();
         });
     }
 

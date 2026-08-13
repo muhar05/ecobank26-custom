@@ -47,28 +47,27 @@ class WasteCustomer extends Model
     }
 
     /**
-     * Generate next customer code safely with lockForUpdate to prevent race conditions.
-     * Format: NSB-YYYYMM-XXXX
+     * Generate the next customer code safely with lockForUpdate to prevent race conditions.
+     * Format: NSB-000001, NSB-000002, dst. (sequential, never changes once created).
      */
     public static function generateNextCustomerCode(): string
     {
         return DB::transaction(function () {
-            $prefix = 'NSB-' . date('Ym') . '-';
-
             // Use lockForUpdate to ensure only one process can calculate the next code at a time
-            $lastCode = self::where('customer_code', 'like', $prefix . '%')
+            $codes = self::where('customer_code', 'like', 'NSB-%')
                 ->lockForUpdate()
-                ->orderBy('customer_code', 'desc')
-                ->value('customer_code');
+                ->pluck('customer_code');
 
-            if ($lastCode) {
-                $lastNumber = (int) substr($lastCode, -4);
-                $nextNumber = $lastNumber + 1;
-            } else {
-                $nextNumber = 1;
+            $max = 0;
+            foreach ($codes as $code) {
+                $parts = explode('-', $code);
+                $num = (int) end($parts);
+                if ($num > $max) {
+                    $max = $num;
+                }
             }
 
-            return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            return 'NSB-' . str_pad($max + 1, 6, '0', STR_PAD_LEFT);
         });
     }
 }

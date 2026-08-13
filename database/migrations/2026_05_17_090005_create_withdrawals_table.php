@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('withdrawals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('member_id')->constrained('members');
             $table->decimal('amount', 15, 2);
             $table->date('date');
             $table->string('notes')->nullable();

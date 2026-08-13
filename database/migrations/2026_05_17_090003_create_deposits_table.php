@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('deposits', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('member_id')->constrained('members');
             $table->foreignId('collector_id')->constrained('collectors');
             $table->date('date');
             $table->decimal('total_amount', 15, 2);

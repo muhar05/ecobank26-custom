@@ -16,11 +16,19 @@ use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WasteCustomerController;
 use App\Http\Controllers\WasteCategoryGroupController;
 use App\Http\Controllers\WasteBankReportController;
+use App\Http\Controllers\BalanceCheckController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Cek Saldo Nasabah - publik, tanpa login
+Route::get('/cek-saldo', [BalanceCheckController::class, 'index'])->name('cek-saldo.index');
+// POST di-throttle: per IP dan per kombinasi credential (hash) untuk cegah brute-force/enumeration
+Route::post('/cek-saldo', [BalanceCheckController::class, 'check'])
+    ->middleware(['throttle:cek-saldo', 'throttle:cek-saldo-credential'])
+    ->name('cek-saldo.check');
 
 // Main dashboard route - land per-role on a page they can access
 Route::get('/dashboard', function () {

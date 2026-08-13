@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('savings_ledgers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('member_id')->constrained('members');
             $table->string('type');
             $table->decimal('amount', 15, 2);
             $table->string('description')->nullable();
