@@ -14,29 +14,19 @@ class DefaultAdminSeeder extends Seeder
         // Define users list with raw phone numbers
         $demoUsers = [
             [
-                'name' => 'Admin RW',
-                'raw_phone' => '620811111111',
-                'roles' => ['admin_rw'],
-            ],
-            [
-                'name' => 'Bendahara RW',
-                'raw_phone' => '620822222222',
-                'roles' => ['bendahara_rw', 'bendahara'],
-            ],
-            [
-                'name' => 'Admin RT',
-                'raw_phone' => '620833333333',
-                'roles' => ['admin_rt'],
-            ],
-            [
                 'name' => 'Admin Bank Sampah',
                 'raw_phone' => '620844444444',
                 'roles' => ['admin_bank_sampah'],
             ],
             [
-                'name' => 'Warga Demo',
+                'name' => 'Admin Bank Sampah 2',
                 'raw_phone' => '620855555555',
-                'roles' => ['warga'],
+                'roles' => ['admin_bank_sampah'],
+            ],
+            [
+                'name' => 'Admin Bank Sampah 3',
+                'raw_phone' => '620866666666',
+                'roles' => ['admin_bank_sampah'],
             ],
         ];
 

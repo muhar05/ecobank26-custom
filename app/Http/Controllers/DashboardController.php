@@ -9,6 +9,7 @@ class DashboardController extends Controller
         $totalCredit = \App\Models\SavingsLedger::where('type', 'credit')->sum('amount');
         $totalDebit = \App\Models\SavingsLedger::where('type', 'debit')->sum('amount');
         $totalSales = \App\Models\Sale::sum('total_amount');
+        $totalCustomers = \App\Models\WasteCustomer::count();
         $wasteBankCashBalance = \App\Models\WasteBankCashLedger::latest('id')->value('balance') ?? 0;
         $recentLedgers = \App\Models\SavingsLedger::with('wasteCustomer')
             ->latest('id')->limit(5)->get();
@@ -19,6 +20,7 @@ class DashboardController extends Controller
             'totalCredit' => $totalCredit,
             'totalDebit' => $totalDebit,
             'totalSales' => $totalSales,
+            'totalCustomers' => $totalCustomers,
             'wasteBankCashBalance' => $wasteBankCashBalance,
             'recentLedgers' => $recentLedgers,
             'recentCashLedgers' => $recentCashLedgers,
