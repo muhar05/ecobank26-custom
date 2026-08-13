@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Deposit;
-use App\Models\Member;
 use App\Models\SavingsLedger;
 use App\Models\WasteCustomer;
 use App\Models\Withdrawal;
@@ -16,10 +15,9 @@ class WithdrawalController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $withdrawals = Withdrawal::with(['wasteCustomer', 'member'])
+        $withdrawals = Withdrawal::with(['wasteCustomer'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
-                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
-                ->orWhereHas('member', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest('date')->paginate(20)->withQueryString();
         return view('bank-sampah.withdrawals.index', compact('withdrawals', 'search'));
     }
@@ -72,15 +70,9 @@ class WithdrawalController extends Controller
         ]);
 
         $customer = WasteCustomer::findOrFail($request->waste_customer_id);
-        $memberId = $customer->member_id;
 
         // Check minimum deposit rule for the target customer
-        $depositCount = Deposit::where(function($q) use ($customer) {
-            $q->where('waste_customer_id', $customer->id);
-            if ($customer->member_id) {
-                $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
-            }
-        })->count();
+        $depositCount = Deposit::where('waste_customer_id', $customer->id)->count();
 
         if ($depositCount < BankSampahService::MIN_DEPOSITS_BEFORE_WITHDRAWAL) {
             return back()->withErrors(['waste_customer_id' => "Nasabah belum memenuhi syarat penarikan. Minimal 2 kali setoran sebelum bisa menarik saldo. Saat ini: {$depositCount} setoran."])->withInput();
@@ -95,9 +87,8 @@ class WithdrawalController extends Controller
             return back()->withErrors(['amount' => "Saldo tidak cukup. Saldo tersedia: Rp " . number_format($available, 0, ',', '.')])->withInput();
         }
 
-        DB::transaction(function () use ($withdrawal, $request, $customer, $memberId) {
+        DB::transaction(function () use ($withdrawal, $request, $customer) {
             $withdrawal->update([
-                'member_id' => $memberId,
                 'waste_customer_id' => $customer->id,
                 'amount' => $request->amount,
                 'date' => $request->date,
@@ -107,7 +98,6 @@ class WithdrawalController extends Controller
             SavingsLedger::where('reference_type', Withdrawal::class)
                 ->where('reference_id', $withdrawal->id)
                 ->update([
-                    'member_id' => $memberId,
                     'waste_customer_id' => $customer->id,
                     'amount' => $request->amount,
                     'description' => $request->notes ?? 'Penarikan saldo',

@@ -114,9 +114,6 @@
                                     @if($l->wasteCustomer)
                                         {{ $l->wasteCustomer->name }}
                                         <span class="block text-[10px] text-slate-400 font-normal mt-0.5">Nasabah Bank Sampah</span>
-                                    @elseif($l->member)
-                                        {{ $l->member->name }}
-                                        <span class="block text-[10px] text-slate-400 font-normal mt-0.5">Warga RW (Legacy)</span>
                                     @else
                                         -
                                     @endif
@@ -166,8 +163,6 @@
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">
                                     @if($l->wasteCustomer)
                                         {{ $l->wasteCustomer->name }}
-                                    @elseif($l->member)
-                                        {{ $l->member->name }}
                                     @else
                                         -
                                     @endif

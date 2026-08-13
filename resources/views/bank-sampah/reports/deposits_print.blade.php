@@ -136,13 +136,7 @@
                     <td>{{ $d->deposit->date ? $d->deposit->date->toDateString() : '-' }}</td>
                     <td style="font-family: monospace;">DEP-{{ str_pad($d->deposit_id, 5, '0', STR_PAD_LEFT) }}</td>
                     <td style="font-weight: bold;">
-                        @if($d->deposit->wasteCustomer)
-                            {{ $d->deposit->wasteCustomer->name }}
-                        @elseif($d->deposit->member)
-                            {{ $d->deposit->member->name }}
-                        @else
-                            -
-                        @endif
+                        {{ $d->deposit->wasteCustomer->name ?? '-' }}
                     </td>
                     <td>{{ $d->wasteCategory->name ?? '-' }}</td>
                     <td class="text-right">{{ number_format($d->weight, 2, ',', '.') }} kg</td>

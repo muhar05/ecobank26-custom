@@ -30,16 +30,6 @@
                             Nonaktif
                         </span>
                     @endif
-
-                    @if($customer->member_id)
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                            Terhubung Warga
-                        </span>
-                    @else
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
-                            Nasabah Manual
-                        </span>
-                    @endif
                 </div>
 
                 <div class="w-full border-t border-slate-100 dark:border-slate-800 my-5"></div>
@@ -92,31 +82,9 @@
 
                 {{-- Account Connections --}}
                 <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Koneksi Akun & Kependudukan</h3>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Koneksi Akun</h3>
                     
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between p-3.5 border border-slate-100 dark:border-slate-800 rounded-xl">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/></svg>
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 block">Profil Kependudukan (Warga)</span>
-                                    <span class="text-xs text-slate-500 dark:text-slate-400">Dihubungkan ke basis data warga RT/RW</span>
-                                </div>
-                            </div>
-                            <div>
-                                @if($customer->member_id)
-                                    <div class="text-right">
-                                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">{{ $customer->member->name }}</span>
-                                        <span class="text-[10px] text-slate-500 dark:text-slate-400 block">{{ $customer->member->member_code }}</span>
-                                    </div>
-                                @else
-                                    <span class="text-xs text-slate-400 dark:text-slate-500">Tidak Terhubung Warga</span>
-                                @endif
-                            </div>
-                        </div>
-
                         <div class="flex items-center justify-between p-3.5 border border-slate-100 dark:border-slate-800 rounded-xl">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -124,7 +92,7 @@
                                 </div>
                                 <div>
                                     <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 block">Akun Login Portal</span>
-                                    <span class="text-xs text-slate-500 dark:text-slate-400">Digunakan warga untuk memantau tabungan</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400">Digunakan nasabah untuk memantau tabungan</span>
                                 </div>
                             </div>
                             <div>

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Collector;
 use App\Models\Deposit;
 use App\Models\DepositDetail;
-use App\Models\Member;
 use App\Models\SavingsLedger;
 use App\Models\WasteCategory;
 use App\Models\WasteCustomer;
@@ -19,10 +18,9 @@ class DepositController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $deposits = Deposit::with(['wasteCustomer', 'member', 'details.wasteCategory'])
+        $deposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
                 ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
-                ->orWhereHas('member', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
                 ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest('date')->paginate(20)->withQueryString();
         return view('bank-sampah.deposits.index', compact('deposits', 'search'));
@@ -101,11 +99,9 @@ class DepositController extends Controller
 
         $totalAmount = collect($details)->sum('subtotal');
         $customer = WasteCustomer::findOrFail($request->waste_customer_id);
-        $memberId = $customer->member_id;
 
-        DB::transaction(function () use ($deposit, $request, $details, $totalAmount, $customer, $memberId) {
+        DB::transaction(function () use ($deposit, $request, $details, $totalAmount, $customer) {
             $deposit->update([
-                'member_id' => $memberId,
                 'waste_customer_id' => $customer->id,
                 'collector_id' => $request->collector_id,
                 'date' => $request->date,
@@ -123,7 +119,6 @@ class DepositController extends Controller
             SavingsLedger::where('reference_type', Deposit::class)
                 ->where('reference_id', $deposit->id)
                 ->update([
-                    'member_id' => $memberId,
                     'waste_customer_id' => $customer->id,
                     'amount' => $totalAmount,
                 ]);

@@ -109,7 +109,7 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
         $categoryId = $this->request->input('waste_category_id');
         $collectorId = $this->request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.member', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
             ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
                 $q->whereBetween('date', [$startDate, $endDate])
                   ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
@@ -132,12 +132,7 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
             $date = Carbon::instance($d->deposit->date)->toDateString();
             $code = 'DEP-' . str_pad($d->deposit->id, 5, '0', STR_PAD_LEFT);
             
-            $nasabah = '-';
-            if ($d->deposit->wasteCustomer) {
-                $nasabah = $d->deposit->wasteCustomer->name;
-            } elseif ($d->deposit->member) {
-                $nasabah = $d->deposit->member->name;
-            }
+            $nasabah = $d->deposit->wasteCustomer->name ?? '-';
 
             $catName = $d->wasteCategory->name ?? '-';
             $groupName = '-';

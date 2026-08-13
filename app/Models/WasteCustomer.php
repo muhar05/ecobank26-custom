@@ -11,7 +11,6 @@ class WasteCustomer extends Model
 {
     protected $fillable = [
         'user_id',
-        'member_id',
         'customer_code',
         'name',
         'phone',
@@ -30,11 +29,6 @@ class WasteCustomer extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function member(): BelongsTo
-    {
-        return $this->belongsTo(Member::class);
     }
 
     public function deposits(): HasMany

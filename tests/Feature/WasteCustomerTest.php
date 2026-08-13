@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Member;
 use App\Models\User;
 use App\Models\WasteCustomer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +14,6 @@ class WasteCustomerTest extends TestCase
 
     private User $adminBankSampah;
     private User $warga;
-    private Member $member;
 
     protected function setUp(): void
     {
@@ -28,17 +26,9 @@ class WasteCustomerTest extends TestCase
         $this->adminBankSampah = User::factory()->create();
         $this->adminBankSampah->assignRole('admin_bank_sampah');
 
-        // Create Warga User & Member
+        // Create Warga User
         $this->warga = User::factory()->create();
         $this->warga->assignRole('warga');
-
-        $this->member = Member::create([
-            'user_id' => $this->warga->id,
-            'member_code' => 'WRG001',
-            'name' => 'Warga Test',
-            'phone' => '0812345678',
-            'address' => 'Jl. Test No. 1',
-        ]);
     }
 
     /**
@@ -80,56 +70,8 @@ class WasteCustomerTest extends TestCase
         $response->assertRedirect(route('bank-sampah.customers.index'));
         $this->assertDatabaseHas('waste_customers', [
             'name' => 'Manual Customer',
-            'member_id' => null,
             'user_id' => null,
         ]);
-    }
-
-    /**
-     * Test Admin Bank Sampah can connect existing member.
-     */
-    public function test_admin_bank_sampah_can_connect_existing_member(): void
-    {
-        $response = $this->actingAs($this->adminBankSampah)
-            ->post(route('bank-sampah.customers.store'), [
-                'mode' => 'existing',
-                'member_id' => $this->member->id,
-                'status' => 'active',
-            ]);
-
-        $response->assertRedirect(route('bank-sampah.customers.index'));
-        $this->assertDatabaseHas('waste_customers', [
-            'name' => 'Warga Test',
-            'member_id' => $this->member->id,
-            'user_id' => $this->warga->id,
-        ]);
-    }
-
-    /**
-     * Test validation prevents duplicate active customer profile for the same member.
-     */
-    public function test_validation_prevents_duplicate_active_customer(): void
-    {
-        // First creation
-        WasteCustomer::create([
-            'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
-            'customer_code' => 'NSB001',
-            'name' => $this->member->name,
-            'status' => 'active',
-        ]);
-
-        // Attempt second active link for the same member
-        $response = $this->actingAs($this->adminBankSampah)
-            ->from(route('bank-sampah.customers.create'))
-            ->post(route('bank-sampah.customers.store'), [
-                'mode' => 'existing',
-                'member_id' => $this->member->id,
-                'status' => 'active',
-            ]);
-
-        $response->assertRedirect(route('bank-sampah.customers.create'));
-        $response->assertSessionHasErrors(['member_id']);
     }
 
     /**
@@ -139,7 +81,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB002',
             'name' => 'Transaction Customer',
             'status' => 'active',
@@ -151,7 +92,6 @@ class WasteCustomerTest extends TestCase
 
         // Create a deposit for this customer
         $customer->deposits()->create([
-            'member_id' => $this->member->id,
             'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 50000,
@@ -168,60 +108,12 @@ class WasteCustomerTest extends TestCase
     }
 
     /**
-     * Test creating a deposit for a linked customer works and performs dual-write.
-     */
-    public function test_deposit_creation_for_linked_customer(): void
-    {
-        $customer = WasteCustomer::create([
-            'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
-            'customer_code' => 'NSB101',
-            'name' => $this->member->name,
-            'status' => 'active',
-        ]);
-
-        $collector = \App\Models\Collector::create(['name' => 'Collector A']);
-        $category = \App\Models\WasteCategory::create(['name' => 'Plastik', 'unit' => 'kg']);
-
-        $response = $this->actingAs($this->adminBankSampah)
-            ->post(route('bank-sampah.deposits.store'), [
-                'waste_customer_id' => $customer->id,
-                'collector_id' => $collector->id,
-                'date' => date('Y-m-d'),
-                'notes' => 'Test deposit',
-                'details' => [
-                    [
-                        'waste_category_id' => $category->id,
-                        'price_per_unit' => 2000,
-                        'weight' => 5,
-                    ]
-                ]
-            ]);
-
-        $response->assertRedirect(route('bank-sampah.deposits.index'));
-
-        // Verify dual-write in database
-        $this->assertDatabaseHas('deposits', [
-            'waste_customer_id' => $customer->id,
-            'member_id' => $this->member->id,
-            'total_amount' => 10000,
-        ]);
-
-        $this->assertDatabaseHas('savings_ledgers', [
-            'waste_customer_id' => $customer->id,
-            'member_id' => $this->member->id,
-            'amount' => 10000,
-        ]);
-    }
-
-    /**
      * Test creating a deposit for a manual customer (no member) now successfully works.
      */
     public function test_deposit_creation_for_manual_customer_succeeds(): void
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB102',
             'name' => 'Manual Customer',
             'status' => 'active',
@@ -247,16 +139,14 @@ class WasteCustomerTest extends TestCase
 
         $response->assertRedirect(route('bank-sampah.deposits.index'));
 
-        // Verify write in database (member_id is null, waste_customer_id is set)
+        // Verify write in database (waste_customer_id is set)
         $this->assertDatabaseHas('deposits', [
             'waste_customer_id' => $customer->id,
-            'member_id' => null,
             'total_amount' => 15000,
         ]);
 
         $this->assertDatabaseHas('savings_ledgers', [
             'waste_customer_id' => $customer->id,
-            'member_id' => null,
             'amount' => 15000,
         ]);
     }
@@ -268,7 +158,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB103',
             'name' => 'Manual Customer C',
             'status' => 'active',
@@ -314,13 +203,11 @@ class WasteCustomerTest extends TestCase
         // Verify withdrawal record
         $this->assertDatabaseHas('withdrawals', [
             'waste_customer_id' => $customer->id,
-            'member_id' => null,
             'amount' => 15000,
         ]);
 
         $this->assertDatabaseHas('savings_ledgers', [
             'waste_customer_id' => $customer->id,
-            'member_id' => null,
             'type' => 'debit',
             'amount' => 15000,
         ]);
@@ -333,14 +220,12 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
             'customer_code' => 'NSB201',
-            'name' => $this->member->name,
+            'name' => 'Warga Test',
             'status' => 'active',
         ]);
 
         $customer->savingsLedgers()->create([
-            'member_id' => $this->member->id,
             'type' => 'credit',
             'amount' => 45000,
             'description' => 'Setoran Awal',
@@ -360,14 +245,12 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
             'customer_code' => 'NSB201',
-            'name' => $this->member->name,
+            'name' => 'Warga Test',
             'status' => 'active',
         ]);
 
         $customer->savingsLedgers()->create([
-            'member_id' => $this->member->id,
             'type' => 'credit',
             'amount' => 45000,
             'description' => 'Setoran Awal',
@@ -402,7 +285,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB301',
             'name' => 'Audit Normal',
             'status' => 'active',
@@ -420,7 +302,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB302',
             'name' => 'Audit Missing Ledger',
             'status' => 'active',
@@ -449,7 +330,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB303',
             'name' => 'Audit Duplicate Ledger',
             'status' => 'active',
@@ -489,39 +369,6 @@ class WasteCustomerTest extends TestCase
     }
 
     /**
-     * Test audit command detects member relationship mismatches.
-     */
-    public function test_audit_detects_relation_mismatch(): void
-    {
-        $customer = WasteCustomer::create([
-            'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
-            'customer_code' => 'NSB304',
-            'name' => 'Audit Relation Mismatch',
-            'status' => 'active',
-        ]);
-
-        $collector = \App\Models\Collector::create(['name' => 'Collector F']);
-
-        // Create a deposit with mismatched member_id (pointing to a different member ID)
-        $mismatchedMember = Member::create([
-            'member_code' => 'WRG099',
-            'name' => 'Different Warga',
-        ]);
-
-        $customer->deposits()->create([
-            'member_id' => $mismatchedMember->id,
-            'collector_id' => $collector->id,
-            'date' => now(),
-            'total_amount' => 20000,
-        ]);
-
-        $this->artisan('bank-sampah:audit')
-            ->assertExitCode(2)
-            ->expectsOutputToContain('Relation Mismatches[HI] : 1');
-    }
-
-    /**
      * Test audit command detects legacy unmapped transaction returning exit code 1 (Warning).
      */
     public function test_audit_detects_legacy_unmapped_transaction_warning(): void
@@ -531,7 +378,6 @@ class WasteCustomerTest extends TestCase
         // Create a customer to ensure checker proceeds and checked > 0
         WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB399',
             'name' => 'Audit Legacy Warning Target',
             'status' => 'active',
@@ -616,9 +462,8 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => $this->warga->id,
-            'member_id' => $this->member->id,
             'customer_code' => 'NSB401',
-            'name' => $this->member->name,
+            'name' => 'Warga Test',
             'status' => 'active',
         ]);
 
@@ -654,7 +499,6 @@ class WasteCustomerTest extends TestCase
     {
         $customer = WasteCustomer::create([
             'user_id' => null,
-            'member_id' => null,
             'customer_code' => 'NSB402',
             'name' => 'Withdrawal Log Nasabah',
             'status' => 'active',

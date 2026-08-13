@@ -79,7 +79,6 @@ class AuditBankSampahConsistency extends Command
         $this->line("Negative Balances  [CRT]: " . count($anomalies['negative_balances']));
         $this->line("Orphan Transactions[HI] : " . count($anomalies['orphan_transactions']));
         $this->line("Orphan Ledgers     [HI] : " . count($anomalies['orphan_ledgers']));
-        $this->line("Relation Mismatches[HI] : " . count($anomalies['relation_mismatches']));
         $this->line("Legacy Unmapped    [WRN]: " . count($anomalies['legacy_unmapped_transactions']));
         $this->info('==================================================');
         $this->line("Exit Code Status:       " . ($exitCode === 0 ? 'HEALTHY (0)' : ($exitCode === 1 ? 'WARNING (1)' : 'CRITICAL (2)')));
@@ -122,20 +121,10 @@ class AuditBankSampahConsistency extends Command
                 }
             }
 
-            if (!empty($anomalies['relation_mismatches'])) {
-                $this->error("\n[HIGH] Relation Mismatches (mismatched member_id pointers):");
-                foreach ($anomalies['relation_mismatches'] as $rm) {
-                    $this->line("  Nasabah {$rm['customer_code']} ({$rm['name']}):");
-                    if (!empty($rm['deposit_ids'])) $this->line("    Deposits: " . implode(', ', $rm['deposit_ids']));
-                    if (!empty($rm['withdrawal_ids'])) $this->line("    Withdrawals: " . implode(', ', $rm['withdrawal_ids']));
-                    if (!empty($rm['ledger_ids'])) $this->line("    Ledgers: " . implode(', ', $rm['ledger_ids']));
-                }
-            }
-
             if (!empty($anomalies['legacy_unmapped_transactions'])) {
                 $this->warn("\n[WARNING] Legacy Unmapped Transactions:");
                 foreach ($anomalies['legacy_unmapped_transactions'] as $lud) {
-                    $this->line("  Table: {$lud['table']} | ID: {$lud['transaction_id']} | Member ID: " . ($lud['member_id'] ?? 'NULL') . " | Created At: " . ($lud['created_at'] ?? 'N/A'));
+                    $this->line("  Table: {$lud['table']} | ID: {$lud['transaction_id']} | Created At: " . ($lud['created_at'] ?? 'N/A'));
                 }
             }
         }

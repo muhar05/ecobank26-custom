@@ -96,8 +96,8 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
             ];
         });
 
-        $depositsList = \App\Models\Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
-            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+        $depositsList = \App\Models\Deposit::with('wasteCustomer')->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer->name ?? '-';
             return [
                 'date' => Carbon::instance($item->date)->toDateString(),
                 'code' => 'DEP-' . str_pad($item->id, 5, '0', STR_PAD_LEFT),

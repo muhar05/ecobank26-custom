@@ -90,26 +90,8 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         $customerId = $this->request->input('waste_customer_id');
         $type = $this->request->input('type');
 
-        $linkedMemberId = null;
-        if ($customerId) {
-            $customer = WasteCustomer::find($customerId);
-            if ($customer) {
-                $linkedMemberId = $customer->member_id;
-            }
-        }
-
-        $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
-                $q->where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                });
-            })
+        $query = SavingsLedger::with('wasteCustomer')
+            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -119,15 +101,7 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         // Preceding starting balance for running balance
         $bal = 0;
         if ($customerId) {
-            $startingBalance = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                })
+            $startingBalance = SavingsLedger::where('waste_customer_id', $customerId)
                 ->where('created_at', '<', $startDate)
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
             $bal = (float) $startingBalance;
@@ -140,12 +114,7 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
         foreach ($ledgers as $l) {
             $date = Carbon::instance($l->created_at)->toDateString();
             
-            $nasabah = '-';
-            if ($l->wasteCustomer) {
-                $nasabah = $l->wasteCustomer->name;
-            } elseif ($l->member) {
-                $nasabah = $l->member->name;
-            }
+            $nasabah = $l->wasteCustomer?->name ?? '-';
 
             $tipe = $l->type === 'credit' ? 'Setoran (Credit)' : 'Penarikan (Debit)';
             $desc = $l->description ?? '-';

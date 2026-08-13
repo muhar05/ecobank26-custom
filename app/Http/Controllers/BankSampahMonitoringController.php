@@ -57,7 +57,6 @@ class BankSampahMonitoringController extends Controller
         $negativeBalances = $this->paginateArray($anomalies['negative_balances'], 5, 'page_negative');
         $orphanTransactions = $this->paginateArray($anomalies['orphan_transactions'], 5, 'page_orphan_tx');
         $orphanLedgers = $this->paginateArray($anomalies['orphan_ledgers'], 5, 'page_orphan_ledger');
-        $relationMismatches = $this->paginateArray($anomalies['relation_mismatches'], 5, 'page_relation');
         $legacyUnmapped = $this->paginateArray($anomalies['legacy_unmapped_transactions'], 5, 'page_legacy');
 
         return view('bank-sampah.monitoring', [
@@ -77,7 +76,6 @@ class BankSampahMonitoringController extends Controller
             'negativeBalances' => $negativeBalances,
             'orphanTransactions' => $orphanTransactions,
             'orphanLedgers' => $orphanLedgers,
-            'relationMismatches' => $relationMismatches,
             'legacyUnmapped' => $legacyUnmapped,
         ]);
     }

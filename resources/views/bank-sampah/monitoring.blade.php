@@ -161,9 +161,6 @@
                 <button @click="activeTab = 'orphan_ledger'" :class="activeTab === 'orphan_ledger' ? 'bg-slate-900 text-white dark:bg-slate-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs font-bold transition">
                     Orphan Ledger ({{ $orphanLedgers->total() }})
                 </button>
-                <button @click="activeTab = 'relation'" :class="activeTab === 'relation' ? 'bg-slate-900 text-white dark:bg-slate-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs font-bold transition">
-                    Relation Mismatch ({{ $relationMismatches->total() }})
-                </button>
                 <button @click="activeTab = 'legacy'" :class="activeTab === 'legacy' ? 'bg-slate-900 text-white dark:bg-slate-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'" class="px-4 py-2 rounded-xl text-xs font-bold transition">
                     Legacy Unmapped ({{ $legacyUnmapped->total() }})
                 </button>
@@ -272,45 +269,6 @@
                 @endif
             </div>
 
-            {{-- Tab: Relation Mismatch --}}
-            <div x-show="activeTab === 'relation'" class="space-y-4" style="display: none;">
-                @if ($relationMismatches->isEmpty())
-                    <div class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">Tidak ada inkonsistensi relasi anggota nasabah.</div>
-                @else
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="text-xs uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                                    <th class="py-3 px-4">Kode Nasabah</th>
-                                    <th class="py-3 px-4">Nama</th>
-                                    <th class="py-3 px-4">Mismatched Deposits</th>
-                                    <th class="py-3 px-4">Mismatched Withdrawals</th>
-                                    <th class="py-3 px-4">Mismatched Ledgers</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm text-slate-700 dark:text-slate-300">
-                                @foreach ($relationMismatches as $rm)
-                                    <tr>
-                                        <td class="py-3.5 px-4 font-mono font-bold">{{ $rm['customer_code'] }}</td>
-                                        <td class="py-3.5 px-4 font-medium">{{ $rm['name'] }}</td>
-                                        <td class="py-3.5 px-4 text-xs">
-                                            {{ empty($rm['deposit_ids']) ? '-' : 'IDs: ' . implode(', ', $rm['deposit_ids']) }}
-                                        </td>
-                                        <td class="py-3.5 px-4 text-xs">
-                                            {{ empty($rm['withdrawal_ids']) ? '-' : 'IDs: ' . implode(', ', $rm['withdrawal_ids']) }}
-                                        </td>
-                                        <td class="py-3.5 px-4 text-xs">
-                                            {{ empty($rm['ledger_ids']) ? '-' : 'IDs: ' . implode(', ', $rm['ledger_ids']) }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-4">{{ $relationMismatches->links() }}</div>
-                @endif
-            </div>
-
             {{-- Tab: Legacy Unmapped --}}
             <div x-show="activeTab === 'legacy'" class="space-y-4" style="display: none;">
                 @if ($legacyUnmapped->isEmpty())
@@ -322,7 +280,6 @@
                                 <tr class="text-xs uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800">
                                     <th class="py-3 px-4">Tabel Database</th>
                                     <th class="py-3 px-4">ID Transaksi</th>
-                                    <th class="py-3 px-4">Member ID</th>
                                     <th class="py-3 px-4">Tanggal Transaksi</th>
                                 </tr>
                             </thead>
@@ -331,7 +288,6 @@
                                     <tr>
                                         <td class="py-3.5 px-4 font-mono font-bold">{{ $lu['table'] }}</td>
                                         <td class="py-3.5 px-4 font-medium">#{{ $lu['transaction_id'] }}</td>
-                                        <td class="py-3.5 px-4">{{ $lu['member_id'] ?? 'NULL' }}</td>
                                         <td class="py-3.5 px-4 text-slate-500 text-xs">
                                             {{ $lu['created_at'] ? \Carbon\Carbon::parse($lu['created_at'])->format('d/m/Y H:i:s') : 'N/A' }}
                                         </td>

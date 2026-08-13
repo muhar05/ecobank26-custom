@@ -107,13 +107,7 @@
                                     DEP-{{ str_pad($d->deposit_id, 5, '0', STR_PAD_LEFT) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-slate-100">
-                                    @if($d->deposit->wasteCustomer)
-                                        {{ $d->deposit->wasteCustomer->name }}
-                                    @elseif($d->deposit->member)
-                                        {{ $d->deposit->member->name }}
-                                    @else
-                                        -
-                                    @endif
+                                    {{ $d->deposit->wasteCustomer->name ?? '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $d->wasteCategory->name ?? '-' }}</div>
@@ -148,13 +142,7 @@
                             <div>
                                 <span class="text-xs font-semibold text-slate-400 font-mono">DEP-{{ str_pad($d->deposit_id, 5, '0', STR_PAD_LEFT) }}</span>
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                                    @if($d->deposit->wasteCustomer)
-                                        {{ $d->deposit->wasteCustomer->name }}
-                                    @elseif($d->deposit->member)
-                                        {{ $d->deposit->member->name }}
-                                    @else
-                                        -
-                                    @endif
+                                    {{ $d->deposit->wasteCustomer->name ?? '-' }}
                                 </h4>
                             </div>
                             <span class="text-xs text-slate-500">{{ $d->deposit->date ? $d->deposit->date->toDateString() : '-' }}</span>

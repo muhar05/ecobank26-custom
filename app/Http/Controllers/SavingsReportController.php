@@ -8,12 +8,12 @@ class SavingsReportController extends Controller
 {
     public function index()
     {
-        $balances = SavingsLedger::select('waste_customer_id', 'member_id')
+        $balances = SavingsLedger::select('waste_customer_id')
             ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) as total_credit")
             ->selectRaw("SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as total_debit")
             ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) - SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as balance")
-            ->groupBy('waste_customer_id', 'member_id')
-            ->with(['wasteCustomer', 'member'])
+            ->groupBy('waste_customer_id')
+            ->with('wasteCustomer')
             ->orderByDesc('balance')
             ->paginate(15)->withQueryString()->fragment('table-section');
 
@@ -22,12 +22,12 @@ class SavingsReportController extends Controller
 
     public function export()
     {
-        $balances = SavingsLedger::select('waste_customer_id', 'member_id')
+        $balances = SavingsLedger::select('waste_customer_id')
             ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) as total_credit")
             ->selectRaw("SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as total_debit")
             ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) - SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as balance")
-            ->groupBy('waste_customer_id', 'member_id')
-            ->with(['wasteCustomer', 'member'])
+            ->groupBy('waste_customer_id')
+            ->with('wasteCustomer')
             ->orderByDesc('balance')
             ->get();
 
@@ -35,17 +35,15 @@ class SavingsReportController extends Controller
 
         return response()->streamDownload(function () use ($balances) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Kode Nasabah', 'Nama Nasabah', 'Tipe Nasabah', 'Total Setoran', 'Total Penarikan', 'Saldo Akhir']);
+            fputcsv($handle, ['Kode Nasabah', 'Nama Nasabah', 'Total Setoran', 'Total Penarikan', 'Saldo Akhir']);
 
             foreach ($balances as $b) {
-                $code = $b->wasteCustomer ? $b->wasteCustomer->customer_code : ($b->member->member_code ?? '');
-                $name = $b->wasteCustomer ? $b->wasteCustomer->name : ($b->member->name ?? '');
-                $type = $b->wasteCustomer ? 'Mandiri / Bank Sampah' : 'Warga RT';
+                $code = $b->wasteCustomer?->customer_code ?? '-';
+                $name = $b->wasteCustomer?->name ?? '-';
 
                 fputcsv($handle, [
                     $code,
                     $name,
-                    $type,
                     $b->total_credit,
                     $b->total_debit,
                     $b->balance,

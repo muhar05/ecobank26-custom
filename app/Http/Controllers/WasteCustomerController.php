@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreWasteCustomerRequest;
 use App\Http\Requests\UpdateWasteCustomerRequest;
-use App\Models\Member;
 use App\Models\WasteCustomer;
 use Illuminate\Http\Request;
 
@@ -12,7 +11,7 @@ class WasteCustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WasteCustomer::with(['member', 'user']);
+        $query = WasteCustomer::with(['user']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -35,39 +34,21 @@ class WasteCustomerController extends Controller
 
     public function create()
     {
-        $members = Member::orderBy('name')->get();
-        return view('bank-sampah.customers.create', compact('members'));
+        return view('bank-sampah.customers.create');
     }
 
     public function store(StoreWasteCustomerRequest $request)
     {
         $data = $request->validated();
-        
-        if ($data['mode'] === 'existing') {
-            $member = Member::findOrFail($data['member_id']);
-            
-            $customer = WasteCustomer::create([
-                'user_id' => $member->user_id,
-                'member_id' => $member->id,
-                'customer_code' => WasteCustomer::generateNextCustomerCode(),
-                'name' => $member->name,
-                'phone' => $member->phone ?? $request->phone,
-                'address' => $member->address ?? $request->address,
-                'status' => $data['status'],
-                'joined_at' => now(),
-            ]);
-        } else {
-            $customer = WasteCustomer::create([
-                'user_id' => null,
-                'member_id' => null,
-                'customer_code' => WasteCustomer::generateNextCustomerCode(),
-                'name' => $data['name'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'status' => $data['status'],
-                'joined_at' => now(),
-            ]);
-        }
+
+        $customer = WasteCustomer::create([
+            'customer_code' => WasteCustomer::generateNextCustomerCode(),
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'status' => $data['status'],
+            'joined_at' => now(),
+        ]);
 
         app(\App\Services\ActivityLogService::class)->logInfo(
             'waste_customer.create',
@@ -81,7 +62,7 @@ class WasteCustomerController extends Controller
 
     public function show(WasteCustomer $customer)
     {
-        $customer->load(['member.kk.rt', 'user']);
+        $customer->load(['user']);
         
         // Calculate basic stats for the customer view
         $depositsCount = $customer->deposits()->count();
@@ -96,8 +77,7 @@ class WasteCustomerController extends Controller
 
     public function edit(WasteCustomer $customer)
     {
-        $members = Member::orderBy('name')->get();
-        return view('bank-sampah.customers.edit', compact('customer', 'members'));
+        return view('bank-sampah.customers.edit', compact('customer'));
     }
 
     public function update(UpdateWasteCustomerRequest $request, WasteCustomer $customer)
@@ -105,27 +85,12 @@ class WasteCustomerController extends Controller
         $data = $request->validated();
         $before = $customer->toArray();
 
-        if ($data['mode'] === 'existing') {
-            $member = Member::findOrFail($data['member_id']);
-            
-            $customer->update([
-                'user_id' => $member->user_id,
-                'member_id' => $member->id,
-                'name' => $member->name,
-                'phone' => $member->phone ?? $request->phone,
-                'address' => $member->address ?? $request->address,
-                'status' => $data['status'],
-            ]);
-        } else {
-            $customer->update([
-                'user_id' => null,
-                'member_id' => null,
-                'name' => $data['name'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'status' => $data['status'],
-            ]);
-        }
+        $customer->update([
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'status' => $data['status'],
+        ]);
 
         app(\App\Services\ActivityLogService::class)->logInfo(
             'waste_customer.update',

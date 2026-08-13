@@ -8,16 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Deposit extends Model
 {
-    protected $fillable = ['member_id', 'waste_customer_id', 'collector_id', 'date', 'total_amount', 'notes'];
+    protected $fillable = ['waste_customer_id', 'collector_id', 'date', 'total_amount', 'notes'];
 
     protected function casts(): array
     {
         return ['date' => 'date', 'total_amount' => 'decimal:2'];
-    }
-
-    public function member(): BelongsTo
-    {
-        return $this->belongsTo(Member::class);
     }
 
     public function wasteCustomer(): BelongsTo

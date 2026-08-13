@@ -23,12 +23,10 @@ class BankSampahService
         // yang berhasil tidak pernah tercatat sama sekali (silent data loss).
         $deposit = DB::transaction(function () use ($data) {
             $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
-            $memberId = $customer->member_id;
 
             $totalAmount = collect($data['details'])->sum('subtotal');
 
             $deposit = Deposit::create([
-                'member_id'        => $memberId,
                 'waste_customer_id'=> $customer->id,
                 'collector_id'     => $data['collector_id'],
                 'date'             => $data['date'],
@@ -47,7 +45,6 @@ class BankSampahService
             }
 
             SavingsLedger::create([
-                'member_id'        => $memberId,
                 'waste_customer_id'=> $customer->id,
                 'type'             => 'credit',
                 'amount'           => $totalAmount,
@@ -90,14 +87,8 @@ class BankSampahService
         // BUG FIX #4: Pisahkan activity logging dari DB::transaction (sama dengan recordDeposit).
         $result = DB::transaction(function () use ($data) {
             $customer = \App\Models\WasteCustomer::findOrFail($data['waste_customer_id']);
-            $memberId = $customer->member_id;
 
-            $depositCount = Deposit::where(function($q) use ($customer) {
-                $q->where('waste_customer_id', $customer->id);
-                if ($customer->member_id) {
-                    $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
-                }
-            })->count();
+            $depositCount = Deposit::where('waste_customer_id', $customer->id)->count();
 
             if ($depositCount < self::MIN_DEPOSITS_BEFORE_WITHDRAWAL) {
                 throw new \App\Exceptions\MinimumDepositException($depositCount, self::MIN_DEPOSITS_BEFORE_WITHDRAWAL);
@@ -110,7 +101,6 @@ class BankSampahService
             }
 
             $withdrawal = Withdrawal::create([
-                'member_id'        => $memberId,
                 'waste_customer_id'=> $customer->id,
                 'amount'           => $data['amount'],
                 'date'             => $data['date'],
@@ -118,7 +108,6 @@ class BankSampahService
             ]);
 
             SavingsLedger::create([
-                'member_id'        => $memberId,
                 'waste_customer_id'=> $customer->id,
                 'type'             => 'debit',
                 'amount'           => $data['amount'],
@@ -155,42 +144,20 @@ class BankSampahService
     {
         $customer = \App\Models\WasteCustomer::findOrFail($customerId);
 
-        $credit = SavingsLedger::where(function($q) use ($customer) {
-            $q->where('waste_customer_id', $customer->id);
-            if ($customer->member_id) {
-                $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
-            }
-        })->where('type', 'credit')->sum('amount');
+        $credit = SavingsLedger::where('waste_customer_id', $customer->id)->where('type', 'credit')->sum('amount');
 
-        $debit = SavingsLedger::where(function($q) use ($customer) {
-            $q->where('waste_customer_id', $customer->id);
-            if ($customer->member_id) {
-                $q->orWhere(fn($q2) => $q2->whereNull('waste_customer_id')->where('member_id', $customer->member_id));
-            }
-        })->where('type', 'debit')->sum('amount');
-
-        return (float) ($credit - $debit);
-    }
-
-    public function getMemberBalance(int $memberId): float
-    {
-        $customer = \App\Models\WasteCustomer::where('member_id', $memberId)->first();
-        if ($customer) {
-            return $this->getCustomerBalance($customer->id);
-        }
-
-        $credit = SavingsLedger::where('member_id', $memberId)->where('type', 'credit')->sum('amount');
-        $debit = SavingsLedger::where('member_id', $memberId)->where('type', 'debit')->sum('amount');
+        $debit = SavingsLedger::where('waste_customer_id', $customer->id)->where('type', 'debit')->sum('amount');
 
         return (float) ($credit - $debit);
     }
 
     public function getAllBalances(): Collection
     {
-        return SavingsLedger::select('member_id')
+        // ponytail: legacy method. Prefer SavingsReportController which uses waste_customer_id.
+        return SavingsLedger::select('waste_customer_id')
             ->selectRaw("SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END) - SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END) as balance")
-            ->groupBy('member_id')
-            ->with('member')
+            ->groupBy('waste_customer_id')
+            ->with('wasteCustomer')
             ->get();
     }
 

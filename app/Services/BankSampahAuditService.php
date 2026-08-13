@@ -35,7 +35,6 @@ class BankSampahAuditService
         $orphanTransactions = [];
         $orphanLedgers = [];
         $duplicateLedgers = [];
-        $relationMismatches = [];
         $legacyUnmappedDetails = [];
 
         if ($totalCustomersChecked > 0) {
@@ -68,31 +67,6 @@ class BankSampahAuditService
                         'name' => $customer->name,
                         'balance' => $ledgerBalance
                     ];
-                }
-
-                // Relationship mismatches check
-                if ($customer->member_id) {
-                    $mismatchedDeposits = Deposit::where('waste_customer_id', $customer->id)
-                        ->where('member_id', '!=', $customer->member_id)
-                        ->pluck('id')->toArray();
-                    
-                    $mismatchedWithdrawals = Withdrawal::where('waste_customer_id', $customer->id)
-                        ->where('member_id', '!=', $customer->member_id)
-                        ->pluck('id')->toArray();
-
-                    $mismatchedLedgers = SavingsLedger::where('waste_customer_id', $customer->id)
-                        ->where('member_id', '!=', $customer->member_id)
-                        ->pluck('id')->toArray();
-
-                    if (!empty($mismatchedDeposits) || !empty($mismatchedWithdrawals) || !empty($mismatchedLedgers)) {
-                        $relationMismatches[] = [
-                            'customer_code' => $customer->customer_code,
-                            'name' => $customer->name,
-                            'deposit_ids' => $mismatchedDeposits,
-                            'withdrawal_ids' => $mismatchedWithdrawals,
-                            'ledger_ids' => $mismatchedLedgers
-                        ];
-                    }
                 }
             }
         }
@@ -156,32 +130,29 @@ class BankSampahAuditService
         }
 
         // E. Legacy Unmapped Transactions Detail Scanning
-        $legacyDeposits = Deposit::whereNull('waste_customer_id')->get(['id', 'member_id', 'created_at']);
+        $legacyDeposits = Deposit::whereNull('waste_customer_id')->get(['id', 'created_at']);
         foreach ($legacyDeposits as $d) {
             $legacyUnmappedDetails[] = [
                 'table' => 'deposits',
                 'transaction_id' => $d->id,
-                'member_id' => $d->member_id,
                 'created_at' => $d->created_at ? $d->created_at->toIso8601String() : null
             ];
         }
 
-        $legacyWithdrawals = Withdrawal::whereNull('waste_customer_id')->get(['id', 'member_id', 'created_at']);
+        $legacyWithdrawals = Withdrawal::whereNull('waste_customer_id')->get(['id', 'created_at']);
         foreach ($legacyWithdrawals as $w) {
             $legacyUnmappedDetails[] = [
                 'table' => 'withdrawals',
                 'transaction_id' => $w->id,
-                'member_id' => $w->member_id,
                 'created_at' => $w->created_at ? $w->created_at->toIso8601String() : null
             ];
         }
 
-        $legacyLedgers = SavingsLedger::whereNull('waste_customer_id')->get(['id', 'member_id', 'created_at']);
+        $legacyLedgers = SavingsLedger::whereNull('waste_customer_id')->get(['id', 'created_at']);
         foreach ($legacyLedgers as $l) {
             $legacyUnmappedDetails[] = [
                 'table' => 'savings_ledgers',
                 'transaction_id' => $l->id,
-                'member_id' => $l->member_id,
                 'created_at' => $l->created_at ? $l->created_at->toIso8601String() : null
             ];
         }
@@ -189,14 +160,13 @@ class BankSampahAuditService
         // Health Score Calculation
         // Weights:
         // Critical: Balance mismatch (20), Duplicate ledger (15), Negative Balance (15)
-        // High: Orphan transaction (10), Orphan ledger (10), Relation mismatch (8)
+        // High: Orphan transaction (10), Orphan ledger (10)
         // Warning: Legacy unmapped (2)
         $totalDeductions = (count($mismatchBalances) * 20)
             + (count($duplicateLedgers) * 15)
             + (count($negativeBalances) * 15)
             + (count($orphanTransactions) * 10)
             + (count($orphanLedgers) * 10)
-            + (count($relationMismatches) * 8)
             + (count($legacyUnmappedDetails) * 2);
 
         $healthScore = max(0.0, 100.0 - $totalDeductions);
@@ -215,7 +185,7 @@ class BankSampahAuditService
 
         // Anomaly Status check
         $hasCritical = !empty($mismatchBalances) || !empty($duplicateLedgers) || !empty($negativeBalances);
-        $hasHigh = !empty($orphanTransactions) || !empty($orphanLedgers) || !empty($relationMismatches);
+        $hasHigh = !empty($orphanTransactions) || !empty($orphanLedgers);
 
         if ($healthScore === 100.0) {
             $exitCode = 0; // Healthy
@@ -232,7 +202,7 @@ class BankSampahAuditService
             'exit_code' => $exitCode,
             'severity_summary' => [
                 'critical_count' => count($mismatchBalances) + count($duplicateLedgers) + count($negativeBalances),
-                'high_count' => count($orphanTransactions) + count($orphanLedgers) + count($relationMismatches),
+                'high_count' => count($orphanTransactions) + count($orphanLedgers),
                 'warning_count' => count($legacyUnmappedDetails)
             ],
             'anomalies' => [
@@ -240,7 +210,6 @@ class BankSampahAuditService
                 'orphan_transactions' => $orphanTransactions,
                 'orphan_ledgers' => $orphanLedgers,
                 'duplicate_ledgers' => $duplicateLedgers,
-                'relation_mismatches' => $relationMismatches,
                 'negative_balances' => $negativeBalances,
                 'legacy_unmapped_transactions' => $legacyUnmappedDetails
             ]

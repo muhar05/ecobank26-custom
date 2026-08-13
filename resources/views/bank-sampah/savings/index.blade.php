@@ -37,8 +37,8 @@
                         @forelse($balances as $b)
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition duration-150">
                                 @php
-                                    $customerName = $b->wasteCustomer ? $b->wasteCustomer->name : ($b->member->name ?? '-');
-                                    $customerCode = $b->wasteCustomer ? $b->wasteCustomer->customer_code : ($b->member->member_code ?? '-');
+                                    $customerName = $b->wasteCustomer?->name ?? '-';
+                                    $customerCode = $b->wasteCustomer?->customer_code ?? '-';
                                     $customerInitial = substr($customerName !== '-' ? $customerName : '?', 0, 1);
                                 @endphp
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -49,9 +49,7 @@
                                         <div>
                                             <div class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ $customerName }}</div>
                                             <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">{{ $customerCode }}</div>
-                                            @if($b->wasteCustomer && !$b->wasteCustomer->member_id)
-                                                <span class="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Mandiri</span>
-                                            @endif
+                                            <span class="text-[10px] text-slate-400 font-normal">{{ $b->wasteCustomer?->customer_code ?? '' }}</span>
                                         </div>
                                     </div>
                                 </td>

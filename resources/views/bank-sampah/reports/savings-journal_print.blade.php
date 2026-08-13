@@ -127,8 +127,6 @@
                     <td style="font-weight: bold;">
                         @if($l->wasteCustomer)
                             {{ $l->wasteCustomer->name }}
-                        @elseif($l->member)
-                            {{ $l->member->name }}
                         @else
                             -
                         @endif

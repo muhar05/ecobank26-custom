@@ -68,7 +68,7 @@ class WasteBankReportController extends Controller
         $categoryId = $request->input('waste_category_id');
         $collectorId = $request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.member', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
             ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
                 $q->whereBetween('date', [$startDate, $endDate])
                   ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
@@ -136,7 +136,7 @@ class WasteBankReportController extends Controller
         $categoryId = $request->input('waste_category_id');
         $collectorId = $request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.member', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
             ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
                 $q->whereBetween('date', [$startDate, $endDate])
                   ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
@@ -287,27 +287,8 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $type = $request->input('type'); // credit or debit
 
-        $linkedMemberId = null;
-        if ($customerId) {
-            $customer = WasteCustomer::find($customerId);
-            if ($customer) {
-                $linkedMemberId = $customer->member_id;
-            }
-        }
-
-        // We eagerly calculate running balances in PHP for safety and backward compatibility
-        $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
-                $q->where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                });
-            })
+        $query = SavingsLedger::with('wasteCustomer')
+            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -315,60 +296,23 @@ class WasteBankReportController extends Controller
 
         // Totals calculated on current filters
         $totalSetor = SavingsLedger::whereBetween('created_at', [$startDate, $endDate])
-            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
-                $q->where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                });
-            })
+            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
             ->where('type', 'credit')
             ->sum('amount');
 
         $totalTarik = SavingsLedger::whereBetween('created_at', [$startDate, $endDate])
-            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
-                $q->where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                });
-            })
+            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
             ->where('type', 'debit')
             ->sum('amount');
 
         $totalSaldo = 0;
         $pageOpeningBalance = 0;
         if ($customerId) {
-            $totalSaldo = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                })
+            $totalSaldo = SavingsLedger::where('waste_customer_id', $customerId)
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
 
             // Calculate running balance for the paginated collection
-            // 1. Get all chronological data for this customer to map accurate balances
-            $allChronological = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                })
+            $allChronological = SavingsLedger::where('waste_customer_id', $customerId)
                 ->orderBy('created_at', 'asc')
                 ->orderBy('id', 'asc')
                 ->get();
@@ -439,26 +383,8 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $type = $request->input('type');
 
-        $linkedMemberId = null;
-        if ($customerId) {
-            $customer = WasteCustomer::find($customerId);
-            if ($customer) {
-                $linkedMemberId = $customer->member_id;
-            }
-        }
-
-        $query = SavingsLedger::with(['wasteCustomer', 'member'])
-            ->when($customerId, function($q) use ($customerId, $linkedMemberId) {
-                $q->where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                });
-            })
+        $query = SavingsLedger::with('wasteCustomer')
+            ->when($customerId, fn($q) => $q->where('waste_customer_id', $customerId))
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -467,15 +393,7 @@ class WasteBankReportController extends Controller
         // Calculate running balance per row in chronological order
         $bal = 0;
         if ($customerId) {
-            $startingBalance = SavingsLedger::where(function($sub) use ($customerId, $linkedMemberId) {
-                    $sub->where('waste_customer_id', $customerId);
-                    if ($linkedMemberId) {
-                        $sub->orWhere(function($sub2) use ($linkedMemberId) {
-                            $sub2->where('member_id', $linkedMemberId)
-                                 ->whereNull('waste_customer_id');
-                        });
-                    }
-                })
+            $startingBalance = SavingsLedger::where('waste_customer_id', $customerId)
                 ->where('created_at', '<', $startDate)
                 ->sum(DB::raw("case when type = 'credit' then amount else -amount end"));
             $bal = $startingBalance;
@@ -587,8 +505,8 @@ class WasteBankReportController extends Controller
             ];
         });
 
-        $depositsList = Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
-            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+        $depositsList = Deposit::with('wasteCustomer')->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer->name ?? '-';
             return [
                 'date' => $item->date,
                 'type' => 'Setoran',
@@ -663,8 +581,8 @@ class WasteBankReportController extends Controller
             ];
         });
 
-        $depositsList = Deposit::with(['member', 'wasteCustomer'])->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
-            $name = $item->wasteCustomer ? $item->wasteCustomer->name : ($item->member ? $item->member->name : '-');
+        $depositsList = Deposit::with('wasteCustomer')->whereBetween('date', [$startDate, $endDate])->get()->map(function($item) {
+            $name = $item->wasteCustomer->name ?? '-';
             return [
                 'date' => $item->date,
                 'type' => 'Setoran',

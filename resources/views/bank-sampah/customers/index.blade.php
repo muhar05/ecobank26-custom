@@ -93,17 +93,10 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    @if($customer->member_id)
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                            Terhubung Warga
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                            Nasabah Manual
-                                        </span>
-                                    @endif
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                        Nasabah Manual
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col gap-1">
