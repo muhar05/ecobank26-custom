@@ -1,0 +1,93 @@
+name: ecobank026
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ecobank026-app
+    container_name: ecobank026-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      # Internal Laravel-to-DB connection inside the container network.
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-eco_bank_26}
+      DB_USERNAME: ${DB_USERNAME:-ecobank}
+      DB_PASSWORD: ${DB_PASSWORD:-ecobank_dev}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      CACHE_STORE: ${CACHE_STORE:-database}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+      SESSION_DRIVER: ${SESSION_DRIVER:-database}
+      VITE_APP_NAME: ${VITE_APP_NAME:-EcoBank026}
+    volumes:
+      - .:/var/www/html
+      - vendor-data:/var/www/html/vendor
+      # Persist only uploaded files; framework caches/logs stay in the bind mount.
+      - storage-app-data:/var/www/html/storage/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: ecobank026-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-eco_bank_26}
+      MYSQL_USER: ${DB_USERNAME:-ecobank}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-ecobank_dev}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-ecobank_root_dev}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      # Host port 3307 avoids clashing with any native MySQL on 3306.
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_ROOT_PASSWORD:-ecobank_root_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  node:
+    image: node:20-alpine
+    container_name: ecobank026-node
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      # The app serves assets on :8000; the browser connects back to the HMR
+      # server on localhost:5173, which is exposed on the host.
+      VITE_PORT: 5173
+      VITE_HOST: 0.0.0.0
+    volumes:
+      - .:/var/www/html
+      - node-modules-data:/var/www/html/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install --ignore-scripts && npm run dev -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      - app
+
+volumes:
+  db-data:
+    name: ecobank026-db-data
+  vendor-data:
+    name: ecobank026-vendor-data
+  storage-app-data:
+    name: ecobank026-storage-app-data
+  node-modules-data:
+    name: ecobank026-node-modules-data

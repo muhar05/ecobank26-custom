@@ -1,0 +1,44 @@
+# Version control
+.git
+.github
+
+# Secrets / environment
+.env
+.env.backup
+.env.production
+.env.docker
+auth.json
+storage/*.key
+
+# Dependencies (installed inside containers / mounted as volumes)
+vendor
+node_modules
+
+# Build artifacts
+public/build
+public/hot
+public/storage
+public/fonts-manifest.dev.json
+
+# Caches / runtime logs
+storage/logs/*
+!storage/logs/.gitignore
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/pail
+bootstrap/cache/*.php
+.phpunit*
+.phpunit.result.cache
+_ide_helper.php
+
+# Docs & tooling (not needed for the runtime image)
+docs
+scripts
+.kiro
+uml
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode
