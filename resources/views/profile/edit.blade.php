@@ -10,7 +10,7 @@
             </div>
             <div>
                 <h2 class="text-lg font-bold text-white">{{ auth()->user()->name }}</h2>
-                <p class="text-sm text-emerald-200">{{ auth()->user()->email }}</p>
+                <p class="text-sm text-emerald-200">{{ auth()->user()->phone ?? auth()->user()->email }}</p>
                 @if(auth()->user()->roles->first())
                     <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/15 text-white">{{ auth()->user()->roles->first()->name }}</span>
                 @endif
@@ -22,7 +22,7 @@
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 delay-100 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors">
         <div class="max-w-xl">
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">Informasi Profil</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Perbarui nama dan alamat email akun Anda.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Perbarui nama, email, dan nomor telepon akun Anda.</p>
 
             <form id="send-verification" method="post" action="{{ route('verification.send') }}">@csrf</form>
 
@@ -38,8 +38,22 @@
 
                 <div>
                     <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Email</label>
-                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required autocomplete="username" class="block w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" autocomplete="username" class="block w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
                     @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nomor Telepon</label>
+                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}" required placeholder="08123456789" class="block w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Nomor ini adalah credential login Anda. Jika diubah, Anda akan diarahkan untuk login kembali.</p>
+                    @error('phone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Password Saat Ini</label>
+                    <input id="current_password" name="current_password" type="password" required autocomplete="current-password" placeholder="••••••••" class="block w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Konfirmasi perubahan profil dengan password Anda saat ini.</p>
+                    @error('current_password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="flex items-center gap-4 pt-2">

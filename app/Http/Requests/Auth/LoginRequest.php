@@ -33,32 +33,30 @@ class LoginRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // No normalization needed here because login can be either phone or username.
-        // We will handle normalization in the authenticate method.
+        if (! $this->has('login') && $this->has('phone')) {
+            $this->merge([
+                'login' => $this->input('phone'),
+            ]);
+        }
     }
 
     /**
      * @throws ValidationException
      */
     public function authenticate(): void
-{
-    $this->ensureIsNotRateLimited();
+    {
+        $this->ensureIsNotRateLimited();
 
-    $login = $this->input('login');
-    
-    // 1. Normalisasi nomor telepon
-    $phone = preg_replace('/[^0-9]/', '', $login);
-    if (str_starts_with($phone, '620')) {
-        $phone = '0' . substr($phone, 3);
-    } elseif (str_starts_with($phone, '62')) {
-        $phone = '0' . substr($phone, 2);
-    }
+        $login = $this->input('login');
+        
+        // 1. Normalisasi nomor telepon menggunakan logic terpusat
+        $phone = \App\Models\User::normalizePhone($login);
 
-    // 2. Cari user murni berdasarkan phone atau kolom alternatif (misal name/email jika ada)
-    // Tanpa menyentuh kolom 'username' yang tidak ada di database
-    $user = \App\Models\User::where('phone', $phone)
-        ->orWhere('name', $login) // Opsional: Berjaga-jaga jika admin ingin login pakai Nama Akun
-        ->first();
+        // 2. Cari user murni berdasarkan phone atau kolom alternatif (misal name/email jika ada)
+        // Tanpa menyentuh kolom 'username' yang tidak ada di database
+        $user = \App\Models\User::where('phone', $phone)
+            ->orWhere('name', $login) // Opsional: Berjaga-jaga jika admin ingin login pakai Nama Akun
+            ->first();
 
     // 3. Verifikasi user dan kecocokan password teks mentahnya
     if (! $user || ! \Illuminate\Support\Facades\Hash::check($this->input('password'), $user->password)) {

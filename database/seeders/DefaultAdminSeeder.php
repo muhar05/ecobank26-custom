@@ -33,7 +33,7 @@ class DefaultAdminSeeder extends Seeder
         // Create users
         $createdUsers = [];
         foreach ($demoUsers as $du) {
-            $phone = $this->normalizePhone($du['raw_phone']);
+            $phone = User::normalizePhone($du['raw_phone']);
 
             // Use updateOrCreate on phone to be safe and unique
             $user = User::updateOrCreate(
@@ -49,19 +49,5 @@ class DefaultAdminSeeder extends Seeder
             $user->syncRoles($du['roles']);
             $createdUsers[$du['raw_phone']] = $user;
         }
-    }
-
-    /**
-     * Normalize raw phone number consistently.
-     */
-    private function normalizePhone(string $phone): string
-    {
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-        if (str_starts_with($phone, '620')) {
-            $phone = '0' . substr($phone, 3);
-        } elseif (str_starts_with($phone, '62')) {
-            $phone = '0' . substr($phone, 2);
-        }
-        return $phone;
     }
 }
