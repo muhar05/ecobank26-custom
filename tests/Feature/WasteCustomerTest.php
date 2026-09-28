@@ -86,13 +86,8 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create([
-            'name' => 'Test Collector',
-        ]);
-
         // Create a deposit for this customer
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 50000,
         ]);
@@ -119,13 +114,11 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector B']);
-        $category = \App\Models\WasteCategory::create(['name' => 'Kertas', 'unit' => 'kg']);
+        $category = \App\Models\WasteCategory::create(['name' => 'Kertas', 'unit' => 'kg', 'member_price' => 1500]);
 
         $response = $this->actingAs($this->adminBankSampah)
             ->post(route('bank-sampah.deposits.store'), [
                 'waste_customer_id' => $customer->id,
-                'collector_id' => $collector->id,
                 'date' => date('Y-m-d'),
                 'notes' => 'Test manual deposit',
                 'details' => [
@@ -163,12 +156,10 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector C']);
-        $category = \App\Models\WasteCategory::create(['name' => 'Besi', 'unit' => 'kg']);
+        $category = \App\Models\WasteCategory::create(['name' => 'Besi', 'unit' => 'kg', 'member_price' => 3000]);
 
         // Give them 2 deposits first to satisfy the 2-deposit minimum withdrawal condition
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 30000,
         ]);
@@ -179,7 +170,6 @@ class WasteCustomerTest extends TestCase
         ]);
 
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 20000,
         ]);
@@ -307,11 +297,8 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector D']);
-
         // Create a deposit with NO corresponding savings ledger record
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 12000,
         ]);
@@ -335,11 +322,8 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector E']);
-
         // Create one deposit
         $deposit = $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 15000,
         ]);
@@ -373,8 +357,6 @@ class WasteCustomerTest extends TestCase
      */
     public function test_audit_detects_legacy_unmapped_transaction_warning(): void
     {
-        $collector = \App\Models\Collector::create(['name' => 'Collector G']);
-
         // Create a customer to ensure checker proceeds and checked > 0
         WasteCustomer::create([
             'user_id' => null,
@@ -385,7 +367,6 @@ class WasteCustomerTest extends TestCase
 
         // Create a deposit without waste_customer_id
         \App\Models\Deposit::create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 5000,
             'waste_customer_id' => null
@@ -467,14 +448,12 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector Log Test']);
-        $category = \App\Models\WasteCategory::create(['name' => 'Kardus', 'unit' => 'kg']);
+        $category = \App\Models\WasteCategory::create(['name' => 'Kardus', 'unit' => 'kg', 'member_price' => 1000]);
 
         // Perform deposit via controller
         $this->actingAs($this->adminBankSampah)
             ->post(route('bank-sampah.deposits.store'), [
                 'waste_customer_id' => $customer->id,
-                'collector_id' => $collector->id,
                 'date' => date('Y-m-d'),
                 'notes' => 'Test deposit log creation',
                 'details' => [
@@ -504,11 +483,8 @@ class WasteCustomerTest extends TestCase
             'status' => 'active',
         ]);
 
-        $collector = \App\Models\Collector::create(['name' => 'Collector Log Test 2']);
-
         // Satisfy 2-deposit rule
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 50000,
         ]);
@@ -519,7 +495,6 @@ class WasteCustomerTest extends TestCase
         ]);
 
         $customer->deposits()->create([
-            'collector_id' => $collector->id,
             'date' => now(),
             'total_amount' => 50000,
         ]);

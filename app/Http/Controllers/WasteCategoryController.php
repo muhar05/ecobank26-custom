@@ -65,6 +65,7 @@ class WasteCategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'unit' => 'required|string|max:20',
+            'member_price' => 'required|numeric|min:0',
             'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
             'code' => 'nullable|string|max:20|unique:waste_categories,code',
         ]);
@@ -124,6 +125,7 @@ class WasteCategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'unit' => 'required|string|max:20',
+            'member_price' => 'required|numeric|min:0',
             'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
             'code' => 'nullable|string|max:20|unique:waste_categories,code,' . $waste_category->id,
         ]);

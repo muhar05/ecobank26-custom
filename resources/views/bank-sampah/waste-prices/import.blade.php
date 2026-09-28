@@ -51,8 +51,23 @@
 
         <form method="POST" action="{{ route('bank-sampah.waste-prices.import.store') }}" enctype="multipart/form-data">
             @csrf
+
+            <x-form-section title="1. Pilih Agregator Target" description="Pilih mitra agregator yang price list-nya akan diperbarui dari file Excel.">
+                <div class="max-w-md">
+                    <label for="collector_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Agregator <span class="text-red-500">*</span></label>
+                    <select name="collector_id" id="collector_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <option value="">-- Pilih Agregator --</option>
+                        @foreach($collectors as $collector)
+                            <option value="{{ $collector->id }}" @selected(old('collector_id') == $collector->id)>{{ $collector->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('collector_id')
+                        <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
+                    @enderror
+                </div>
+            </x-form-section>
             
-            <x-form-section title="1. Download Template" description="Gunakan template Excel (.xlsx) ini agar format data sesuai dengan sistem.">
+            <x-form-section title="2. Download Template" description="Gunakan template Excel (.xlsx) ini agar format data sesuai dengan sistem.">
                 <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center border border-slate-200 dark:border-slate-600">
@@ -69,7 +84,7 @@
                 </div>
             </x-form-section>
 
-            <x-form-section title="2. Upload File Excel" description="Pastikan file sesuai dengan template yang diunduh.">
+            <x-form-section title="3. Upload File Excel" description="Pastikan file sesuai dengan template yang diunduh.">
                 @error('file')
                     <div class="mb-4 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl flex items-start gap-3">
                         <svg class="w-5 h-5 text-rose-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

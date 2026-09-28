@@ -28,7 +28,6 @@ class BankSampahService
 
             $deposit = Deposit::create([
                 'waste_customer_id'=> $customer->id,
-                'collector_id'     => $data['collector_id'],
                 'date'             => $data['date'],
                 'total_amount'     => $totalAmount,
                 'notes'            => $data['notes'] ?? null,
@@ -161,74 +160,225 @@ class BankSampahService
             ->get();
     }
 
-    public function recordSale(array $data): Sale
+    /**
+     * Calculate remaining deposit weight for each category on a given date.
+     * remaining_weight = total_deposited - total_sold
+     * Only returns categories with remaining_weight > 0 that have a collector_price for the given collector.
+     */
+    public function getDailyRemainingWaste(string $date, int $collectorId, ?int $excludeSaleId = null): Collection
     {
-        return DB::transaction(function () use ($data) {
-            $details = collect($data['details'])->filter(fn ($d) => !empty($d['waste_category_id']) && !empty($d['weight']));
+        // 1. Total deposited on date per category
+        $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+            ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
+            ->groupBy('waste_category_id')
+            ->pluck('total_deposited', 'waste_category_id');
 
-            if ($details->isEmpty()) {
-                throw new \InvalidArgumentException('Minimal satu detail penjualan harus diisi.');
+        if ($deposited->isEmpty()) {
+            return collect();
+        }
+
+        // 2. Total sold on date per category (excluding $excludeSaleId if editing an existing sale)
+        $sold = SaleDetail::whereHas('sale', function ($q) use ($date, $excludeSaleId) {
+            $q->whereDate('date', $date);
+            if ($excludeSaleId) {
+                $q->where('id', '!=', $excludeSaleId);
             }
+        })
+        ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
+        ->groupBy('waste_category_id')
+        ->pluck('total_sold', 'waste_category_id');
 
-            $collectorId = $data['collector_id'];
+        // 3. Collector prices for this collector
+        $collectorPrices = \App\Models\WastePrice::where('collector_id', $collectorId)
+            ->whereIn('waste_category_id', $deposited->keys())
+            ->pluck('collector_price', 'waste_category_id');
 
-            // Load member prices for margin calculation
-            $wastePrices = \App\Models\WastePrice::where('collector_id', $collectorId)
-                ->pluck('member_price', 'waste_category_id');
+        // 4. Waste categories info
+        $categories = \App\Models\WasteCategory::whereIn('id', $deposited->keys())->get()->keyBy('id');
 
-            $totalMargin = 0;
+        $result = collect();
+        foreach ($deposited as $catId => $depWeight) {
+            $soldWeight = (float) ($sold[$catId] ?? 0);
+            $remaining = round((float) $depWeight - $soldWeight, 2);
 
-            $details = $details->map(function ($d) use ($wastePrices, &$totalMargin) {
-                $weight = (float) $d['weight'];
-                $collectorPrice = (float) $d['price_per_unit'];
-                $memberPrice = (float) ($wastePrices[$d['waste_category_id']] ?? 0);
-                $subtotal = round($weight * $collectorPrice, 2);
-                $margin = round(($collectorPrice - $memberPrice) * $weight, 2);
-                $totalMargin += $margin;
+            // Only offer if remaining > 0 and aggregator has a collector_price
+            if ($remaining > 0 && isset($collectorPrices[$catId])) {
+                $cat = $categories[$catId];
+                $colPrice = (float) $collectorPrices[$catId];
+                $memPrice = (float) $cat->member_price;
 
-                $d['subtotal'] = $subtotal;
-                return $d;
-            });
-
-            if ($totalMargin < 0) {
-                throw new \InvalidArgumentException('Total margin negatif. Periksa harga pengepul dan harga nasabah.');
-            }
-
-            $totalAmount = $details->sum('subtotal');
-
-            $sale = Sale::create([
-                'collector_id' => $collectorId,
-                'date' => $data['date'],
-                'total_amount' => $totalAmount,
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            foreach ($details as $detail) {
-                SaleDetail::create([
-                    'sale_id' => $sale->id,
-                    'waste_category_id' => $detail['waste_category_id'],
-                    'weight' => $detail['weight'],
-                    'price_per_unit' => $detail['price_per_unit'],
-                    'subtotal' => $detail['subtotal'],
+                $result->push([
+                    'waste_category_id' => $cat->id,
+                    'name' => $cat->name,
+                    'code' => $cat->code,
+                    'unit' => $cat->unit,
+                    'member_price' => $memPrice,
+                    'collector_price' => $colPrice,
+                    'total_deposited' => (float) $depWeight,
+                    'total_sold' => $soldWeight,
+                    'remaining_weight' => $remaining,
                 ]);
             }
+        }
+
+        return $result;
+    }
+
+    public function recordSale(array $data, ?int $saleId = null): Sale
+    {
+        return DB::transaction(function () use ($data, $saleId) {
+            $rawDetails = collect($data['details'] ?? [])
+                ->filter(fn ($d) => !empty($d['waste_category_id']) && !empty($d['weight']) && (float)$d['weight'] > 0);
+
+            if ($rawDetails->isEmpty()) {
+                throw new \InvalidArgumentException('Minimal satu detail penjualan harus diisi dengan berat lebih dari 0.');
+            }
+
+            $collectorId = (int) $data['collector_id'];
+            $date = $data['date'];
+
+            // 1. Fetch deposited weights on this date
+            $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+                ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
+                ->groupBy('waste_category_id')
+                ->pluck('total_deposited', 'waste_category_id');
+
+            // 2. Fetch sold weights on this date (excluding this sale if updating)
+            $sold = SaleDetail::whereHas('sale', function ($q) use ($date, $saleId) {
+                $q->whereDate('date', $date);
+                if ($saleId) {
+                    $q->where('id', '!=', $saleId);
+                }
+            })
+            ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
+            ->groupBy('waste_category_id')
+            ->pluck('total_sold', 'waste_category_id');
+
+            $collectorPrices = \App\Models\WastePrice::where('collector_id', $collectorId)
+                ->pluck('collector_price', 'waste_category_id');
+
+            $categories = \App\Models\WasteCategory::whereIn('id', $rawDetails->pluck('waste_category_id'))
+                ->get()
+                ->keyBy('id');
+
+            $totalAmount = 0;
+            $totalMargin = 0;
+            $processedDetails = [];
+
+            foreach ($rawDetails as $d) {
+                $catId = (int) $d['waste_category_id'];
+                $weight = (float) $d['weight'];
+
+                $cat = $categories->get($catId);
+                if (! $cat) {
+                    throw new \InvalidArgumentException("Kategori sampah dengan ID {$catId} tidak ditemukan.");
+                }
+
+                // Check remaining weight
+                $totalDep = (float) ($deposited[$catId] ?? 0);
+                $totalSld = (float) ($sold[$catId] ?? 0);
+                $remaining = round($totalDep - $totalSld, 2);
+
+                if ($remaining <= 0) {
+                    throw new \InvalidArgumentException("Kategori '{$cat->name}' tidak dapat dijual karena sisa setoran pada tanggal {$date} sudah habis (0 kg).");
+                }
+
+                if ($weight > $remaining) {
+                    throw new \InvalidArgumentException("Berat penjualan untuk '{$cat->name}' ({$weight} kg) melebihi sisa setoran yang tersedia ({$remaining} kg) pada tanggal {$date}.");
+                }
+
+                // Check collector price
+                if (! isset($collectorPrices[$catId])) {
+                    throw new \InvalidArgumentException("Agregator belum memiliki harga penawaran untuk kategori '{$cat->name}'.");
+                }
+
+                $collectorPrice = (float) $collectorPrices[$catId];
+                $memberPrice = (float) $cat->member_price;
+
+                if ($collectorPrice < $memberPrice) {
+                    throw new \InvalidArgumentException("Harga jual ke agregator (Rp " . number_format($collectorPrice, 0, ',', '.') . ") untuk '{$cat->name}' tidak boleh lebih rendah dari harga beli nasabah (Rp " . number_format($memberPrice, 0, ',', '.') . ").");
+                }
+
+                $subtotal = round($weight * $collectorPrice, 2);
+                $margin = round(($collectorPrice - $memberPrice) * $weight, 2);
+
+                $totalAmount += $subtotal;
+                $totalMargin += $margin;
+
+                $processedDetails[] = [
+                    'waste_category_id' => $catId,
+                    'weight' => $weight,
+                    'price_per_unit' => $collectorPrice,
+                    'member_price' => $memberPrice,
+                    'subtotal' => $subtotal,
+                    'margin' => $margin,
+                ];
+            }
+
+            if ($saleId) {
+                $sale = Sale::findOrFail($saleId);
+                $sale->update([
+                    'collector_id' => $collectorId,
+                    'date' => $date,
+                    'total_amount' => $totalAmount,
+                    'notes' => $data['notes'] ?? null,
+                ]);
+                $sale->details()->delete();
+            } else {
+                $sale = Sale::create([
+                    'collector_id' => $collectorId,
+                    'date' => $date,
+                    'total_amount' => $totalAmount,
+                    'notes' => $data['notes'] ?? null,
+                ]);
+            }
+
+            foreach ($processedDetails as $pd) {
+                SaleDetail::create(array_merge($pd, ['sale_id' => $sale->id]));
+            }
+
+            // Update cash ledger
+            $ledger = WasteBankCashLedger::where('reference_type', Sale::class)
+                ->where('reference_id', $sale->id)
+                ->first();
 
             if ($totalMargin > 0) {
                 $currentBalance = $this->getWasteBankBalance();
-
-                WasteBankCashLedger::create([
-                    'type' => 'in',
-                    'amount' => $totalMargin,
-                    'balance' => $currentBalance + $totalMargin,
-                    'reference_type' => Sale::class,
-                    'reference_id' => $sale->id,
-                    'date' => $data['date'],
-                    'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
-                ]);
+                if ($ledger) {
+                    $ledger->update([
+                        'amount' => $totalMargin,
+                        'date' => $date,
+                        'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
+                    ]);
+                } else {
+                    WasteBankCashLedger::create([
+                        'type' => 'in',
+                        'amount' => $totalMargin,
+                        'balance' => $currentBalance + $totalMargin,
+                        'reference_type' => Sale::class,
+                        'reference_id' => $sale->id,
+                        'date' => $date,
+                        'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
+                    ]);
+                }
+            } elseif ($ledger) {
+                $ledger->delete();
             }
+
+            $this->recalculateWasteBankBalances();
 
             return $sale;
         });
+    }
+
+    public function recalculateWasteBankBalances(): void
+    {
+        $ledgers = WasteBankCashLedger::orderBy('date')->orderBy('id')->get();
+        $balance = 0;
+        foreach ($ledgers as $ledger) {
+            $balance = $ledger->type === 'in' ? $balance + $ledger->amount : $balance - $ledger->amount;
+            $ledger->update(['balance' => $balance]);
+        }
     }
 
     public function getWasteBankBalance(): float

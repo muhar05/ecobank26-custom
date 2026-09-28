@@ -66,13 +66,11 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $groupId = $request->input('waste_category_group_id');
         $categoryId = $request->input('waste_category_id');
-        $collectorId = $request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
-            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'wasteCategory.wasteCategoryGroup'])
+            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId) {
                 $q->whereBetween('date', [$startDate, $endDate])
-                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
-                  ->when($collectorId, fn($q2) => $q2->where('collector_id', $collectorId));
+                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId));
             })
             ->when($categoryId, fn($q) => $q->where('waste_category_id', $categoryId))
             ->when($groupId, function($q) use ($groupId) {
@@ -93,12 +91,11 @@ class WasteBankReportController extends Controller
         $customers = WasteCustomer::orderBy('name')->get();
         $groups = WasteCategoryGroup::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
-        $collectors = Collector::orderBy('name')->get();
 
         return view('bank-sampah.reports.deposits', compact(
-            'details', 'startDate', 'endDate', 'customerId', 'groupId', 'categoryId', 'collectorId',
+            'details', 'startDate', 'endDate', 'customerId', 'groupId', 'categoryId',
             'totalTransactions', 'totalWeight', 'totalAmount', 'averageTransaction',
-            'customers', 'groups', 'categories', 'collectors'
+            'customers', 'groups', 'categories'
         ));
     }
 
@@ -134,13 +131,11 @@ class WasteBankReportController extends Controller
         $customerId = $request->input('waste_customer_id');
         $groupId = $request->input('waste_category_group_id');
         $categoryId = $request->input('waste_category_id');
-        $collectorId = $request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
-            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'wasteCategory.wasteCategoryGroup'])
+            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId) {
                 $q->whereBetween('date', [$startDate, $endDate])
-                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
-                  ->when($collectorId, fn($q2) => $q2->where('collector_id', $collectorId));
+                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId));
             })
             ->when($categoryId, fn($q) => $q->where('waste_category_id', $categoryId))
             ->when($groupId, function($q) use ($groupId) {

@@ -24,13 +24,9 @@
                 </div>
             </x-form-section>
 
-            <x-form-section title="Harga" description="Harga nasabah masuk ke saldo tabungan. Harga agregator untuk menghitung margin kas.">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <x-field-group label="Harga Nasabah (Rp/kg)" name="member_price" required helper="Masuk ke saldo tabungan nasabah.">
-                        <x-rupiah-input name="member_price" :value="old('member_price')" required />
-                    </x-field-group>
-
-                    <x-field-group label="Harga Agregator (Rp/kg)" name="collector_price" required helper="Harga jual ke agregator.">
+            <x-form-section title="Harga Agregator" description="Harga penawaran beli dari agregator ke Bank Sampah.">
+                <div class="max-w-md">
+                    <x-field-group label="Harga Agregator (Rp)" name="collector_price" required helper="Harga beli agregator per satuan kategori.">
                         <x-rupiah-input name="collector_price" :value="old('collector_price')" required />
                     </x-field-group>
                 </div>

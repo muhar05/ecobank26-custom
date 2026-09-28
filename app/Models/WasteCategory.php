@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class WasteCategory extends Model
 {
-    protected $fillable = ['name', 'unit', 'code', 'category_group', 'waste_category_group_id'];
+    protected $fillable = ['name', 'unit', 'code', 'member_price', 'category_group', 'waste_category_group_id'];
+
+    protected $casts = [
+        'member_price' => 'decimal:2',
+    ];
 
     public const GROUPS = [
         'Plastik',

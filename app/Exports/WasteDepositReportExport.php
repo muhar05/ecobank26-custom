@@ -60,17 +60,11 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
             $categoryName = WasteCategory::find($id)->name ?? 'Semua Kategori';
         }
 
-        $collectorName = 'Semua Agregator';
-        if ($id = $this->request->input('collector_id')) {
-            $collectorName = Collector::find($id)->name ?? 'Semua Agregator';
-        }
-
         return [
             'Periode' => $startDate->toDateString() . ' s/d ' . $endDate->toDateString(),
             'Nasabah' => $customerName,
             'Grup Kategori' => $groupName,
             'Kategori' => $categoryName,
-            'Agregator' => $collectorName,
             'Dibuat Pada' => now()->toDateTimeString(),
             'Dibuat Oleh' => auth()->user() ? auth()->user()->name : 'System'
         ];
@@ -107,13 +101,11 @@ class WasteDepositReportExport implements FromArray, WithHeadings, WithTitle, Wi
         $customerId = $this->request->input('waste_customer_id');
         $groupId = $this->request->input('waste_category_group_id');
         $categoryId = $this->request->input('waste_category_id');
-        $collectorId = $this->request->input('collector_id');
 
-        $query = DepositDetail::with(['deposit.wasteCustomer', 'deposit.collector', 'wasteCategory.wasteCategoryGroup'])
-            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId, $collectorId) {
+        $query = DepositDetail::with(['deposit.wasteCustomer', 'wasteCategory.wasteCategoryGroup'])
+            ->whereHas('deposit', function($q) use ($startDate, $endDate, $customerId) {
                 $q->whereBetween('date', [$startDate, $endDate])
-                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId))
-                  ->when($collectorId, fn($q2) => $q2->where('collector_id', $collectorId));
+                  ->when($customerId, fn($q2) => $q2->where('waste_customer_id', $customerId));
             })
             ->when($categoryId, fn($q) => $q->where('waste_category_id', $categoryId))
             ->when($groupId, function($q) use ($groupId) {

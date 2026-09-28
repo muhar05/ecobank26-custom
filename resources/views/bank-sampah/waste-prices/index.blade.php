@@ -117,14 +117,14 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">Rp {{ number_format($price->member_price, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
+                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">Rp {{ number_format($price->wasteCategory->member_price ?? 0, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
                                     <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rp {{ number_format($price->collector_price, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
                                     @php
-                                        $margin = $price->collector_price - $price->member_price;
+                                        $margin = $price->collector_price - ($price->wasteCategory->member_price ?? 0);
                                     @endphp
                                     <div class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $margin > 0 ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' }}">
                                         Rp {{ number_format($margin, 0, ',', '.') }}

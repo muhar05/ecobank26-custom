@@ -84,6 +84,7 @@
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Kategori</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Grup Kategori</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Satuan</th>
+                            <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Harga Nasabah</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Aksi</th>
                         </tr>
                     </thead>
@@ -121,6 +122,9 @@
                                         {{ $category->unit }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                    Rp {{ number_format($category->member_price, 0, ',', '.') }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                     <a href="{{ route('bank-sampah.waste-categories.edit', $category) }}" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 transition">Edit</a>
                                     <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-categories.destroy', $category) }}'})" class="text-rose-600 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-300 transition">Hapus</button>
@@ -148,9 +152,14 @@
                                 <p class="font-mono text-xs font-semibold text-slate-400">{{ $category->code ?? '-' }}</p>
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">{{ $category->name }}</h4>
                             </div>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                {{ $category->unit }}
-                            </span>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                    {{ $category->unit }}
+                                </span>
+                                <p class="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+                                    Rp {{ number_format($category->member_price, 0, ',', '.') }}
+                                </p>
+                            </div>
                         </div>
                         
                         <div class="flex flex-wrap items-center gap-1.5">

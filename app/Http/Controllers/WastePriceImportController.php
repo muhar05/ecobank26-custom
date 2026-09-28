@@ -15,7 +15,8 @@ class WastePriceImportController extends Controller
 {
     public function showForm()
     {
-        return view('bank-sampah.waste-prices.import');
+        $collectors = Collector::orderBy('name')->get();
+        return view('bank-sampah.waste-prices.import', compact('collectors'));
     }
 
     public function template()
@@ -26,9 +27,11 @@ class WastePriceImportController extends Controller
     public function import(Request $request)
     {
         $request->validate([
+            'collector_id' => 'required|exists:collectors,id',
             'file' => 'required|file|mimes:xlsx,xls|max:2048',
         ]);
 
+        $collector = Collector::findOrFail($request->collector_id);
         $file = $request->file('file');
         
         try {
@@ -51,12 +54,6 @@ class WastePriceImportController extends Controller
         $failedRows = [];
         $errors = [];
         $rowNumber = 1;
-
-        $collector = Collector::first() ?: Collector::create([
-            'name' => 'Bu Erta', 
-            'phone' => '081234567890', 
-            'address' => 'Alamat Agregator'
-        ]);
 
         foreach ($importData as $row) {
             $rowNumber++;
@@ -83,12 +80,8 @@ class WastePriceImportController extends Controller
                 $reason = 'Nama Kategori Sampah wajib diisi.';
             } elseif ($unit === '') {
                 $reason = 'Satuan wajib diisi.';
-            } elseif ($memberPrice === '' || !is_numeric($memberPrice) || $memberPrice < 0) {
-                $reason = 'Harga Beli dari Nasabah wajib diisi dengan angka >= 0.';
             } elseif ($collectorPrice === '' || !is_numeric($collectorPrice) || $collectorPrice < 0) {
                 $reason = 'Harga Jual ke Agregator wajib diisi dengan angka >= 0.';
-            } elseif ((float) $collectorPrice < (float) $memberPrice) {
-                $reason = 'Harga Jual ke Agregator harus lebih besar atau sama dengan Harga Beli dari Nasabah.';
             }
 
             if ($reason) {
@@ -134,6 +127,15 @@ class WastePriceImportController extends Controller
                 continue;
             }
 
+            // Validasi harga agregator terhadap harga beli nasabah master kategori
+            if ((float) $collectorPrice < (float) $category->member_price) {
+                $rowWithReason = $row;
+                $rowWithReason[8] = "Harga Agregator (Rp " . number_format((float)$collectorPrice, 0, ',', '.') . ") tidak boleh lebih rendah dari Harga Beli Nasabah (Rp " . number_format((float)$category->member_price, 0, ',', '.') . ").";
+                $failedRows[] = $rowWithReason;
+                $errors[] = "Baris {$rowNumber}: {$rowWithReason[8]}";
+                continue;
+            }
+
             // Parse Date
             $tanggalBerlaku = now()->format('Y-m-d');
             if (!empty($tanggalBerlakuRaw)) {
@@ -171,18 +173,14 @@ class WastePriceImportController extends Controller
 
             if ($existing) {
                 $existing->update([
-                    'member_price' => (float) $memberPrice,
                     'collector_price' => (float) $collectorPrice,
-                    'price_per_unit' => (float) $memberPrice,
                 ]);
                 $updated++;
             } else {
                 WastePrice::create([
                     'collector_id' => $collector->id,
                     'waste_category_id' => $category->id,
-                    'member_price' => (float) $memberPrice,
                     'collector_price' => (float) $collectorPrice,
-                    'price_per_unit' => (float) $memberPrice,
                 ]);
                 $created++;
             }

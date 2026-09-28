@@ -106,6 +106,7 @@ Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampa
 
 // Bank Sampah - Sales
 Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::get('sales/daily-recap', [SaleController::class, 'dailyRecap'])->name('sales.daily-recap');
     Route::resource('sales', SaleController::class)->except(['show']);
 });
 

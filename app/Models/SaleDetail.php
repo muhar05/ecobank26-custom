@@ -12,13 +12,17 @@ class SaleDetail extends Model
         'waste_category_id',
         'weight',
         'price_per_unit',
+        'member_price',
         'subtotal',
+        'margin',
     ];
 
     protected $casts = [
         'weight' => 'decimal:2',
         'price_per_unit' => 'decimal:2',
+        'member_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'margin' => 'decimal:2',
     ];
 
     public function sale(): BelongsTo

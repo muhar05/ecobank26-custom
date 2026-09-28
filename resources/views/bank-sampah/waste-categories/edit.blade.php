@@ -36,6 +36,10 @@
                     <x-field-group label="Kode Kategori (Opsional)" name="code" helper="Kosongkan kode jika ingin digenerate otomatis berdasarkan grup.">
                         <input type="text" name="code" id="code" value="{{ old('code', $category->code) }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 font-mono uppercase">
                     </x-field-group>
+
+                    <x-field-group label="Harga Beli Nasabah (Rp)" name="member_price" required helper="Harga beli resmi Bank Sampah ke nasabah (per satuan).">
+                        <x-rupiah-input name="member_price" :value="old('member_price', $category->member_price)" required />
+                    </x-field-group>
                 </div>
             </x-form-section>
 

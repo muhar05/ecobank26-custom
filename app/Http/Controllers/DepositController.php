@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Collector;
 use App\Models\Deposit;
 use App\Models\DepositDetail;
 use App\Models\SavingsLedger;
 use App\Models\WasteCategory;
 use App\Models\WasteCustomer;
-use App\Models\WastePrice;
 use App\Services\BankSampahService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +18,7 @@ class DepositController extends Controller
         $search = $request->input('search');
         $deposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
-                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
-                ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest('date')->paginate(20)->withQueryString();
         return view('bank-sampah.deposits.index', compact('deposits', 'search'));
     }
@@ -29,22 +26,15 @@ class DepositController extends Controller
     public function create()
     {
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
-        $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
-        $wastePrices = WastePrice::all()->groupBy('collector_id')
-            ->map(fn ($items) => $items->keyBy('waste_category_id')->map(fn ($p) => [
-                'member_price' => (float) $p->member_price,
-                'collector_price' => (float) $p->collector_price,
-            ]));
 
-        return view('bank-sampah.deposits.create', compact('customers', 'collectors', 'categories', 'wastePrices'));
+        return view('bank-sampah.deposits.create', compact('customers', 'categories'));
     }
 
     public function store(Request $request, BankSampahService $service)
     {
         $request->validate([
             'waste_customer_id' => 'required|exists:waste_customers,id',
-            'collector_id' => 'required|exists:collectors,id',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:255',
         ]);
@@ -57,7 +47,6 @@ class DepositController extends Controller
 
         $service->recordDeposit([
             'waste_customer_id' => $request->waste_customer_id,
-            'collector_id' => $request->collector_id,
             'date' => $request->date,
             'notes' => $request->notes,
             'details' => $details,
@@ -71,22 +60,15 @@ class DepositController extends Controller
     {
         $deposit->load('details');
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
-        $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
-        $wastePrices = WastePrice::all()->groupBy('collector_id')
-            ->map(fn ($items) => $items->keyBy('waste_category_id')->map(fn ($p) => [
-                'member_price' => (float) $p->member_price,
-                'collector_price' => (float) $p->collector_price,
-            ]));
 
-        return view('bank-sampah.deposits.edit', compact('deposit', 'customers', 'collectors', 'categories', 'wastePrices'));
+        return view('bank-sampah.deposits.edit', compact('deposit', 'customers', 'categories'));
     }
 
     public function update(Request $request, Deposit $deposit)
     {
         $request->validate([
             'waste_customer_id' => 'required|exists:waste_customers,id',
-            'collector_id' => 'required|exists:collectors,id',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:255',
         ]);
@@ -103,7 +85,6 @@ class DepositController extends Controller
         DB::transaction(function () use ($deposit, $request, $details, $totalAmount, $customer) {
             $deposit->update([
                 'waste_customer_id' => $customer->id,
-                'collector_id' => $request->collector_id,
                 'date' => $request->date,
                 'total_amount' => $totalAmount,
                 'notes' => $request->notes,
@@ -149,7 +130,8 @@ class DepositController extends Controller
         foreach ($request->input('details', []) as $row) {
             if (!empty($row['waste_category_id']) && !empty($row['weight']) && $row['weight'] > 0) {
                 $weight = (float) $row['weight'];
-                $price = (float) ($row['price_per_unit'] ?? 0);
+                $category = WasteCategory::find($row['waste_category_id']);
+                $price = (float) ($row['price_per_unit'] ?? ($category->member_price ?? 0));
                 $details[] = [
                     'waste_category_id' => $row['waste_category_id'],
                     'weight' => $weight,

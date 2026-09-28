@@ -3,7 +3,7 @@
         <x-form-card title="Catat Setoran Sampah"><div class="p-6">
 
             <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis diambil dari menu Harga Sampah berdasarkan agregator dan kategori.</p>
+                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga beli nasabah otomatis diambil dari master Kategori Sampah EcoBank.</p>
             </div>
 
             <form method="POST" action="{{ route('bank-sampah.deposits.store') }}">
@@ -13,26 +13,16 @@
                     <div class="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm">{{ $errors->first('details') }}</div>
                 @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Nasabah <span class="text-red-500">*</span></label>
                         <select name="waste_customer_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih --</option>
+                            <option value="">-- Pilih Nasabah --</option>
                             @foreach($customers as $c)
                                 <option value="{{ $c->id }}" {{ old('waste_customer_id') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->customer_code }})</option>
                             @endforeach
                         </select>
                         @error('waste_customer_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Agregator <span class="text-red-500">*</span></label>
-                        <select name="collector_id" required x-model="collectorId" @change="updatePrices()" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih --</option>
-                            @foreach($collectors as $c)
-                                <option value="{{ $c->id }}" {{ old('collector_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('collector_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Tanggal <span class="text-red-500">*</span></label>
@@ -87,7 +77,7 @@
                                                     <span class="text-xs text-slate-400 dark:text-slate-500" x-text="'('+row.unit+')'"></span>
                                                 </td>
                                                 <td class="pr-2 py-2">
-                                                    <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" :class="row.hasPrice && collectorId ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : ''" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                                    <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700">
                                                 </td>
                                                 <td class="pr-2 py-2">
                                                     <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
@@ -96,9 +86,8 @@
                                                     <span x-text="formatRp(row.weight * row.price)"></span>
                                                 </td>
                                                 <td class="py-2 text-center">
-                                                    <span x-show="row.hasPrice && collectorId && !row.manualOverride" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">Auto</span>
-                                                    <span x-show="row.manualOverride && collectorId" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">Manual</span>
-                                                    <span x-show="collectorId && !row.hasPrice" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300" title="Harga belum tersedia">⚠️</span>
+                                                    <span x-show="!row.manualOverride" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">Auto</span>
+                                                    <span x-show="row.manualOverride" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">Manual</span>
                                                 </td>
                                                 <td class="py-2 text-center">
                                                     <button type="button" @click="removeRow(i)" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition">
@@ -131,7 +120,6 @@
                                             </div>
                                         </div>
                                         <div class="flex justify-between items-center text-sm">
-                                            <span x-show="collectorId && !row.hasPrice" class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia</span>
                                             <span class="font-medium text-slate-700 dark:text-slate-300 ml-auto" x-text="formatRp(row.weight * row.price)"></span>
                                         </div>
                                     </div>
@@ -182,12 +170,21 @@
         </div>
     </div>
 
+    @php
+        $categoryOptions = $categories->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'unit' => $c->unit,
+                'member_price' => (float) $c->member_price,
+            ];
+        })->values()->all();
+    @endphp
+
     <script>
         function depositForm() {
-            const allCategories = @json($categories->map(fn($c) => ['id' => $c->id, 'name' => $c->name, 'unit' => $c->unit]));
+            const allCategories = @json($categoryOptions);
             return {
-                collectorId: '{{ old("collector_id", "") }}',
-                prices: @json($wastePrices),
                 rows: [],
                 modalOpen: false,
                 modalSearch: '',
@@ -199,10 +196,16 @@
                         Object.values(oldRows).forEach(d => {
                             if (!d.waste_category_id) return;
                             const cat = allCategories.find(c => c.id == d.waste_category_id);
-                            if (cat) this.rows.push({ catId: cat.id, name: cat.name, unit: cat.unit, price: Number(d.price_per_unit) || 0, weight: Number(d.weight) || 0, hasPrice: false, manualOverride: !!Number(d.price_per_unit) });
+                            if (cat) this.rows.push({
+                                catId: cat.id,
+                                name: cat.name,
+                                unit: cat.unit,
+                                price: Number(d.price_per_unit) || Math.round(cat.member_price),
+                                weight: Number(d.weight) || 0,
+                                manualOverride: !!Number(d.price_per_unit)
+                            });
                         });
                     }
-                    if (this.collectorId) this.updatePrices();
                 },
                 filteredCategories() {
                     const q = this.modalSearch.toLowerCase();
@@ -216,9 +219,15 @@
                         if (this.isAlreadySelected(catId)) return;
                         const cat = allCategories.find(c => c.id == catId);
                         if (!cat) return;
-                        // BUG FIX #1 (partial): row baru selalu mulai di mode Auto (manualOverride=false, weightTouched=false)
-                        const row = { catId: cat.id, name: cat.name, unit: cat.unit, price: 0, weight: 0, hasPrice: false, manualOverride: false, weightTouched: false };
-                        this.fillRowPrice(row);
+                        const row = {
+                            catId: cat.id,
+                            name: cat.name,
+                            unit: cat.unit,
+                            price: Math.round(cat.member_price),
+                            weight: 0,
+                            manualOverride: false,
+                            weightTouched: false
+                        };
                         this.rows.push(row);
                     });
                     this.modalSelected = [];
@@ -226,35 +235,7 @@
                     this.modalOpen = false;
                 },
                 removeRow(i) { this.rows.splice(i, 1); },
-                fillRowPrice(row) {
-                    if (!this.collectorId) { row.hasPrice = false; return; }
-                    const cp = this.prices[this.collectorId];
-                    if (cp && cp[row.catId]) {
-                        if (!row.manualOverride) row.price = Math.round(cp[row.catId].member_price);
-                        row.hasPrice = true;
-                    } else { row.hasPrice = false; }
-                },
-                // BUG FIX #1: updatePrices() dipanggil saat Agregator berubah.
-                // SEBELUMNYA: reset manualOverride=false untuk SEMUA baris, sehingga harga yang
-                // sudah diketik manual user akan ditimpa harga otomatis (data hilang).
-                // SESUDAHNYA: hanya baris yang belum pernah diubah manual (Auto) yang di-update
-                // harganya. Baris dengan manualOverride=true dipertahankan harga manualnya.
-                updatePrices() {
-                    this.rows.forEach(row => {
-                        if (!row.manualOverride) {
-                            // Hanya reset dan isi ulang baris yang masih dalam mode Auto
-                            this.fillRowPrice(row);
-                        } else {
-                            // Baris manual: hanya update flag hasPrice tanpa menimpa harga
-                            const cp = this.prices[this.collectorId];
-                            row.hasPrice = !!(cp && cp[row.catId]);
-                        }
-                    });
-                },
                 grandTotal() { return this.rows.reduce((s, r) => s + (r.weight * r.price || 0), 0); },
-                // BUG FIX #3: Tampilkan 'Rp 0' untuk nilai nol agar user bisa membedakan
-                // antara belum dihitung vs sudah dihitung hasilnya 0.
-                // SEBELUMNYA: return '-' untuk nilai 0 (falsy), membingungkan UX.
                 formatRp(v) { return (v !== null && v !== undefined) ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
             }
         }
