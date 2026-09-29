@@ -72,16 +72,18 @@ Route::middleware(['auth', 'permission:view_own_savings'])->group(function () {
     Route::get('/warga/savings/history', [WargaSavingsController::class, 'history'])->name('warga.savings.history');
 });
 
-// Bank Sampah - Waste Categories
-Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+// Bank Sampah - Waste Categories & Prices
+Route::middleware(['auth', 'permission:manage_waste_prices', 'track_admin_device'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::get('waste-categories/import', [WasteCategoryImportController::class, 'showForm'])->name('waste-categories.import');
     Route::post('waste-categories/import', [WasteCategoryImportController::class, 'import'])->name('waste-categories.import.store');
     Route::get('waste-categories/import/template', [WasteCategoryImportController::class, 'template'])->name('waste-categories.import.template');
     Route::get('waste-categories/import/failed-rows', [WasteCategoryImportController::class, 'downloadFailedRows'])->name('waste-categories.import.failed-rows');
     Route::get('waste-prices/import', [WastePriceImportController::class, 'showForm'])->name('waste-prices.import');
     Route::post('waste-prices/import', [WastePriceImportController::class, 'import'])->name('waste-prices.import.store');
+    Route::post('waste-prices/import/alias', [WastePriceImportController::class, 'registerAlias'])->name('waste-prices.import.alias');
     Route::get('waste-prices/import/template', [WastePriceImportController::class, 'template'])->name('waste-prices.import.template');
     Route::get('waste-prices/import/failed-rows', [WastePriceImportController::class, 'downloadFailedRows'])->name('waste-prices.import.failed-rows');
+    Route::get('waste-prices/history', [WastePriceController::class, 'history'])->name('waste-prices.history');
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
     Route::patch('waste-category-groups/{waste_category_group}/toggle', [WasteCategoryGroupController::class, 'toggle'])->name('waste-category-groups.toggle');
     Route::resource('waste-category-groups', WasteCategoryGroupController::class)->except(['show', 'destroy']);
@@ -89,19 +91,28 @@ Route::middleware(['auth', 'permission:manage_waste_prices'])->prefix('bank-samp
     Route::resource('waste-prices', WastePriceController::class)->except(['show']);
 });
 
+// Bank Sampah - Admin Devices
+Route::middleware(['auth'])->prefix('bank-sampah/devices')->name('bank-sampah.devices.')->group(function () {
+    Route::get('name', [\App\Http\Controllers\AdminDeviceController::class, 'nameDeviceForm'])->name('name');
+    Route::post('name', [\App\Http\Controllers\AdminDeviceController::class, 'storeDeviceName'])->name('store-name');
+    Route::get('/', [\App\Http\Controllers\AdminDeviceController::class, 'index'])->name('index');
+    Route::post('{device}/revoke', [\App\Http\Controllers\AdminDeviceController::class, 'revoke'])->name('revoke');
+});
+
 // Bank Sampah - Customers
-Route::middleware(['auth', 'permission:manage_waste_customers'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+Route::middleware(['auth', 'permission:manage_waste_customers', 'track_admin_device'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::resource('customers', WasteCustomerController::class);
 });
 
 // Bank Sampah - Deposits
-Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+Route::middleware(['auth', 'permission:manage_deposits', 'track_admin_device'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::get('deposits/import', [\App\Http\Controllers\DepositImportController::class, 'showForm'])->name('deposits.import');
     Route::post('deposits/import/parse', [\App\Http\Controllers\DepositImportController::class, 'parseFile'])->name('deposits.import.parse');
     Route::post('deposits/import/preview', [\App\Http\Controllers\DepositImportController::class, 'previewSheet'])->name('deposits.import.preview');
     Route::post('deposits/import/resolve', [\App\Http\Controllers\DepositImportController::class, 'resolveMapping'])->name('deposits.import.resolve');
     Route::post('deposits/import/quick-add-customer', [\App\Http\Controllers\DepositImportController::class, 'quickAddCustomer'])->name('deposits.import.quick-add-customer');
     Route::post('deposits/import/bulk-add-customers', [\App\Http\Controllers\DepositImportController::class, 'bulkAddCustomers'])->name('deposits.import.bulk-add-customers');
+    Route::post('deposits/import/quick-add-category', [\App\Http\Controllers\DepositImportController::class, 'quickAddCategory'])->name('deposits.import.quick-add-category');
     Route::post('deposits/import/commit', [\App\Http\Controllers\DepositImportController::class, 'commitImport'])->name('deposits.import.commit');
     Route::post('deposits/import/reset', [\App\Http\Controllers\DepositImportController::class, 'resetImport'])->name('deposits.import.reset');
     Route::resource('deposits', DepositController::class)->except(['show']);

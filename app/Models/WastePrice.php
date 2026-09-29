@@ -25,4 +25,9 @@ class WastePrice extends Model
     {
         return $this->belongsTo(Collector::class);
     }
+
+    public function histories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WastePriceHistory::class)->latest('changed_at');
+    }
 }

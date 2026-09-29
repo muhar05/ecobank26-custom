@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collector;
+use App\Models\MaterialAlias;
 use App\Models\WasteCategory;
 use App\Models\WastePrice;
+use App\Models\WastePriceHistory;
+use App\Services\DeviceTrackingService;
+use App\Services\MaterialMappingService;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\WastePriceTemplateExport;
@@ -13,6 +17,12 @@ use Carbon\Carbon;
 
 class WastePriceImportController extends Controller
 {
+    protected MaterialMappingService $mappingService;
+
+    public function __construct(MaterialMappingService $mappingService)
+    {
+        $this->mappingService = $mappingService;
+    }
     public function showForm()
     {
         $collectors = Collector::orderBy('name')->get();
@@ -37,7 +47,11 @@ class WastePriceImportController extends Controller
         try {
             $sheets = Excel::toArray(new WastePriceTemplateExport(), $file);
         } catch (\Exception $e) {
-            return back()->withErrors(['file' => 'Gagal membaca file Excel. Pastikan format file benar.']);
+            try {
+                $sheets = Excel::toArray(null, $file);
+            } catch (\Exception $e2) {
+                return back()->withErrors(['file' => 'Gagal membaca file Excel. Pastikan format file benar.']);
+            }
         }
 
         if (empty($sheets) || empty($sheets[0])) {
@@ -96,6 +110,14 @@ class WastePriceImportController extends Controller
             $category = null;
             if (!empty($categoryCode)) {
                 $category = WasteCategory::where('code', $categoryCode)->first();
+            }
+
+            if (!$category && !empty($categoryName)) {
+                // Check exact canonical or scoped alias for this aggregator
+                $resolution = $this->mappingService->resolve($categoryName, MaterialAlias::SOURCE_AGGREGATOR, $collector->id);
+                if ($resolution['category']) {
+                    $category = $resolution['category'];
+                }
             }
 
             if (!$category && !empty($categoryName)) {
@@ -166,21 +188,50 @@ class WastePriceImportController extends Controller
                 }
             }
 
-            // Save/Update
+            // Save/Update with Price History
             $existing = WastePrice::where('collector_id', $collector->id)
                 ->where('waste_category_id', $category->id)
                 ->first();
 
+            $newPrice = (float) $collectorPrice;
+            $device = $request->attributes->get('admin_device') 
+                ?? app(DeviceTrackingService::class)->getDeviceFromRequest($request, $request->user());
+
             if ($existing) {
-                $existing->update([
-                    'collector_price' => (float) $collectorPrice,
-                ]);
-                $updated++;
+                $oldPrice = (float) $existing->collector_price;
+                if (abs($oldPrice - $newPrice) > 0.01) {
+                    $existing->update([
+                        'collector_price' => $newPrice,
+                    ]);
+                    WastePriceHistory::create([
+                        'waste_price_id'    => $existing->id,
+                        'collector_id'      => $collector->id,
+                        'waste_category_id' => $category->id,
+                        'old_price'         => $oldPrice,
+                        'new_price'         => $newPrice,
+                        'changed_at'        => now(),
+                        'changed_by_user_id'=> auth()->id(),
+                        'admin_device_id'   => $device?->id,
+                        'source'            => WastePriceHistory::SOURCE_IMPORT,
+                    ]);
+                    $updated++;
+                }
             } else {
-                WastePrice::create([
-                    'collector_id' => $collector->id,
+                $createdPrice = WastePrice::create([
+                    'collector_id'      => $collector->id,
                     'waste_category_id' => $category->id,
-                    'collector_price' => (float) $collectorPrice,
+                    'collector_price'   => $newPrice,
+                ]);
+                WastePriceHistory::create([
+                    'waste_price_id'    => $createdPrice->id,
+                    'collector_id'      => $collector->id,
+                    'waste_category_id' => $category->id,
+                    'old_price'         => null,
+                    'new_price'         => $newPrice,
+                    'changed_at'        => now(),
+                    'changed_by_user_id'=> auth()->id(),
+                    'admin_device_id'   => $device?->id,
+                    'source'            => WastePriceHistory::SOURCE_IMPORT,
                 ]);
                 $created++;
             }
@@ -209,5 +260,24 @@ class WastePriceImportController extends Controller
         }
 
         return Excel::download(new WastePriceFailedRowsExport($failedRows), 'failed-rows-harga-sampah.xlsx');
+    }
+
+    public function registerAlias(Request $request)
+    {
+        $request->validate([
+            'collector_id'      => 'required|exists:collectors,id',
+            'external_name'     => 'required|string|max:255',
+            'waste_category_id' => 'required|exists:waste_categories,id',
+        ]);
+
+        $alias = $this->mappingService->registerAlias(
+            $request->input('external_name'),
+            (int) $request->input('waste_category_id'),
+            MaterialAlias::SOURCE_AGGREGATOR,
+            (int) $request->input('collector_id'),
+            true
+        );
+
+        return back()->with('success', "Alias harga '{$alias->external_name}' berhasil dipetakan ke kategori '{$alias->wasteCategory->name}'.");
     }
 }

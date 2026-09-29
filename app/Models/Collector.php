@@ -21,4 +21,9 @@ class Collector extends Model
     {
         return $this->hasMany(Sale::class);
     }
+
+    public function materialAliases(): HasMany
+    {
+        return $this->hasMany(MaterialAlias::class, 'source_id');
+    }
 }

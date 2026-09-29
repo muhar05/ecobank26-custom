@@ -35,6 +35,11 @@ class WasteCategory extends Model
         return $this->hasMany(WastePrice::class);
     }
 
+    public function materialAliases()
+    {
+        return $this->hasMany(MaterialAlias::class);
+    }
+
     public static function generateCode($groupInput): string
     {
         $prefix = 'UNC';

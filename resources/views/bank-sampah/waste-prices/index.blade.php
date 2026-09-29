@@ -6,6 +6,10 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola harga beli dari nasabah dan harga jual ke agregator (margin keuntungan)</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('bank-sampah.waste-prices.history') }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition">
+                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Riwayat Harga
+                </a>
                 <a href="{{ route('bank-sampah.waste-prices.import') }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Import Harga
@@ -121,6 +125,14 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
                                     <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rp {{ number_format($price->collector_price, 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
+                                    @php
+                                        $latestHistory = $price->histories->first();
+                                    @endphp
+                                    @if($latestHistory)
+                                        <div class="text-[10px] text-slate-400 mt-0.5" title="Diubah oleh {{ $latestHistory->changedBy->name ?? 'Admin' }} ({{ $latestHistory->adminDevice->device_name ?? 'Device' }})">
+                                            {{ $latestHistory->changed_at ? $latestHistory->changed_at->format('d/m/y H:i') : '' }} &bull; {{ $latestHistory->source }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right">
                                     @php
@@ -131,6 +143,7 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                    <a href="{{ route('bank-sampah.waste-prices.history', ['collector_id' => $price->collector_id, 'waste_category_id' => $price->waste_category_id]) }}" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 transition">Riwayat</a>
                                     <a href="{{ route('bank-sampah.waste-prices.edit', $price) }}" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 transition">Edit</a>
                                     <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-prices.destroy', $price) }}'})" class="text-rose-600 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-300 transition">Hapus</button>
                                 </td>

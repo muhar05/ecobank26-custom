@@ -7,11 +7,19 @@ use App\Models\WasteCategory;
 use App\Models\WasteCustomer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Models\MaterialAlias;
+use App\Models\WasteCategoryGroup;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class DepositImportService
 {
+    protected MaterialMappingService $mappingService;
+
+    public function __construct(?MaterialMappingService $mappingService = null)
+    {
+        $this->mappingService = $mappingService ?? app(MaterialMappingService::class);
+    }
     /**
      * List all sheet names from an uploaded spreadsheet file.
      */
@@ -305,21 +313,32 @@ class DepositImportService
 
             // 3. Material matching
             if ($rawMat !== '') {
-                // Check manual mapping first
+                // Check temporary session mapping first
                 if (isset($materialMappings[$rawMat])) {
                     $matchedCategory = WasteCategory::find($materialMappings[$rawMat]);
+                    if ($matchedCategory) {
+                        $materialStatus = 'MAPPED';
+                    }
                 }
 
-                // If not mapped, check exact code or normalized name
+                // If not mapped in session, resolve via MaterialMappingService pipeline
                 if (!$matchedCategory) {
-                    $normMat = $this->normalizeString($rawMat);
-                    if (isset($categoryByCode[$normMat])) {
-                        $matchedCategory = $categoryByCode[$normMat];
-                    } elseif (isset($categoryByNameNorm[$normMat])) {
-                        $matchedCategory = $categoryByNameNorm[$normMat];
+                    $resolution = $this->mappingService->resolve(
+                        $rawMat,
+                        MaterialAlias::SOURCE_BANK_SAMPAH,
+                        null
+                    );
+
+                    if ($resolution['status'] === 'VALID') {
+                        $matchedCategory = $resolution['category'];
+                        $materialStatus = 'VALID';
+                    } elseif ($resolution['status'] === 'ALIAS') {
+                        $matchedCategory = $resolution['category'];
+                        $materialStatus = 'ALIAS';
+                        $reasons[] = $resolution['reason'];
                     } else {
                         $materialStatus = 'NEEDS MAPPING';
-                        $reasons[] = "Material '{$rawMat}' belum terdaftar di master";
+                        $reasons[] = "Material '{$rawMat}' belum terdaftar di master maupun alias";
                     }
                 }
             }
@@ -330,6 +349,8 @@ class DepositImportService
                     $status = 'AMBIGUOUS';
                 } elseif ($customerStatus === 'NEEDS MAPPING' || $materialStatus === 'NEEDS MAPPING') {
                     $status = 'NEEDS MAPPING';
+                } elseif ($materialStatus === 'ALIAS') {
+                    $status = 'ALIAS';
                 }
             }
 
@@ -370,8 +391,8 @@ class DepositImportService
                 }
             }
 
-            // Demote VALID to WARNING if warnings exist
-            if ($status === 'VALID' && ($hasPriceWarning || $hasTotalWarning || $hasExistingDeposit)) {
+            // Demote VALID or ALIAS to WARNING if warnings exist
+            if (($status === 'VALID' || $status === 'ALIAS') && ($hasPriceWarning || $hasTotalWarning || $hasExistingDeposit)) {
                 $status = 'WARNING';
             }
 
@@ -461,6 +482,48 @@ class DepositImportService
                 $created[] = $customer;
             }
             return $created;
+        });
+    }
+
+    /**
+     * Quick Add a new canonical WasteCategory and optionally register a persistent alias.
+     */
+    public function quickAddCategory(
+        string $name,
+        int $groupId,
+        string $unit = 'kg',
+        float $memberPrice = 0,
+        ?string $rawMaterialToAlias = null
+    ): WasteCategory {
+        return DB::transaction(function () use ($name, $groupId, $unit, $memberPrice, $rawMaterialToAlias) {
+            $group = WasteCategoryGroup::findOrFail($groupId);
+            $code = WasteCategory::generateCode($group);
+
+            $category = WasteCategory::create([
+                'code'                    => $code,
+                'name'                    => trim($name),
+                'waste_category_group_id' => $group->id,
+                'unit'                    => trim($unit),
+                'member_price'            => $memberPrice,
+            ]);
+
+            if ($rawMaterialToAlias) {
+                $this->mappingService->registerAlias(
+                    $rawMaterialToAlias,
+                    $category->id,
+                    MaterialAlias::SOURCE_BANK_SAMPAH,
+                    null,
+                    true
+                );
+            }
+
+            app(ActivityLogService::class)->logInfo(
+                'waste_category.create',
+                "Membuat kategori sampah baru {$category->name} ({$category->code}) via Import Setoran.",
+                ['after' => $category->toArray()]
+            );
+
+            return $category;
         });
     }
 

@@ -56,4 +56,9 @@ class User extends Authenticatable
 
         return $phone;
     }
+
+    public function adminDevices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AdminDevice::class);
+    }
 }

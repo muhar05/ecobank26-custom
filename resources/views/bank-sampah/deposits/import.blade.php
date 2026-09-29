@@ -181,7 +181,7 @@
         {{-- STEP 2: PRATINJAU & RESOLUSI PEMETAAN                     --}}
         {{-- ========================================================= --}}
         @if($step === 'preview')
-            <div class="space-y-6" x-data="{ bulkModalOpen: false }">
+            <div class="space-y-6" x-data="{ bulkModalOpen: false, quickCatModalOpen: false, quickCatRaw: '' }">
                 
                 {{-- Metadata Banner --}}
                 <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -209,14 +209,18 @@
                 </div>
 
                 {{-- Status Metric Chips --}}
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
                     <div class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
                         <span class="block text-[10px] font-bold uppercase text-slate-500">Total Baris</span>
                         <span class="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5 block font-mono">{{ $counts['total'] }}</span>
                     </div>
                     <div class="p-3 bg-emerald-50/70 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-xs">
-                        <span class="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">Siap Impor (Valid)</span>
+                        <span class="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">Exact Master</span>
                         <span class="text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-0.5 block font-mono">{{ $counts['valid'] }}</span>
+                    </div>
+                    <div class="p-3 bg-purple-50/70 dark:bg-purple-950/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-xs">
+                        <span class="block text-[10px] font-bold uppercase text-purple-700 dark:text-purple-400">Via Alias</span>
+                        <span class="text-xl font-extrabold text-purple-700 dark:text-purple-400 mt-0.5 block font-mono">{{ $counts['alias'] ?? 0 }}</span>
                     </div>
                     <div class="p-3 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800 shadow-xs">
                         <span class="block text-[10px] font-bold uppercase text-amber-700 dark:text-amber-400">Peringatan</span>
@@ -313,31 +317,49 @@
                                 <span>Terdapat {{ count($unmatchedMaterials) }} Material Belum Terdaftar di Master</span>
                             </h4>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Petakan material Excel ke kategori sampah master yang bersesuaian
+                                Petakan material Excel ke kategori sampah master yang bersesuaian atau tambahkan jenis baru
                             </p>
                         </div>
 
                         <div class="divide-y divide-slate-100 dark:divide-slate-800 space-y-3">
                             @foreach($unmatchedMaterials as $rawMat => $info)
-                                <div class="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                                <div class="pt-3 first:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
                                     <div class="min-w-[200px]">
                                         <span class="font-bold text-slate-800 dark:text-slate-200 text-sm">"{{ $rawMat }}"</span>
                                         <span class="text-slate-400 ml-1.5 font-mono text-[11px]">({{ $info['count'] }} baris)</span>
+                                        @if(!empty($info['candidates']) && $info['candidates']->isNotEmpty())
+                                            <div class="text-[11px] text-purple-700 dark:text-purple-300 font-medium mt-0.5">
+                                                Saran kandidat: {{ $info['candidates']->pluck('name')->join(', ') }}
+                                            </div>
+                                        @endif
                                     </div>
 
-                                    <form method="POST" action="{{ route('bank-sampah.deposits.import.resolve') }}" class="flex items-center gap-2 flex-1 max-w-md">
+                                    <form method="POST" action="{{ route('bank-sampah.deposits.import.resolve') }}" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 max-w-lg">
                                         @csrf
                                         <input type="hidden" name="token" value="{{ $token }}">
-                                        <select name="material_mappings[{{ $rawMat }}]" required class="w-full text-xs rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-                                            <option value="">-- Pilih Kategori Master --</option>
-                                            @foreach($categories as $cat)
-                                                <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->unit }}) - Rp {{ number_format($cat->member_price, 0, ',', '.') }}</option>
-                                            @endforeach
-                                        </select>
-                                        <button type="submit" class="shrink-0 bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">
+                                        <div class="w-full sm:flex-1 space-y-1">
+                                            <select name="material_mappings[{{ $rawMat }}]" required class="w-full text-xs rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                                                <option value="">-- Pilih Kategori Master --</option>
+                                                @foreach($categories as $cat)
+                                                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->unit }}) - Rp {{ number_format($cat->member_price, 0, ',', '.') }}</option>
+                                                @endforeach
+                                            </select>
+                                            <label class="inline-flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 cursor-pointer">
+                                                <input type="checkbox" name="save_permanent_aliases[{{ $rawMat }}]" value="1" checked class="rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+                                                <span>Simpan pemetaan ini permanen (alias)</span>
+                                            </label>
+                                        </div>
+                                        <button type="submit" class="shrink-0 bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold self-start sm:self-center">
                                             Petakan
                                         </button>
                                     </form>
+
+                                    <button type="button" 
+                                            @click="quickCatModalOpen = true; quickCatRaw = '{{ addslashes($rawMat) }}'" 
+                                            class="shrink-0 inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-100 transition self-start md:self-center">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        + Tambah Jenis Baru
+                                    </button>
                                 </div>
                             @endforeach
                         </div>
@@ -490,6 +512,10 @@
                                             @if($r['status'] === 'VALID')
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
                                                     VALID
+                                                </span>
+                                            @elseif($r['status'] === 'ALIAS')
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300">
+                                                    ALIAS
                                                 </span>
                                             @elseif($r['status'] === 'WARNING')
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
@@ -704,6 +730,83 @@
                                 </button>
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-xs">
                                     Simpan Semua Nasabah & Petakan Otomatis
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- MODAL QUICK ADD KATEGORI / MATERIAL BARU --}}
+                <div x-show="quickCatModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="quickCatModalOpen = false">
+                    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs" @click="quickCatModalOpen = false"></div>
+                    <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
+                        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                    Tambah Sebagai Jenis Sampah Baru
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    Label Excel: <span class="font-bold text-purple-600 font-mono" x-text="'\"' + quickCatRaw + '\"'"></span>
+                                </p>
+                            </div>
+                            <button type="button" @click="quickCatModalOpen = false" class="text-slate-400 hover:text-slate-600">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+
+                        <form method="POST" action="{{ route('bank-sampah.deposits.import.quick-add-category') }}" class="p-5 space-y-4 text-xs">
+                            @csrf
+                            <input type="hidden" name="token" value="{{ $token }}">
+                            <input type="hidden" name="raw_material" :value="quickCatRaw">
+
+                            <div>
+                                <label class="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                    Nama Resmi Material <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="text" name="name" :value="quickCatRaw" required class="w-full text-xs rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-2 font-semibold">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                        Grup Induk <span class="text-rose-500">*</span>
+                                    </label>
+                                    <select name="waste_category_group_id" required class="w-full text-xs rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-2">
+                                        <option value="">-- Pilih Grup --</option>
+                                        @foreach($groups as $grp)
+                                            <option value="{{ $grp->id }}">{{ $grp->name }} ({{ $grp->code }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                        Satuan <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="text" name="unit" value="kg" required class="w-full text-xs rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-2">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                    Harga Beli Nasabah (Rp) <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="number" step="1" min="0" name="member_price" value="0" required class="w-full text-xs font-mono rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-2">
+                                <p class="text-[10px] text-slate-400 mt-1">Harga resmi yang dibayar Bank Sampah ke nasabah saat penimbangan.</p>
+                            </div>
+
+                            <div class="pt-1">
+                                <label class="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                                    <input type="checkbox" name="save_alias" value="1" checked class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <span class="font-semibold text-[11px]">Simpan label Excel sebagai alias permanen material ini</span>
+                                </label>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+                                <button type="button" @click="quickCatModalOpen = false" class="px-3 py-1.5 font-semibold text-slate-600 hover:text-slate-800">
+                                    Batal
+                                </button>
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold shadow-xs">
+                                    Simpan & Petakan Otomatis
                                 </button>
                             </div>
                         </form>

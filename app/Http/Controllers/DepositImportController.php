@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MaterialAlias;
 use App\Models\WasteCategory;
+use App\Models\WasteCategoryGroup;
 use App\Models\WasteCustomer;
 use App\Services\DepositImportService;
+use App\Services\MaterialMappingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,10 +17,12 @@ use Illuminate\Support\Str;
 class DepositImportController extends Controller
 {
     protected DepositImportService $importService;
+    protected MaterialMappingService $mappingService;
 
-    public function __construct(DepositImportService $importService)
+    public function __construct(DepositImportService $importService, MaterialMappingService $mappingService)
     {
         $this->importService = $importService;
+        $this->mappingService = $mappingService;
     }
 
     /**
@@ -62,6 +67,7 @@ class DepositImportController extends Controller
             $counts = [
                 'total' => count($rows),
                 'valid' => 0,
+                'alias' => 0,
                 'warning' => 0,
                 'needs_mapping' => 0,
                 'error' => 0,
@@ -97,6 +103,7 @@ class DepositImportController extends Controller
                         $unmatchedMaterials[$raw] = [
                             'raw' => $raw,
                             'count' => 0,
+                            'candidates' => $this->mappingService->getCandidates($raw),
                         ];
                     }
                     $unmatchedMaterials[$raw]['count']++;
@@ -162,6 +169,7 @@ class DepositImportController extends Controller
                 'priceDiscrepancyMaterials' => $priceDiscrepancyMaterials,
                 'duplicateCustomers' => $duplicateCustomers,
                 'categories' => $categories,
+                'groups' => WasteCategoryGroup::active()->orderBy('name')->get(),
                 'customers' => $customers,
                 'summary' => [
                     'deposits_count' => count($groupedCustomers),
@@ -336,9 +344,21 @@ class DepositImportController extends Controller
         }
 
         if ($request->filled('material_mappings')) {
+            $savePermanent = $request->input('save_permanent_aliases', []);
             foreach ($request->input('material_mappings') as $raw => $id) {
                 if (!empty($id)) {
-                    $staging['material_mappings'][$raw] = (int) $id;
+                    $catId = (int) $id;
+                    $staging['material_mappings'][$raw] = $catId;
+
+                    if (!empty($savePermanent[$raw])) {
+                        $this->mappingService->registerAlias(
+                            $raw,
+                            $catId,
+                            MaterialAlias::SOURCE_BANK_SAMPAH,
+                            null,
+                            true
+                        );
+                    }
                 }
             }
         }
@@ -468,6 +488,55 @@ class DepositImportController extends Controller
         $count = count($created);
         return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
             ->with('success', "{$count} nasabah baru berhasil didaftarkan sekaligus dan seluruh baris terkait terpetakan otomatis.");
+    }
+
+    /**
+     * Quick Add a new canonical WasteCategory and optionally register a persistent alias.
+     */
+    public function quickAddCategory(Request $request)
+    {
+        $request->validate([
+            'token'                   => 'required|string',
+            'raw_material'            => 'required|string',
+            'name'                    => 'required|string|max:255',
+            'waste_category_group_id' => 'required|exists:waste_category_groups,id',
+            'unit'                    => 'required|string|max:20',
+            'member_price'            => 'required|numeric|min:0',
+            'save_alias'              => 'nullable|boolean',
+        ]);
+
+        $token = $request->input('token');
+        if (!Cache::has("deposit_import_{$token}")) {
+            return redirect()->route('bank-sampah.deposits.import')
+                ->withErrors(['file' => 'Sesi impor telah kedaluwarsa.']);
+        }
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $rawMat = $request->input('raw_material');
+
+        $category = $this->importService->quickAddCategory(
+            $request->input('name'),
+            (int) $request->input('waste_category_group_id'),
+            $request->input('unit'),
+            (float) $request->input('member_price'),
+            $request->boolean('save_alias', true) ? $rawMat : null
+        );
+
+        $staging['material_mappings'][$rawMat] = $category->id;
+
+        $staging['rows'] = $this->importService->processRows(
+            $staging['raw_rows'],
+            $staging['confirmed_date'],
+            $staging['customer_mappings'],
+            $staging['material_mappings'],
+            $staging['price_modes'],
+            $staging['duplicate_policies']
+        );
+
+        Cache::put("deposit_import_{$token}", $staging, now()->addHours(3));
+
+        return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
+            ->with('success', "Kategori sampah baru '{$category->name}' ({$category->code}) berhasil ditambahkan dan seluruh baris terkait terpetakan otomatis.");
     }
 
     /**
