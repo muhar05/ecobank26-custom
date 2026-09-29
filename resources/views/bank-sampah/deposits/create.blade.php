@@ -1,180 +1,346 @@
-<x-layouts.dashboard title="Catat Setoran Sampah">
-    <div x-data="depositForm()" x-cloak>
-        <x-form-card title="Catat Setoran Sampah"><div class="p-6">
-
-            <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga beli nasabah otomatis diambil dari master Kategori Sampah EcoBank.</p>
+<x-layouts.dashboard title="Setoran / Timbangan Sampah">
+    <div x-data="depositForm()" @keydown.window="handleGlobalKeydown($event)" x-cloak class="space-y-6">
+        {{-- Header Halaman --}}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <span>Setoran / Timbangan Sampah</span>
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Catat penimbangan sampah nasabah aktif secara cepat per nasabah
+                </p>
             </div>
+            <div>
+                <a href="{{ route('bank-sampah.deposits.index') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-lg shadow-xs transition">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Daftar Semua Setoran
+                </a>
+            </div>
+        </div>
 
-            <form method="POST" action="{{ route('bank-sampah.deposits.store') }}">
-                @csrf
+        {{-- Flash Notification --}}
+        @if(session('success'))
+            <div class="p-4 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-3 shadow-xs">
+                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <div class="text-sm font-medium">{{ session('success') }}</div>
+            </div>
+        @endif
 
-                @if($errors->has('details'))
-                    <div class="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm">{{ $errors->first('details') }}</div>
-                @endif
+        @if($errors->any())
+            <div class="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-xl text-sm">
+                <p class="font-bold mb-1">Periksa kembali isian form:</p>
+                <ul class="list-disc pl-5 space-y-0.5 text-xs">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Nasabah <span class="text-red-500">*</span></label>
-                        <select name="waste_customer_id" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih Nasabah --</option>
-                            @foreach($customers as $c)
-                                <option value="{{ $c->id }}" {{ old('waste_customer_id') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->customer_code }})</option>
-                            @endforeach
-                        </select>
-                        @error('waste_customer_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Tanggal <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" value="{{ old('date', date('Y-m-d')) }}" required class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                        @error('date') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                    </div>
-                </div>
+        {{-- Split-screen layout: Kiri (Input Setoran) vs Kanan (Rekap Hari Ini) --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {{-- PANEL KIRI: Form Timbangan Nasabah Aktif (~65%) --}}
+            <div class="lg:col-span-7 xl:col-span-8">
+                <form id="deposit-form" method="POST" action="{{ route('bank-sampah.deposits.store') }}" class="space-y-5">
+                    @csrf
+                    <input type="hidden" name="action" id="form-action" value="save_and_close">
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Catatan</label>
-                    <input type="text" name="notes" value="{{ old('notes') }}" class="mt-1 block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                </div>
-
-                {{-- Detail Setoran --}}
-                <div class="mb-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Detail Setoran</h3>
-                        <button type="button" @click="modalOpen = true" class="inline-flex items-center gap-1.5 bg-emerald-700 dark:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                            Tambah Kategori Sampah
-                        </button>
-                    </div>
-
-                    {{-- Empty state --}}
-                    <template x-if="rows.length === 0">
-                        <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center">
-                            <p class="text-sm text-slate-400 dark:text-slate-500">Belum ada kategori dipilih. Klik Tambah Kategori Sampah untuk mulai.</p>
+                    {{-- Card Data Nasabah & Tanggal --}}
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                        <div class="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                1. Identitas Nasabah
+                            </span>
+                            <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Nasabah Aktif
+                            </span>
                         </div>
-                    </template>
 
-                    {{-- Desktop table --}}
-                    <template x-if="rows.length > 0">
-                        <div>
-                            <div class="hidden md:block overflow-x-auto">
-                                <table class="min-w-full text-sm">
-                                    <thead>
-                                        <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase">
-                                            <th class="pb-2 text-left">Kategori Sampah</th>
-                                            <th class="pb-2 text-left w-32">Harga Nasabah / kg</th>
-                                            <th class="pb-2 text-left w-24">Berat (kg)</th>
-                                            <th class="pb-2 text-right w-32">Subtotal</th>
-                                            <th class="pb-2 text-center w-20">Status</th>
-                                            <th class="pb-2 w-10"></th>
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                            {{-- Pilih Nasabah --}}
+                            <div class="sm:col-span-7">
+                                <label for="waste_customer_id" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                    Nasabah <span class="text-rose-500">*</span>
+                                </label>
+                                <select name="waste_customer_id" 
+                                        id="waste_customer_id" 
+                                        required 
+                                        autofocus
+                                        @change="onCustomerChange()"
+                                        class="block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 font-medium">
+                                    <option value="">-- Pilih / Ketik Nama Nasabah --</option>
+                                    @foreach($customers as $c)
+                                        <option value="{{ $c->id }}" {{ old('waste_customer_id') == $c->id ? 'selected' : '' }}>
+                                            {{ $c->name }} ({{ $c->customer_code }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Tanggal --}}
+                            <div class="sm:col-span-5">
+                                <label for="date" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                    Tanggal Timbangan <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="date" 
+                                       id="date" 
+                                       value="{{ old('date', $selectedDate ?? date('Y-m-d')) }}" 
+                                       required 
+                                       class="block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            </div>
+
+                            {{-- Catatan --}}
+                            <div class="sm:col-span-12">
+                                <label for="notes" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                                    Catatan / Keterangan Timbangan (Opsional)
+                                </label>
+                                <input type="text" 
+                                       name="notes" 
+                                       id="notes" 
+                                       value="{{ old('notes') }}" 
+                                       placeholder="Contoh: Titipan RT 03, barang jemputan, dll." 
+                                       class="block w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Card Grid Rincian Material --}}
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div>
+                                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    2. Rincian Timbangan Material
+                                </span>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                    Ketik nama material &rarr; Enter &rarr; Ketik berat &rarr; Enter untuk baris baru
+                                </p>
+                            </div>
+                            <button type="button" 
+                                    @click="addRow(true)" 
+                                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                Tambah Baris (Enter)
+                            </button>
+                        </div>
+
+                        {{-- Tabel Grid Spreadsheet --}}
+                        <div class="overflow-x-visible">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        <th class="py-2.5 px-2 w-5 text-center">#</th>
+                                        <th class="py-2.5 px-2 min-w-[200px]">Material / Jenis Sampah</th>
+                                        <th class="py-2.5 px-2 w-32 text-right">Berat (kg)</th>
+                                        <th class="py-2.5 px-2 w-36 text-right">Harga Beli (Rp)</th>
+                                        <th class="py-2.5 px-2 w-36 text-right">Total (Rp)</th>
+                                        <th class="py-2.5 px-1 w-10 text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                                    <template x-for="(row, i) in rows" :key="row.id">
+                                        <tr class="group hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition">
+                                            {{-- Nomor Baris --}}
+                                            <td class="py-2 px-2 text-center text-xs font-mono text-slate-400" x-text="i + 1"></td>
+
+                                            {{-- Kolom Material (Searchable Combobox) --}}
+                                            <td class="py-2 px-2 relative" @click.outside="row.dropdownOpen = false">
+                                                <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
+                                                
+                                                <div class="relative">
+                                                    <input type="text"
+                                                           :id="'material-input-' + i"
+                                                           x-model="row.searchQuery"
+                                                           @focus="openDropdown(row, i)"
+                                                           @input="onSearchInput(row, i)"
+                                                           @keydown.down.prevent="navigateDown(row)"
+                                                           @keydown.up.prevent="navigateUp(row)"
+                                                           @keydown.enter.prevent="selectHighlighted(row, i)"
+                                                           @keydown.tab="onMaterialTab(row, i)"
+                                                           placeholder="Ketik nama material (Asoy, Emberan, dll)..."
+                                                           autocomplete="off"
+                                                           class="w-full text-xs sm:text-sm font-medium rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-emerald-500 focus:ring-emerald-500 py-1.5 px-2.5">
+                                                    
+                                                    {{-- Ikon Status Pemilihan --}}
+                                                    <div class="absolute right-2 top-2 pointer-events-none text-slate-400">
+                                                        <template x-if="row.catId">
+                                                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">&#10003;</span>
+                                                        </template>
+                                                        <template x-if="!row.catId">
+                                                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Dropdown Hasil Pencarian Material --}}
+                                                <div x-show="row.dropdownOpen" 
+                                                     x-transition.opacity.duration.100ms
+                                                     class="absolute z-30 left-2 right-2 mt-1 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-52 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                                                    <template x-for="(cat, cIdx) in getFilteredCategories(row.searchQuery)" :key="cat.id">
+                                                        <div @mousedown.prevent="selectCategory(row, cat, i)"
+                                                             @mouseenter="row.highlightedIndex = cIdx"
+                                                             :class="row.highlightedIndex === cIdx ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'"
+                                                             class="px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="font-bold" x-text="cat.name"></span>
+                                                                <template x-if="cat.code">
+                                                                    <span class="font-mono text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500" x-text="cat.code"></span>
+                                                                </template>
+                                                            </div>
+                                                            <div class="text-right shrink-0">
+                                                                <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400" x-text="formatRp(cat.member_price)"></span>
+                                                                <span class="text-[10px] text-slate-400" x-text="'/' + cat.unit"></span>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="getFilteredCategories(row.searchQuery).length === 0">
+                                                        <div class="p-3 text-center text-xs text-slate-400">
+                                                            Material tidak ditemukan
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </td>
+
+                                            {{-- Kolom Berat (kg) --}}
+                                            <td class="py-2 px-2 text-right">
+                                                <input type="number" 
+                                                       step="any" 
+                                                       min="0"
+                                                       :id="'weight-input-' + i"
+                                                       :name="'details[' + i + '][weight]'"
+                                                       x-model="row.weight"
+                                                       @keydown.enter.prevent="onWeightEnter(i)"
+                                                       @input="row.weightTouched = true"
+                                                       placeholder="0.00"
+                                                       class="w-full text-right text-xs sm:text-sm font-mono font-bold rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-emerald-500 py-1.5 px-2.5">
+                                            </td>
+
+                                            {{-- Kolom Harga Beli Nasabah (Read-only default + inline override) --}}
+                                            <td class="py-2 px-2 text-right whitespace-nowrap">
+                                                <input type="hidden" :name="'details[' + i + '][price_per_unit]'" :value="row.price">
+                                                
+                                                <template x-if="!row.editingPrice">
+                                                    <div class="flex items-center justify-end gap-1.5">
+                                                        <span class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300" x-text="formatRp(row.price)"></span>
+                                                        <template x-if="row.manualOverride">
+                                                            <span class="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold">Edit</span>
+                                                        </template>
+                                                        <button type="button" 
+                                                                @click="row.editingPrice = true" 
+                                                                class="text-[10px] text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 underline">
+                                                            Ubah
+                                                        </button>
+                                                    </div>
+                                                </template>
+
+                                                <template x-if="row.editingPrice">
+                                                    <div class="flex items-center justify-end gap-1">
+                                                        <input type="number" 
+                                                               step="1" 
+                                                               min="0" 
+                                                               x-model.number="row.price" 
+                                                               @input="row.manualOverride = true"
+                                                               @keydown.enter.prevent="row.editingPrice = false"
+                                                               class="w-20 px-1 py-0.5 text-xs text-right font-mono rounded border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-slate-900 dark:text-slate-100">
+                                                        <button type="button" 
+                                                                @click="row.editingPrice = false" 
+                                                                class="px-1.5 py-0.5 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded hover:bg-slate-300 transition">
+                                                            OK
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </td>
+
+                                            {{-- Kolom Subtotal --}}
+                                            <td class="py-2 px-2 text-right whitespace-nowrap">
+                                                <span class="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100" 
+                                                      x-text="formatRp(calculateRowSubtotal(row))">
+                                                </span>
+                                            </td>
+
+                                            {{-- Kolom Hapus Baris --}}
+                                            <td class="py-2 px-1 text-center">
+                                                <button type="button" 
+                                                        @click="removeRow(i)" 
+                                                        title="Hapus baris ini"
+                                                        class="p-1 rounded text-slate-300 hover:text-rose-600 dark:text-slate-600 dark:hover:text-rose-400 transition">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                        <template x-for="(row, i) in rows" :key="row.catId">
-                                            <tr>
-                                                <td class="pr-2 py-2">
-                                                    <input type="hidden" :name="'details['+i+'][waste_category_id]'" :value="row.catId">
-                                                    <span class="text-sm text-slate-800 dark:text-slate-200" x-text="row.name"></span>
-                                                    <span class="text-xs text-slate-400 dark:text-slate-500" x-text="'('+row.unit+')'"></span>
-                                                </td>
-                                                <td class="pr-2 py-2">
-                                                    <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700">
-                                                </td>
-                                                <td class="pr-2 py-2">
-                                                    <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                                </td>
-                                                <td class="py-2 text-right text-sm font-medium text-slate-700 dark:text-slate-300 pr-1">
-                                                    <span x-text="formatRp(row.weight * row.price)"></span>
-                                                </td>
-                                                <td class="py-2 text-center">
-                                                    <span x-show="!row.manualOverride" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">Auto</span>
-                                                    <span x-show="row.manualOverride" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300">Manual</span>
-                                                </td>
-                                                <td class="py-2 text-center">
-                                                    <button type="button" @click="removeRow(i)" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
 
-                            {{-- Mobile cards --}}
-                            <div class="md:hidden space-y-3">
-                                <template x-for="(row, i) in rows" :key="row.catId">
-                                    <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-2">
-                                        <input type="hidden" :name="'details['+i+'][waste_category_id]'" :value="row.catId">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm font-medium text-slate-800 dark:text-slate-200" x-text="row.name"></span>
-                                            <button type="button" @click="removeRow(i)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Harga / kg</label>
-                                                <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Berat (kg)</label>
-                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" @input="row.manualOverride = true; row.weightTouched = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                            </div>
-                                        </div>
-                                        <div class="flex justify-between items-center text-sm">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300 ml-auto" x-text="formatRp(row.weight * row.price)"></span>
-                                        </div>
-                                    </div>
-                                </template>
+                        {{-- Ringkasan Bawah Grid (Live Total) --}}
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-4">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 items-center">
+                                <div>
+                                    <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Material</span>
+                                    <span class="text-base font-bold text-slate-800 dark:text-slate-200" x-text="validRowCount() + ' jenis'"></span>
+                                </div>
+                                <div class="text-right sm:text-center">
+                                    <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Berat Timbangan</span>
+                                    <span class="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
+                                        <span x-text="grandTotalWeight().toFixed(2)"></span> <span class="text-xs font-normal text-slate-500">kg</span>
+                                    </span>
+                                </div>
+                                <div class="col-span-2 sm:col-span-1 text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-700">
+                                    <span class="block text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Total Nilai Tabungan</span>
+                                    <span class="text-xl font-extrabold text-emerald-700 dark:text-emerald-400 font-mono" x-text="formatRp(grandTotalAmount())"></span>
+                                </div>
                             </div>
                         </div>
-                    </template>
 
-                    {{-- Total --}}
-                    <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Masuk Tabungan Nasabah</span>
-                        <span class="text-lg font-bold text-emerald-700 dark:text-emerald-400" x-text="formatRp(grandTotal())"></span>
-                    </div>
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Baris dengan berat kosong/0 akan diabaikan.</p>
-                </div>
+                        {{-- Action Buttons --}}
+                        <div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <a href="{{ route('bank-sampah.deposits.index') }}" 
+                               class="w-full sm:w-auto text-center px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                Batal
+                            </a>
+                            
+                            <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+                                {{-- Tombol Simpan & Selesai --}}
+                                <button type="button" 
+                                        @click="submitForm('save_and_close')"
+                                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-xs font-bold shadow-xs transition">
+                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    Simpan & Selesai
+                                    <span class="text-[10px] text-slate-400 font-mono hidden md:inline">(Ctrl+Enter)</span>
+                                </button>
 
-                <div class="flex flex-col-reverse sm:flex-row gap-3">
-                    <a href="{{ route('bank-sampah.deposits.index') }}" class="text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</a>
-                    <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Simpan</button>
-                </div>
-            </form></div></x-form-card>
-
-        {{-- Category Picker Modal --}}
-        <div x-show="modalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="modalOpen = false">
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="modalOpen = false"></div>
-            <div x-show="modalOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-slate-200 dark:border-slate-700">
-                    <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Pilih Kategori Sampah</h3>
-                    <input type="text" x-model="modalSearch" placeholder="Cari kategori..." class="w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                </div>
-                <div class="flex-1 overflow-y-auto p-4 space-y-1">
-                    <template x-for="cat in filteredCategories()" :key="cat.id">
-                        <label class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition" :class="modalSelected.includes(cat.id) ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'">
-                            <input type="checkbox" :value="cat.id" x-model.number="modalSelected" :disabled="isAlreadySelected(cat.id)" class="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500">
-                            <div class="flex-1">
-                                <span class="text-sm text-slate-800 dark:text-slate-200" x-text="cat.name"></span>
-                                <span class="text-xs text-slate-400 dark:text-slate-500 ml-1" x-text="'('+cat.unit+')'"></span>
+                                {{-- Tombol Simpan & Lanjut Nasabah Berikutnya --}}
+                                <button type="button" 
+                                        @click="submitForm('save_and_next')"
+                                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-bold shadow-sm hover:shadow transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                    Simpan & Lanjut Nasabah Berikutnya
+                                    <span class="text-[10px] text-emerald-100 font-mono hidden md:inline">(Ctrl+Shift+Enter)</span>
+                                </button>
                             </div>
-                            <span x-show="isAlreadySelected(cat.id)" class="text-[10px] text-slate-400 dark:text-slate-500">Sudah dipilih</span>
-                        </label>
-                    </template>
-                </div>
-                <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex gap-3">
-                    <button type="button" @click="modalOpen = false; modalSelected = []; modalSearch = ''" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
-                    <button type="button" @click="addSelected()" class="flex-1 bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Tambahkan Kategori</button>
-                </div>
+                        </div>
+                    </div>
+                </form>
             </div>
+
+            {{-- PANEL KANAN: Rekap Setoran Hari Ini (~35%) --}}
+            <div class="lg:col-span-5 xl:col-span-4">
+                @include('bank-sampah.deposits.partials.today-recap')
+            </div>
+
         </div>
     </div>
 
+    {{-- Clean Data Preparation in Blade --}}
     @php
         $categoryOptions = $categories->map(function ($c) {
             return [
                 'id' => $c->id,
                 'name' => $c->name,
+                'code' => $c->code,
                 'unit' => $c->unit,
                 'member_price' => (float) $c->member_price,
             ];
@@ -184,60 +350,223 @@
     <script>
         function depositForm() {
             const allCategories = @json($categoryOptions);
+
             return {
                 rows: [],
-                modalOpen: false,
-                modalSearch: '',
-                modalSelected: [],
+                allCategories: allCategories,
+
                 init() {
-                    // Restore from old input
                     const oldRows = @json(old('details', []));
                     if (oldRows && Object.keys(oldRows).length) {
                         Object.values(oldRows).forEach(d => {
                             if (!d.waste_category_id) return;
-                            const cat = allCategories.find(c => c.id == d.waste_category_id);
-                            if (cat) this.rows.push({
-                                catId: cat.id,
-                                name: cat.name,
-                                unit: cat.unit,
-                                price: Number(d.price_per_unit) || Math.round(cat.member_price),
-                                weight: Number(d.weight) || 0,
-                                manualOverride: !!Number(d.price_per_unit)
-                            });
+                            const cat = this.allCategories.find(c => c.id == d.waste_category_id);
+                            if (cat) {
+                                this.rows.push({
+                                    id: Date.now() + Math.random(),
+                                    catId: cat.id,
+                                    name: cat.name,
+                                    code: cat.code,
+                                    unit: cat.unit,
+                                    price: Number(d.price_per_unit) || Math.round(cat.member_price),
+                                    weight: d.weight || '',
+                                    manualOverride: !!Number(d.price_per_unit) && Number(d.price_per_unit) !== Math.round(cat.member_price),
+                                    editingPrice: false,
+                                    searchQuery: cat.name,
+                                    dropdownOpen: false,
+                                    highlightedIndex: 0
+                                });
+                            }
+                        });
+                    }
+
+                    // Selalu sediakan minimal 1 baris kosong siap ketik
+                    if (this.rows.length === 0) {
+                        this.addRow(false);
+                    }
+                },
+
+                addRow(shouldFocus = true) {
+                    const newRow = {
+                        id: Date.now() + Math.random(),
+                        catId: '',
+                        name: '',
+                        code: '',
+                        unit: 'kg',
+                        price: 0,
+                        weight: '',
+                        manualOverride: false,
+                        editingPrice: false,
+                        searchQuery: '',
+                        dropdownOpen: false,
+                        highlightedIndex: 0
+                    };
+                    this.rows.push(newRow);
+
+                    if (shouldFocus) {
+                        this.$nextTick(() => {
+                            const newIdx = this.rows.length - 1;
+                            const input = document.getElementById('material-input-' + newIdx);
+                            if (input) input.focus();
                         });
                     }
                 },
-                filteredCategories() {
-                    const q = this.modalSearch.toLowerCase();
-                    return allCategories.filter(c => c.name.toLowerCase().includes(q));
+
+                removeRow(idx) {
+                    this.rows.splice(idx, 1);
+                    if (this.rows.length === 0) {
+                        this.addRow(false);
+                    }
                 },
-                isAlreadySelected(catId) {
-                    return this.rows.some(r => r.catId == catId);
-                },
-                addSelected() {
-                    this.modalSelected.forEach(catId => {
-                        if (this.isAlreadySelected(catId)) return;
-                        const cat = allCategories.find(c => c.id == catId);
-                        if (!cat) return;
-                        const row = {
-                            catId: cat.id,
-                            name: cat.name,
-                            unit: cat.unit,
-                            price: Math.round(cat.member_price),
-                            weight: 0,
-                            manualOverride: false,
-                            weightTouched: false
-                        };
-                        this.rows.push(row);
+
+                onCustomerChange() {
+                    this.$nextTick(() => {
+                        const firstInput = document.getElementById('material-input-0');
+                        if (firstInput && !this.rows[0].catId) {
+                            firstInput.focus();
+                        }
                     });
-                    this.modalSelected = [];
-                    this.modalSearch = '';
-                    this.modalOpen = false;
                 },
-                removeRow(i) { this.rows.splice(i, 1); },
-                grandTotal() { return this.rows.reduce((s, r) => s + (r.weight * r.price || 0), 0); },
-                formatRp(v) { return (v !== null && v !== undefined) ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
-            }
+
+                openDropdown(row, idx) {
+                    row.dropdownOpen = true;
+                    row.highlightedIndex = 0;
+                },
+
+                onSearchInput(row, idx) {
+                    row.dropdownOpen = true;
+                    row.highlightedIndex = 0;
+                    // Jika teks dihapus, reset catId
+                    if (row.catId && row.searchQuery.toLowerCase() !== row.name.toLowerCase()) {
+                        row.catId = '';
+                        row.price = 0;
+                    }
+                },
+
+                getFilteredCategories(query) {
+                    if (!query || query.trim() === '') return this.allCategories;
+                    const q = query.toLowerCase().trim();
+                    return this.allCategories.filter(c => 
+                        c.name.toLowerCase().includes(q) || 
+                        (c.code && c.code.toLowerCase().includes(q))
+                    );
+                },
+
+                navigateDown(row) {
+                    const list = this.getFilteredCategories(row.searchQuery);
+                    if (!list.length) return;
+                    row.dropdownOpen = true;
+                    row.highlightedIndex = (row.highlightedIndex + 1) % list.length;
+                },
+
+                navigateUp(row) {
+                    const list = this.getFilteredCategories(row.searchQuery);
+                    if (!list.length) return;
+                    row.dropdownOpen = true;
+                    row.highlightedIndex = (row.highlightedIndex - 1 + list.length) % list.length;
+                },
+
+                selectHighlighted(row, idx) {
+                    const list = this.getFilteredCategories(row.searchQuery);
+                    if (list.length > 0 && row.dropdownOpen) {
+                        const target = list[row.highlightedIndex] || list[0];
+                        this.selectCategory(row, target, idx);
+                    } else if (row.catId) {
+                        // Kategori sudah ada, loncat ke input berat
+                        this.focusWeightInput(idx);
+                    }
+                },
+
+                onMaterialTab(row, idx) {
+                    const list = this.getFilteredCategories(row.searchQuery);
+                    if (!row.catId && list.length > 0 && row.dropdownOpen) {
+                        const target = list[row.highlightedIndex] || list[0];
+                        this.selectCategory(row, target, idx);
+                    }
+                },
+
+                selectCategory(row, cat, idx) {
+                    row.catId = cat.id;
+                    row.name = cat.name;
+                    row.code = cat.code;
+                    row.unit = cat.unit;
+                    row.price = Math.round(cat.member_price);
+                    row.searchQuery = cat.name;
+                    row.dropdownOpen = false;
+                    row.manualOverride = false;
+                    this.focusWeightInput(idx);
+                },
+
+                focusWeightInput(idx) {
+                    this.$nextTick(() => {
+                        const weightInput = document.getElementById('weight-input-' + idx);
+                        if (weightInput) {
+                            weightInput.focus();
+                            weightInput.select();
+                        }
+                    });
+                },
+
+                onWeightEnter(idx) {
+                    const currentRow = this.rows[idx];
+                    if (!currentRow.catId) {
+                        const matInput = document.getElementById('material-input-' + idx);
+                        if (matInput) matInput.focus();
+                        return;
+                    }
+
+                    // Jika baris terakhir, buat baris baru otomatis
+                    if (idx === this.rows.length - 1) {
+                        this.addRow(true);
+                    } else {
+                        // Loncat ke input material baris berikutnya
+                        const nextInput = document.getElementById('material-input-' + (idx + 1));
+                        if (nextInput) nextInput.focus();
+                    }
+                },
+
+                calculateRowSubtotal(row) {
+                    const w = parseFloat(row.weight) || 0;
+                    const p = parseFloat(row.price) || 0;
+                    return w * p;
+                },
+
+                grandTotalWeight() {
+                    return this.rows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+                },
+
+                grandTotalAmount() {
+                    return this.rows.reduce((sum, r) => sum + this.calculateRowSubtotal(r), 0);
+                },
+
+                validRowCount() {
+                    return this.rows.filter(r => r.catId && (parseFloat(r.weight) || 0) > 0).length;
+                },
+
+                formatRp(val) {
+                    if (val === null || val === undefined || isNaN(val)) return 'Rp 0';
+                    return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+                },
+
+                submitForm(actionType) {
+                    const form = document.getElementById('deposit-form');
+                    const actionInput = document.getElementById('form-action');
+                    if (actionInput) actionInput.value = actionType;
+                    if (form) form.requestSubmit();
+                },
+
+                handleGlobalKeydown(e) {
+                    // Ctrl + Enter / Cmd + Enter: Simpan
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                            this.submitForm('save_and_next');
+                        } else {
+                            this.submitForm('save_and_close');
+                        }
+                    }
+                }
+            };
         }
     </script>
 </x-layouts.dashboard>

@@ -96,6 +96,14 @@ Route::middleware(['auth', 'permission:manage_waste_customers'])->prefix('bank-s
 
 // Bank Sampah - Deposits
 Route::middleware(['auth', 'permission:manage_deposits'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::get('deposits/import', [\App\Http\Controllers\DepositImportController::class, 'showForm'])->name('deposits.import');
+    Route::post('deposits/import/parse', [\App\Http\Controllers\DepositImportController::class, 'parseFile'])->name('deposits.import.parse');
+    Route::post('deposits/import/preview', [\App\Http\Controllers\DepositImportController::class, 'previewSheet'])->name('deposits.import.preview');
+    Route::post('deposits/import/resolve', [\App\Http\Controllers\DepositImportController::class, 'resolveMapping'])->name('deposits.import.resolve');
+    Route::post('deposits/import/quick-add-customer', [\App\Http\Controllers\DepositImportController::class, 'quickAddCustomer'])->name('deposits.import.quick-add-customer');
+    Route::post('deposits/import/bulk-add-customers', [\App\Http\Controllers\DepositImportController::class, 'bulkAddCustomers'])->name('deposits.import.bulk-add-customers');
+    Route::post('deposits/import/commit', [\App\Http\Controllers\DepositImportController::class, 'commitImport'])->name('deposits.import.commit');
+    Route::post('deposits/import/reset', [\App\Http\Controllers\DepositImportController::class, 'resetImport'])->name('deposits.import.reset');
     Route::resource('deposits', DepositController::class)->except(['show']);
 });
 

@@ -16,19 +16,47 @@ class DepositController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
         $deposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
-                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest('date')->paginate(20)->withQueryString();
-        return view('bank-sampah.deposits.index', compact('deposits', 'search'));
+                ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")
+                    ->orWhere('customer_code', 'like', "%{$search}%")))
+            ->when($startDate, fn($q) => $q->whereDate('date', '>=', $startDate))
+            ->when($endDate, fn($q) => $q->whereDate('date', '<=', $endDate))
+            ->latest('date')
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('bank-sampah.deposits.index', compact('deposits', 'search', 'startDate', 'endDate'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
 
-        return view('bank-sampah.deposits.create', compact('customers', 'categories'));
+        $selectedDate = $request->input('date', date('Y-m-d'));
+        $todayDeposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
+            ->whereDate('date', $selectedDate)
+            ->latest('id')
+            ->get();
+
+        $todayTotalWeight = (float) $todayDeposits->sum(fn($d) => $d->details->sum('weight'));
+        $todayTotalAmount = (float) $todayDeposits->sum('total_amount');
+        $todayCustomerCount = $todayDeposits->pluck('waste_customer_id')->unique()->count();
+
+        return view('bank-sampah.deposits.create', compact(
+            'customers',
+            'categories',
+            'todayDeposits',
+            'todayTotalWeight',
+            'todayTotalAmount',
+            'todayCustomerCount',
+            'selectedDate'
+        ));
     }
 
     public function store(Request $request, BankSampahService $service)
@@ -42,15 +70,21 @@ class DepositController extends Controller
         $details = $this->parseDetails($request);
 
         if (empty($details)) {
-            return back()->withErrors(['details' => 'Minimal satu item setoran harus diisi.'])->withInput();
+            return back()->withErrors(['details' => 'Minimal satu item timbangan harus diisi dengan berat lebih dari 0.'])->withInput();
         }
 
-        $service->recordDeposit([
+        $deposit = $service->recordDeposit([
             'waste_customer_id' => $request->waste_customer_id,
             'date' => $request->date,
             'notes' => $request->notes,
             'details' => $details,
         ]);
+
+        if ($request->input('action') === 'save_and_next') {
+            $customerName = $deposit->wasteCustomer->name ?? 'Nasabah';
+            return redirect()->route('bank-sampah.deposits.create', ['date' => $request->date])
+                ->with('success', "Setoran atas nama {$customerName} berhasil dicatat. Silakan lanjutkan timbangan berikutnya.");
+        }
 
         return redirect()->route('bank-sampah.deposits.index')
             ->with('success', 'Setoran sampah berhasil dicatat.');
@@ -58,7 +92,7 @@ class DepositController extends Controller
 
     public function edit(Deposit $deposit)
     {
-        $deposit->load('details');
+        $deposit->load(['details.wasteCategory', 'wasteCustomer']);
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();
 
