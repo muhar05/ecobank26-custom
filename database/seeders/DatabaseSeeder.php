@@ -11,12 +11,18 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $this->call([
+        $seeders = [
             RolePermissionSeeder::class,
             DefaultAdminSeeder::class,
             DefaultAppSettingsSeeder::class,
-            DefaultWasteCategoryGroupSeeder::class,
-            DemoSeeder::class,
-        ]);
+        ];
+
+        // Seed demo/test data only if explicitly requested
+        if (env('SEED_DEMO_DATA', false)) {
+            $seeders[] = DefaultWasteCategoryGroupSeeder::class;
+            $seeders[] = DemoSeeder::class;
+        }
+
+        $this->call($seeders);
     }
 }

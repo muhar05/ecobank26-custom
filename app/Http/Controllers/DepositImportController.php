@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\DepositTemplateExport;
 use App\Models\MaterialAlias;
 use App\Models\WasteCategory;
 use App\Models\WasteCategoryGroup;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DepositImportController extends Controller
 {
@@ -23,6 +25,14 @@ class DepositImportController extends Controller
     {
         $this->importService = $importService;
         $this->mappingService = $mappingService;
+    }
+
+    /**
+     * Download the official Excel import template for deposits.
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new DepositTemplateExport(), 'template-import-setoran.xlsx');
     }
 
     /**

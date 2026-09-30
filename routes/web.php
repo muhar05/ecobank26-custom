@@ -50,11 +50,6 @@ Route::get('/dashboard', function () {
 Route::get('/bank-sampah/dashboard', [DashboardController::class, 'bankSampah'])
     ->middleware(['auth', 'permission:view_waste_bank'])->name('bank-sampah.dashboard');
 
-// Bank Sampah Monitoring Audit Dashboard
-// Route::get('/bank-sampah/monitoring', [\App\Http\Controllers\BankSampahMonitoringController::class, 'index'])
-//     ->middleware(['auth', 'role:admin_bank_sampah|admin_rw'])
-//     ->name('bank-sampah.monitoring');
-
 // Warga dashboard - redirect to Bank Sampah dashboard
 Route::redirect('/warga/dashboard', '/bank-sampah/dashboard')->name('warga.dashboard');
 
@@ -107,6 +102,7 @@ Route::middleware(['auth', 'permission:manage_waste_customers', 'track_admin_dev
 // Bank Sampah - Deposits
 Route::middleware(['auth', 'permission:manage_deposits', 'track_admin_device'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::get('deposits/import', [\App\Http\Controllers\DepositImportController::class, 'showForm'])->name('deposits.import');
+    Route::get('deposits/import/template', [\App\Http\Controllers\DepositImportController::class, 'downloadTemplate'])->name('deposits.import.template');
     Route::post('deposits/import/parse', [\App\Http\Controllers\DepositImportController::class, 'parseFile'])->name('deposits.import.parse');
     Route::post('deposits/import/preview', [\App\Http\Controllers\DepositImportController::class, 'previewSheet'])->name('deposits.import.preview');
     Route::post('deposits/import/resolve', [\App\Http\Controllers\DepositImportController::class, 'resolveMapping'])->name('deposits.import.resolve');

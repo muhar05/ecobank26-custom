@@ -31,7 +31,7 @@ class WastePriceImportController extends Controller
 
     public function template()
     {
-        return Excel::download(new WastePriceTemplateExport(), 'template-harga-sampah.xlsx');
+        return Excel::download(new \App\Exports\AggregatorPriceTemplateExport(), 'template-harga-aggregator.xlsx');
     }
 
     public function import(Request $request)
@@ -69,23 +69,59 @@ class WastePriceImportController extends Controller
         $errors = [];
         $rowNumber = 1;
 
+        // Detect column indices from header
+        $colMaterial = 3;
+        $colPrice = 6;
+        $colUnit = 4;
+        $colCode = 2;
+        $colGroupCode = 0;
+        $colGroupName = 1;
+        $colDate = 7;
+
+        if (!empty($header)) {
+            $hasMatchedHeader = false;
+            foreach ($header as $colIdx => $colName) {
+                $normCol = strtolower(trim((string)$colName));
+                if (preg_match('/^(material|\*?\s*nama kategori sampah|\*?\s*nama kategori|kategori)$/i', $normCol)) {
+                    $colMaterial = $colIdx;
+                    $hasMatchedHeader = true;
+                } elseif (preg_match('/^(harga|\*?\s*harga jual ke agregator|\*?\s*harga agregator|harga jual|collector_price)$/i', $normCol)) {
+                    $colPrice = $colIdx;
+                    $hasMatchedHeader = true;
+                } elseif (preg_match('/^(\*?\s*satuan|unit)$/i', $normCol)) {
+                    $colUnit = $colIdx;
+                } elseif (preg_match('/^(kode kategori|kode|code)$/i', $normCol)) {
+                    $colCode = $colIdx;
+                } elseif (preg_match('/^(tanggal berlaku|tanggal|date)$/i', $normCol)) {
+                    $colDate = $colIdx;
+                }
+            }
+
+            // If header was simply 2 columns (e.g. Material | Harga)
+            if (!$hasMatchedHeader && count($header) === 2) {
+                $colMaterial = 0;
+                $colPrice = 1;
+                $colUnit = null;
+                $colCode = null;
+            }
+        }
+
         foreach ($importData as $row) {
             $rowNumber++;
 
             // Skip completely empty rows
-            $nonEmptyCells = array_filter($row, fn($cell) => $cell !== null && trim($cell) !== '');
+            $nonEmptyCells = array_filter($row, fn($cell) => $cell !== null && trim((string)$cell) !== '');
             if (empty($nonEmptyCells)) {
                 continue;
             }
 
-            $groupCode = isset($row[0]) ? trim($row[0]) : '';
-            $groupName = isset($row[1]) ? trim($row[1]) : '';
-            $categoryCode = isset($row[2]) ? trim($row[2]) : '';
-            $categoryName = isset($row[3]) ? trim($row[3]) : '';
-            $unit = isset($row[4]) ? trim($row[4]) : '';
-            $memberPrice = isset($row[5]) ? trim($row[5]) : '';
-            $collectorPrice = isset($row[6]) ? trim($row[6]) : '';
-            $tanggalBerlakuRaw = isset($row[7]) ? trim($row[7]) : '';
+            $groupCode = ($colGroupCode !== null && isset($row[$colGroupCode])) ? trim((string)$row[$colGroupCode]) : '';
+            $groupName = ($colGroupName !== null && isset($row[$colGroupName])) ? trim((string)$row[$colGroupName]) : '';
+            $categoryCode = ($colCode !== null && isset($row[$colCode])) ? trim((string)$row[$colCode]) : '';
+            $categoryName = ($colMaterial !== null && isset($row[$colMaterial])) ? trim((string)$row[$colMaterial]) : '';
+            $unit = ($colUnit !== null && isset($row[$colUnit]) && trim((string)$row[$colUnit]) !== '') ? trim((string)$row[$colUnit]) : 'kg';
+            $collectorPrice = ($colPrice !== null && isset($row[$colPrice])) ? trim((string)$row[$colPrice]) : '';
+            $tanggalBerlakuRaw = ($colDate !== null && isset($row[$colDate])) ? trim((string)$row[$colDate]) : '';
 
             $reason = null;
 

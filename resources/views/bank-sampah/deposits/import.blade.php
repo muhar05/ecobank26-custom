@@ -52,6 +52,25 @@
                     </p>
                 </div>
 
+                {{-- Download Template Section --}}
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-700 shadow-xs flex items-center justify-center border border-slate-200 dark:border-slate-600 shrink-0">
+                            <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Belum punya format Excel setoran?</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Gunakan template resmi (memuat sheet "Data Setoran" & "Petunjuk") agar format sesuai sistem.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('bank-sampah.deposits.import.template') }}" class="inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition px-4 py-2 rounded-lg text-xs font-bold shadow-xs shrink-0">
+                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download Template Excel
+                    </a>
+                </div>
+
                 {{-- Panduan Format Excel --}}
                 <div class="p-4 bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
                     <div class="font-bold flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300">
