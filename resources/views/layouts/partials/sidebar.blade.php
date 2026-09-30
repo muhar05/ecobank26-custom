@@ -1,16 +1,28 @@
-<aside class="flex flex-col w-64 min-w-[16rem] h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 transition-colors duration-300">
+<aside class="flex flex-col h-full bg-surface border-r border-border transition-all duration-200 overflow-hidden" :class="sidebarCollapsed ? 'w-20 min-w-[5rem]' : 'w-64 min-w-[16rem]'">
     {{-- Brand --}}
-    <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
-        <h1 class="text-lg font-bold text-emerald-800 dark:text-emerald-400">ECOBANK026</h1>
-        <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">Bank Sampah</p>
+    <div class="px-5 py-5 border-b border-border-subtle flex items-center justify-between overflow-hidden">
+        <div class="flex items-center gap-2.5 overflow-hidden" x-show="!sidebarCollapsed">
+            <div class="w-8 h-8 rounded-radius-md bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-subtle">
+                EB
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-heading-sm font-bold text-text truncate">ECOBANK026</h1>
+                <p class="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Bank Sampah</p>
+            </div>
+        </div>
+        <div class="mx-auto" x-show="sidebarCollapsed" x-cloak>
+            <div class="w-8 h-8 rounded-radius-md bg-primary text-white flex items-center justify-center font-bold text-sm shadow-subtle">
+                EB
+            </div>
+        </div>
     </div>
 
     {{-- Navigation --}}
-    <nav class="flex-1 px-4 py-4 overflow-y-auto space-y-6">
+    <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-6">
 
         {{-- Section: Main --}}
         <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Main</p>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Main</p>
             <div class="space-y-1">
                 <x-sidebar-link href="/bank-sampah/dashboard" :active="request()->is('bank-sampah/dashboard')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></x-slot>
@@ -23,7 +35,7 @@
         @can('view_own_savings')
             @role('warga')
             <div>
-                <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Bank Sampah Saya</p>
+                <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Bank Sampah Saya</p>
                 <div class="space-y-1">
                     <x-sidebar-link href="/warga/savings" :active="request()->is('warga/savings') || request()->is('warga/savings/')">
                         <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></x-slot>
@@ -41,7 +53,7 @@
         {{-- Section: Bank Sampah (admin_bank_sampah full menu) --}}
         @role('admin_bank_sampah')
         <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Data Master</p>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Data Master</p>
             <div class="space-y-1">
                 <x-sidebar-link href="/bank-sampah/waste-categories" :active="request()->is('bank-sampah/waste-categories*')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg></x-slot>
@@ -69,7 +81,7 @@
         </div>
 
         <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Transaksi</p>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Transaksi</p>
             <div class="space-y-1">
                 <x-sidebar-link href="/bank-sampah/deposits" :active="request()->is('bank-sampah/deposits*')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg></x-slot>
@@ -91,7 +103,7 @@
         </div>
 
         <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Laporan</p>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Laporan</p>
             <div class="space-y-1">
                 <x-sidebar-link href="/bank-sampah/savings" :active="request()->is('bank-sampah/savings*')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></x-slot>
@@ -103,24 +115,13 @@
                 </x-sidebar-link>
             </div>
         </div>
-        @if(auth()->user()?->hasRole('admin_bank_sampah') || auth()->user()?->hasRole('admin_rw'))
-        <!-- <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Audit & Kontrol</p>
-            <div class="space-y-1">
-                <x-sidebar-link href="/bank-sampah/monitoring" :active="request()->is('bank-sampah/monitoring*')">
-                    <x-slot name="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438a3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138a3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0a3.42 3.42 0 00-1.946-.806a3.42 3.42 0 01-3.138-3.138a3.42 3.42 0 00-.806-1.946a3.42 3.42 0 010-4.438a3.42 3.42 0 00.806-1.946a3.42 3.42 0 013.138-3.138z"/></svg></x-slot>
-                    Monitoring Audit
-                </x-sidebar-link>
-            </div>
-        </div> -->
-        @endif
         @endrole
 
         {{-- Section: Bank Sampah (admin_rt view-only) --}}
         @role('admin_rt')
         @can('view_waste_bank')
         <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Bank Sampah</p>
+            <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Bank Sampah</p>
             <div class="space-y-1">
                 <x-sidebar-link href="/bank-sampah/dashboard" :active="request()->is('bank-sampah/dashboard')">
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg></x-slot>
@@ -130,44 +131,21 @@
                     <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></x-slot>
                     Saldo Nasabah
                 </x-sidebar-link>
-                @can('view_waste_reports')
-                <x-sidebar-link href="/bank-sampah/cash-report" :active="request()->is('bank-sampah/cash-report*')">
-                    <x-slot name="icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></x-slot>
-                    Kas Bank Sampah
-                </x-sidebar-link>
-                @endcan
             </div>
         </div>
         @endcan
         @endrole
 
-        {{-- Section: Keamanan & Audit (admin_rw only) --}}
-        @role('admin_rw')
-        <div>
-            <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Keamanan & Audit</p>
-            <div class="space-y-1">
-                <x-sidebar-link href="/admin/audit-logs" :active="request()->is('admin/audit-logs*')">
-                    <x-slot name="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806a3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438a3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138a3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0a3.42 3.42 0 00-1.946-.806a3.42 3.42 0 01-3.138-3.138a3.42 3.42 0 00-.806-1.946a3.42 3.42 0 010-4.438a3.42 3.42 0 00.806-1.946a3.42 3.42 0 013.138-3.138z"/></svg></x-slot>
-                    Log Audit Sistem
-                </x-sidebar-link>
-                <x-sidebar-link href="/admin/settings" :active="request()->is('admin/settings*')">
-                    <x-slot name="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></x-slot>
-                    Pengaturan Sistem
-                </x-sidebar-link>
-            </div>
-        </div>
-        @endrole
-
     </nav>
 
-    {{-- Bottom: Akun --}}
-    <div class="px-3 py-4 border-t border-slate-100 dark:border-slate-800">
-        <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Akun</p>
+    {{-- Bottom: Akun & Logout --}}
+    <div class="px-3 py-4 border-t border-border-subtle">
+        <p class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-text-muted/70" x-show="!sidebarCollapsed" x-cloak>Akun</p>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-800 hover:text-red-600 dark:hover:text-red-400 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                Keluar
+            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-radius-md text-body-sm font-medium text-text-muted hover:bg-danger-light hover:text-danger-text transition-subtle">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span class="truncate" x-show="!sidebarCollapsed" x-cloak>Keluar</span>
             </button>
         </form>
     </div>

@@ -10,19 +10,22 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased bg-slate-50 dark:bg-slate-950" x-data="{ sidebarOpen: false }">
+<body class="font-sans antialiased bg-background text-text transition-colors duration-200" 
+      x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }" 
+      x-init="$watch('sidebarCollapsed', val => localStorage.setItem('sidebarCollapsed', val))">
 
 <div class="flex h-screen overflow-hidden">
     {{-- Sidebar: desktop --}}
-    <div class="hidden lg:flex lg:w-64 lg:min-w-[16rem] lg:flex-shrink-0">
+    <div class="hidden lg:flex transition-all duration-200 flex-shrink-0"
+         :class="sidebarCollapsed ? 'lg:w-20 lg:min-w-[5rem]' : 'lg:w-64 lg:min-w-[16rem]'">
         @include('layouts.partials.sidebar')
     </div>
 
     {{-- Sidebar: mobile overlay --}}
-    <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-40 lg:hidden" @click="sidebarOpen = false">
+    <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-40 lg:hidden" @click="sidebarOpen = false" x-cloak>
         <div class="absolute inset-0 bg-black/50"></div>
     </div>
-    <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
+    <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="fixed inset-y-0 left-0 z-50 w-64 lg:hidden" x-cloak>
         @include('layouts.partials.sidebar')
     </div>
 
@@ -35,6 +38,8 @@
         </main>
     </div>
 </div>
+
+<x-ui.toast />
 
 </body>
 </html>

@@ -3,3 +3,96 @@
 @tailwind utilities;
 
 [x-cloak] { display: none !important; }
+
+:root {
+  /* ========================================================================= */
+  /* ECOBANK026 CORE SEMANTIC TOKENS (LIGHT THEME - EARTHY MODERN OPERATIONAL)  */
+  /* ========================================================================= */
+
+  /* Brand / Primary: Forest/Emerald Green */
+  --color-primary: 5 150 105;        /* #059669 */
+  --color-primary-hover: 4 120 87;   /* #047857 */
+  --color-primary-light: 236 253 245;/* #ecfdf5 */
+  --color-primary-fg: 255 255 255;
+
+  /* Secondary: Warm Earthy Amber/Ochre */
+  --color-secondary: 217 119 6;      /* #d97706 */
+  --color-secondary-hover: 180 83 9; /* #b45309 */
+  --color-secondary-light: 254 243 199;
+
+  /* Backgrounds: Warm stone/cream neutral foundation */
+  --color-background: 250 250 249;   /* #fafaf9 (stone-50) */
+  --color-surface: 255 255 255;      /* #ffffff pure white card surface */
+  --color-surface-muted: 245 245 244;/* #f5f5f4 (stone-100) soft warm surface */
+
+  /* Typography / Text: Warm dark charcoal & warm stone muted */
+  --color-text: 28 25 23;            /* #1c1917 (stone-900) */
+  --color-text-muted: 120 113 108;   /* #78716c (stone-500) */
+
+  /* Borders: Warm subtle borders */
+  --color-border: 231 229 228;       /* #e7e5e4 (stone-200) */
+  --color-border-subtle: 245 245 244;/* #f5f5f4 (stone-100) */
+
+  /* Semantic Feedback */
+  --color-success: 16 185 129;       /* #10b981 */
+  --color-success-light: 236 253 245;
+  --color-success-text: 6 95 70;
+
+  --color-warning: 217 119 6;        /* #d97706 */
+  --color-warning-light: 254 243 199;
+  --color-warning-text: 146 64 14;
+
+  --color-danger: 225 29 72;         /* #e11d48 */
+  --color-danger-light: 255 241 242;
+  --color-danger-text: 159 18 57;
+
+  --color-info: 14 165 233;          /* #0ea5e9 */
+  --color-info-light: 240 249 255;
+  --color-info-text: 3 105 161;
+}
+
+.dark {
+  /* ========================================================================= */
+  /* ECOBANK026 CORE SEMANTIC TOKENS (DARK THEME - DEEP WARM CHARCOAL)          */
+  /* ========================================================================= */
+
+  --color-primary: 16 185 129;        /* #10b981 */
+  --color-primary-hover: 5 150 105;   /* #059669 */
+  --color-primary-light: 6 78 59 / 0.3;
+  --color-primary-fg: 255 255 255;
+
+  --color-secondary: 245 158 11;     /* #f59e0b */
+  --color-secondary-hover: 217 119 6;
+  --color-secondary-light: 120 53 15 / 0.3;
+
+  --color-background: 12 10 9;        /* #0c0a09 (stone-950) warm deep charcoal */
+  --color-surface: 28 25 23;          /* #1c1917 (stone-900) warm surface */
+  --color-surface-muted: 41 37 36;    /* #292524 (stone-800) */
+
+  --color-text: 245 245 244;          /* #f5f5f4 (stone-100) warm off-white */
+  --color-text-muted: 168 162 158;    /* #a8a29e (stone-400) */
+
+  --color-border: 41 37 36;          /* #292524 (stone-800) */
+  --color-border-subtle: 28 25 23;
+
+  --color-success: 52 211 153;       /* #34d399 */
+  --color-success-light: 6 78 59 / 0.4;
+  --color-success-text: 167 243 208;
+
+  --color-warning: 251 191 36;       /* #fbbf24 */
+  --color-warning-light: 120 53 15 / 0.4;
+  --color-warning-text: 253 230 138;
+
+  --color-danger: 251 113 133;       /* #fb7185 */
+  --color-danger-light: 136 19 55 / 0.4;
+  --color-danger-text: 254 205 211;
+
+  --color-info: 56 189 248;          /* #38bdf8 */
+  --color-info-light: 12 74 110 / 0.4;
+  --color-info-text: 186 230 253;
+}
+
+/* Subtle motion transitions */
+.transition-subtle {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
