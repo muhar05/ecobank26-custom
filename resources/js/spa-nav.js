@@ -34,10 +34,11 @@ function normalizePath(pathname) {
 export function isEligibleUrl(url) {
     if (url.origin !== window.location.origin) return false;
     const path = normalizePath(url.pathname);
-    // Eligible modules: Dashboard, Deposits, and Customers (full CRUD directory)
+    // Eligible modules: Dashboard, Deposits, Customers, and Sales
     if (path === '/bank-sampah/dashboard') return true;
     if (path.startsWith('/bank-sampah/customers')) return true;
-    if (path === '/bank-sampah/deposits' || path === '/bank-sampah/deposits/create') return true;
+    if (path.startsWith('/bank-sampah/deposits')) return true;
+    if (path.startsWith('/bank-sampah/sales')) return true;
     return POC_ELIGIBLE_PATHS.some(p => normalizePath(p) === path);
 }
 

@@ -19,11 +19,46 @@ class SaleController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $sales = Sale::with('collector')
+        $selectedDate = $request->input('date', date('Y-m-d'));
+
+        // 1. Calculate remaining deposited waste on selected date ready to sell
+        $deposited = \App\Models\DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $selectedDate))
+            ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
+            ->groupBy('waste_category_id')
+            ->pluck('total_deposited', 'waste_category_id');
+
+        $sold = SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $selectedDate))
+            ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
+            ->groupBy('waste_category_id')
+            ->pluck('total_sold', 'waste_category_id');
+
+        $readyToSell = collect();
+        if ($deposited->isNotEmpty()) {
+            $categories = WasteCategory::whereIn('id', $deposited->keys())->orderBy('name')->get();
+            foreach ($categories as $cat) {
+                $depWeight = (float) ($deposited[$cat->id] ?? 0);
+                $soldWeight = (float) ($sold[$cat->id] ?? 0);
+                $remaining = round($depWeight - $soldWeight, 2);
+
+                if ($remaining > 0) {
+                    $readyToSell->push([
+                        'category' => $cat,
+                        'total_deposited' => $depWeight,
+                        'total_sold' => $soldWeight,
+                        'remaining_weight' => $remaining,
+                        'member_price' => (float) $cat->member_price,
+                    ]);
+                }
+            }
+        }
+
+        // 2. Query sales history with collector and details
+        $sales = Sale::with(['collector', 'details.wasteCategory'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
                 ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest()->paginate(20)->withQueryString();
-        return view('bank-sampah.sales.index', compact('sales', 'search'));
+            ->latest()->paginate(15)->withQueryString();
+
+        return view('bank-sampah.sales.index', compact('sales', 'search', 'readyToSell', 'selectedDate'));
     }
 
     public function dailyRecap(Request $request)

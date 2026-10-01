@@ -1,356 +1,632 @@
-<x-layouts.dashboard title="Catat Penjualan">
-    <div x-data="saleForm()" x-cloak>
-        <x-form-card title="Catat Penjualan"><div class="p-6">
-
-            <div class="mb-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
-                <p class="text-xs text-emerald-700 dark:text-emerald-400">Harga otomatis dari Harga Sampah. Kas Bank Sampah hanya menerima margin (selisih harga agregator − harga nasabah).</p>
-            </div>
-
-            <form method="POST" action="{{ route('bank-sampah.sales.store') }}" class="space-y-6">
-                @csrf
-
-                @if($errors->any())
-                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                        <ul class="text-xs text-red-600 dark:text-red-400 space-y-1">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Agregator <span class="text-red-500">*</span></label>
-                        <select name="collector_id" required x-model="collectorId" @change="updatePrices()" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih Agregator --</option>
-                            @foreach($collectors as $collector)
-                                <option value="{{ $collector->id }}" @selected(old('collector_id') == $collector->id)>{{ $collector->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('collector_id') <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="space-y-1">
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Tanggal <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" x-model="date" value="{{ old('date', date('Y-m-d')) }}" required class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                        @error('date') <p class="text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Catatan</label>
-                    <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Opsional" class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                </div>
-
-                {{-- Detail Sampah --}}
-                <div>
-                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <div>
-                            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Detail Sampah yang Dijual</h3>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Tarik rekap otomatis untuk mengisi sisa setoran hari ini, atau pilih kategori manual.</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" @click="fetchRecap()" :disabled="loadingRecap || !collectorId" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                <span x-text="loadingRecap ? 'Menghitung...' : 'Tarik Rekap Setoran Hari Ini'"></span>
-                            </button>
-                            <button type="button" @click="modalOpen = true" class="inline-flex items-center gap-1.5 bg-emerald-700 dark:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition shadow-sm">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                Pilih Manual
-                            </button>
-                        </div>
-                    </div>
-
-                    <template x-if="rows.length === 0">
-                        <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center">
-                            <p class="text-sm text-slate-400 dark:text-slate-500">Belum ada kategori dipilih. Klik <strong>Tarik Rekap Setoran Hari Ini</strong> atau <strong>Pilih Manual</strong> untuk mulai.</p>
-                        </div>
-                    </template>
-
-                    <template x-if="rows.length > 0">
-                        <div>
-                            {{-- Desktop table --}}
-                            <div class="hidden md:block overflow-x-auto">
-                                <table class="min-w-full text-sm">
-                                    <thead>
-                                        <tr class="text-xs text-slate-500 dark:text-slate-400 uppercase">
-                                            <th class="pb-2 text-left">Kategori Sampah</th>
-                                            <th class="pb-2 text-left w-28">Harga Agregator</th>
-                                            <th class="pb-2 text-left w-28">Harga Nasabah</th>
-                                            <th class="pb-2 text-left w-24">Sisa Tersedia</th>
-                                            <th class="pb-2 text-left w-32">Berat Dijual (kg)</th>
-                                            <th class="pb-2 text-right w-28">Subtotal</th>
-                                            <th class="pb-2 text-right w-28">Margin Kas</th>
-                                            <th class="pb-2 text-center w-16">Status</th>
-                                            <th class="pb-2 w-10"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                        <template x-for="(row, i) in rows" :key="row.catId">
-                                            <tr>
-                                                <td class="pr-2 py-2">
-                                                    <input type="hidden" :name="'details['+i+'][waste_category_id]'" :value="row.catId">
-                                                    <span class="text-sm font-medium text-slate-800 dark:text-slate-200" x-text="row.name"></span>
-                                                </td>
-                                                <td class="pr-2 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                                    <span x-text="formatRp(row.price)"></span>
-                                                </td>
-                                                <td class="pr-2 py-2 text-sm text-slate-500 dark:text-slate-400">
-                                                    <span x-text="formatRp(row.memberPrice)"></span>
-                                                </td>
-                                                <td class="pr-2 py-2 text-sm text-slate-600 dark:text-slate-300 font-mono">
-                                                    <span x-text="row.remainingWeight !== undefined ? row.remainingWeight + ' ' + (row.unit || 'kg') : '-'"></span>
-                                                </td>
-                                                <td class="pr-2 py-2">
-                                                    <input type="number" step="0.01" min="0.01" :max="row.remainingWeight || undefined" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                                    <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
-                                                        <span class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold block mt-0.5">Melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
-                                                    </template>
-                                                </td>
-                                                <td class="py-2 text-right text-sm text-slate-700 dark:text-slate-300 pr-1 font-semibold">
-                                                    <span x-text="formatRp(row.weight * row.price)"></span>
-                                                </td>
-                                                <td class="py-2 text-right text-sm text-emerald-600 dark:text-emerald-400 pr-1 font-bold">
-                                                    <span x-text="formatRp(rowMargin(row))"></span>
-                                                </td>
-                                                <td class="py-2 text-center">
-                                                    <span x-show="row.hasPrice && collectorId" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300">Siap</span>
-                                                    <span x-show="collectorId && !row.hasPrice" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300" title="Agregator belum punya harga">⚠️</span>
-                                                </td>
-                                                <td class="py-2 text-center">
-                                                    <button type="button" @click="removeRow(i)" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {{-- Mobile cards --}}
-                            <div class="md:hidden space-y-3">
-                                <template x-for="(row, i) in rows" :key="row.catId">
-                                    <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-2">
-                                        <input type="hidden" :name="'details['+i+'][waste_category_id]'" :value="row.catId">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm font-medium text-slate-800 dark:text-slate-200" x-text="row.name"></span>
-                                            <button type="button" @click="removeRow(i)" class="text-red-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-3 text-xs">
-                                            <div>
-                                                <span class="text-slate-400">Harga Agregator:</span>
-                                                <p class="font-semibold text-slate-800 dark:text-slate-200" x-text="formatRp(row.price)"></p>
-                                            </div>
-                                            <div>
-                                                <span class="text-slate-400">Sisa Tersedia:</span>
-                                                <p class="font-mono font-semibold text-slate-800 dark:text-slate-200" x-text="row.remainingWeight !== undefined ? row.remainingWeight + ' kg' : '-'"></p>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Berat Dijual (kg)</label>
-                                            <input type="number" step="0.01" min="0.01" :max="row.remainingWeight || undefined" :name="'details['+i+'][weight]'" x-model.number="row.weight" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                            <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
-                                                <span class="text-[10px] text-rose-600 font-semibold block mt-0.5">Melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
-                                            </template>
-                                        </div>
-                                        <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
-                                            <span>Margin: <strong class="text-emerald-600" x-text="formatRp(rowMargin(row))"></strong></span>
-                                            <span>Subtotal: <strong class="text-slate-800 dark:text-slate-100" x-text="formatRp(row.weight * row.price)"></strong></span>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                                            <div>
-                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Harga Agregator / kg</label>
-                                                <input type="number" step="1" min="0" :name="'details['+i+'][price_per_unit]'" x-model.number="row.price" @input="row.manualOverride = true" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Berat (kg)</label>
-                                                <input type="number" step="0.01" min="0" :name="'details['+i+'][weight]'" x-model.number="row.weight" placeholder="0" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                            </div>
-                                        </div>
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-slate-500 dark:text-slate-400">Subtotal:</span>
-                                            <span class="font-medium text-slate-700 dark:text-slate-300" x-text="formatRp(row.weight * row.price)"></span>
-                                        </div>
-                                        <div class="flex justify-between text-sm">
-                                            <span class="text-slate-500 dark:text-slate-400">Margin:</span>
-                                            <span class="font-medium text-emerald-600 dark:text-emerald-400" x-text="formatRp(rowMargin(row))"></span>
-                                        </div>
-                                        <span x-show="collectorId && !row.hasPrice" class="text-[11px] text-amber-600 dark:text-amber-400">Harga belum tersedia untuk agregator dan kategori ini.</span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-
-                    {{-- Totals --}}
-                    <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Penjualan ke Agregator</span>
-                            <span class="text-base font-bold text-slate-900 dark:text-slate-100" x-text="formatRp(grandTotal())"></span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Margin Kas Bank Sampah</span>
-                            <span class="text-base font-bold text-emerald-700 dark:text-emerald-400" x-text="formatRp(totalMargin())"></span>
-                        </div>
-                    </div>
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Baris kosong diabaikan.</p>
-                </div>
-
-                <div class="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <a href="{{ route('bank-sampah.sales.index') }}" class="text-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</a>
-                    <button type="submit" class="bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Simpan Penjualan</button>
-                </div>
-            </form></div></x-form-card>
-
-        {{-- Category Picker Modal --}}
-        <div x-show="modalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="modalOpen = false">
-            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="modalOpen = false"></div>
-            <div x-show="modalOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-slate-200 dark:border-slate-700">
-                    <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">Pilih Kategori Sampah</h3>
-                    <input type="text" x-model="modalSearch" placeholder="Cari kategori..." class="w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                </div>
-                <div class="flex-1 overflow-y-auto p-4 space-y-1">
-                    <template x-for="cat in filteredCategories()" :key="cat.id">
-                        <label class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition" :class="modalSelected.includes(cat.id) ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent'">
-                            <input type="checkbox" :value="cat.id" x-model.number="modalSelected" :disabled="isAlreadySelected(cat.id)" class="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500">
-                            <div class="flex-1">
-                                <span class="text-sm text-slate-800 dark:text-slate-200" x-text="cat.name"></span>
-                                <span class="text-xs text-slate-400 dark:text-slate-500 ml-1" x-text="'('+cat.unit+')'"></span>
-                            </div>
-                            <span x-show="isAlreadySelected(cat.id)" class="text-[10px] text-slate-400 dark:text-slate-500">Sudah dipilih</span>
-                        </label>
-                    </template>
-                </div>
-                <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex gap-3">
-                    <button type="button" @click="modalOpen = false; modalSelected = []; modalSearch = ''" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">Batal</button>
-                    <button type="button" @click="addSelected()" class="flex-1 bg-emerald-700 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800 dark:hover:bg-emerald-400 transition">Tambahkan Kategori</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+<x-layouts.dashboard title="Catat Penjualan ke Agregator">
     @php
         $categoryOptions = $wasteCategories->map(function ($c) {
             return [
                 'id' => $c->id,
                 'name' => $c->name,
+                'code' => $c->code,
                 'unit' => $c->unit,
                 'member_price' => (float) $c->member_price,
             ];
         })->values()->all();
+
+        $collectorOptions = $collectors->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'phone' => $c->phone,
+            ];
+        })->values()->all();
     @endphp
 
+    <div x-data="saleCreateWorkflow()" x-cloak class="max-w-5xl mx-auto space-y-6 pb-12">
+        {{-- Page Header --}}
+        <x-ui.page-header title="Catat Penjualan ke Agregator" description="Muat timbangan sampah terpilah ke truk agregator dan pantau margin kas bank sampah">
+            <x-slot:breadcrumbs>
+                <a href="{{ route('bank-sampah.dashboard') }}" class="hover:text-text transition-subtle">Dashboard</a>
+                <span>&rarr;</span>
+                <a href="{{ route('bank-sampah.sales.index') }}" class="hover:text-text transition-subtle">Penjualan</a>
+                <span>&rarr;</span>
+                <span class="text-text">Catat Baru</span>
+            </x-slot:breadcrumbs>
+            <x-slot:actions>
+                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.sales.index') }}'">
+                    Kembali ke Daftar
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
+
+        {{-- Form Transaksi Penjualan --}}
+        <form id="sale-form" method="POST" action="{{ route('bank-sampah.sales.store') }}" @submit="submitting = true" class="space-y-6">
+            @csrf
+
+            {{-- Operational Guidance Notice --}}
+            <div class="p-4 rounded-radius-md bg-primary-light/40 border border-primary/20 flex items-start gap-3">
+                <svg class="w-5 h-5 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-body-sm text-text leading-relaxed">
+                    <span class="font-bold text-primary">Prinsip Operasional:</span> Harga agregator terisi otomatis dari master penawaran harga. Kas Bank Sampah membukukan <span class="font-semibold text-primary">Margin Bank Sampah = (Harga Agregator &minus; Harga Nasabah) &times; Berat Dijual</span>.
+                </div>
+            </div>
+
+            {{-- Error Banner --}}
+            @if($errors->any())
+                <div class="p-4 rounded-radius-md bg-danger-light border border-danger/30 text-danger-text">
+                    <ul class="text-body-sm space-y-1 list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            {{-- ========================================================= --}}
+            {{-- STEP 1 & 2: AGREGATOR & TANGGAL PENJUALAN                 --}}
+            {{-- ========================================================= --}}
+            <x-ui.card variant="bordered" class="space-y-4">
+                <div class="border-b border-border-subtle pb-3">
+                    <h2 class="text-heading-sm font-bold text-text">1. Agregator & Tanggal Penjualan</h2>
+                    <p class="text-caption text-text-muted mt-0.5">Tentukan mitra agregator pembeli dan tanggal muat timbangan</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                    {{-- Agregator Selection --}}
+                    <div class="sm:col-span-6 space-y-1">
+                        <x-input-label for="collector_id" value="Pilih Mitra Agregator" :required="true" />
+                        <select name="collector_id"
+                                id="collector_id"
+                                required
+                                x-model="collectorId"
+                                @change="updateAllPrices()"
+                                class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
+                            <option value="">-- Pilih Mitra Agregator --</option>
+                            @foreach($collectors as $c)
+                                <option value="{{ $c->id }}" @selected(old('collector_id') == $c->id)>{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('collector_id') <p class="text-caption text-danger mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Tanggal Penjualan --}}
+                    <div class="sm:col-span-6 space-y-1">
+                        <x-input-label for="date" value="Tanggal Penjualan" :required="true" />
+                        <x-text-input type="date"
+                                      name="date"
+                                      id="date"
+                                      x-model="date"
+                                      @change="fetchRecap(false)"
+                                      value="{{ old('date', request('date', date('Y-m-d'))) }}"
+                                      required />
+                        @error('date') <p class="text-caption text-danger mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Catatan Opsional --}}
+                    <div class="sm:col-span-12 space-y-1">
+                        <x-input-label for="notes" value="Catatan Muatan / Keterangan (Opsional)" />
+                        <x-text-input type="text"
+                                      name="notes"
+                                      id="notes"
+                                      x-model="notes"
+                                      placeholder="Contoh: No. Polisi Truk B 1234 CD, nama sopir, muatan gelondongan..."
+                                      value="{{ old('notes') }}" />
+                    </div>
+                </div>
+            </x-ui.card>
+
+            {{-- ========================================================= --}}
+            {{-- STEP 3: RINCIAN MATERIAL TIMBANGAN JUAL                   --}}
+            {{-- ========================================================= --}}
+            <x-ui.card variant="bordered" class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                    <div>
+                        <h2 class="text-heading-sm font-bold text-text">2. Rincian Material yang Dijual</h2>
+                        <p class="text-caption text-text-muted mt-0.5">
+                            Tarik sisa setoran yang tersedia atau tambahkan baris material secara mandiri
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <x-ui.button type="button"
+                                     variant="secondary"
+                                     size="sm"
+                                     @click="fetchRecap(true)"
+                                     x-bind:disabled="loadingRecap || !collectorId || !date">
+                            <template x-if="loadingRecap">
+                                <x-ui.spinner size="sm" class="-ml-1 mr-1.5" />
+                            </template>
+                            <svg x-show="!loadingRecap" class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span x-text="loadingRecap ? 'Mengambil Data...' : 'Tarik Sisa Setoran'"></span>
+                        </x-ui.button>
+
+                        <x-ui.button type="button"
+                                     variant="outline"
+                                     size="sm"
+                                     @click="addRow()">
+                            <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            + Tambah Baris
+                        </x-ui.button>
+                    </div>
+                </div>
+
+                {{-- Empty rows guide --}}
+                <template x-if="rows.length === 0">
+                    <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-body-sm font-bold text-text">Belum ada baris material yang dipilih.</p>
+                            <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
+                                Pilih Agregator dan Tanggal di atas, lalu klik <span class="font-semibold text-text">Tarik Sisa Setoran</span> untuk mengisi otomatis, atau klik <span class="font-semibold text-text">+ Tambah Baris</span> untuk memilih manual.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Rows present --}}
+                <template x-if="rows.length > 0">
+                    <div>
+                        {{-- DESKTOP VIEW: Row-oriented Table (md+) --}}
+                        <div class="hidden md:block overflow-x-visible">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-border text-caption font-bold text-text-muted uppercase tracking-wider">
+                                        <th class="py-3 px-3 w-8 text-center">#</th>
+                                        <th class="py-3 px-3 min-w-[220px]">Material / Jenis Sampah</th>
+                                        <th class="py-3 px-3 w-32 text-right">Sisa Setoran</th>
+                                        <th class="py-3 px-3 w-36 text-right">Berat Dijual (kg)</th>
+                                        <th class="py-3 px-3 w-36 text-right">Harga Agregator</th>
+                                        <th class="py-3 px-3 w-36 text-right">Subtotal</th>
+                                        <th class="py-3 px-3 w-36 text-right">Margin Bank</th>
+                                        <th class="py-3 px-2 w-10 text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-border-subtle">
+                                    <template x-for="(row, i) in rows" :key="row.catId">
+                                        <tr class="group hover:bg-surface-muted/50 transition-subtle">
+                                            {{-- Number --}}
+                                            <td class="py-3 px-3 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
+
+                                            {{-- Material Selector --}}
+                                            <td class="py-3 px-3">
+                                                <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
+                                                <select x-model.number="row.catId"
+                                                        @change="onCategoryChange(row)"
+                                                        class="w-full text-body-sm font-semibold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
+                                                    <template x-for="cat in allCategories" :key="cat.id">
+                                                        <option :value="cat.id" x-text="cat.name" :selected="cat.id == row.catId"></option>
+                                                    </template>
+                                                </select>
+                                                <span class="text-caption text-text-muted block mt-0.5">
+                                                    Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(row.memberPrice)"></strong> / <span x-text="row.unit || 'kg'"></span>
+                                                </span>
+                                            </td>
+
+                                            {{-- Sisa Setoran --}}
+                                            <td class="py-3 px-3 text-right">
+                                                <span class="font-mono text-body-sm font-bold text-text block" x-text="row.remainingWeight !== undefined ? row.remainingWeight.toFixed(2) + ' ' + (row.unit || 'kg') : '-'"></span>
+                                                <span class="text-caption text-text-muted block">Tersedia</span>
+                                            </td>
+
+                                            {{-- Berat Dijual Input --}}
+                                            <td class="py-3 px-3 text-right">
+                                                <input type="number"
+                                                       step="0.01"
+                                                       min="0.01"
+                                                       :max="row.remainingWeight || undefined"
+                                                       :name="'details[' + i + '][weight]'"
+                                                       x-model.number="row.weight"
+                                                       placeholder="0.00"
+                                                       class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
+                                                       :class="row.remainingWeight !== undefined && row.weight > row.remainingWeight ? 'border-danger text-danger' : ''">
+
+                                                {{-- Validation warnings near source --}}
+                                                <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
+                                                    <span class="text-caption font-semibold text-danger block mt-1">
+                                                        Maks sisa: <span x-text="row.remainingWeight"></span> kg!
+                                                    </span>
+                                                </template>
+                                            </td>
+
+                                            {{-- Harga Agregator --}}
+                                            <td class="py-3 px-3 text-right whitespace-nowrap">
+                                                <template x-if="row.hasPrice">
+                                                    <div>
+                                                        <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(row.price)"></span>
+                                                        <span class="text-caption text-text-muted">/ <span x-text="row.unit || 'kg'"></span></span>
+                                                        <template x-if="row.price < row.memberPrice">
+                                                            <span class="text-caption text-danger font-bold block mt-0.5">⚠️ Rugi! &lt; Beli</span>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!row.hasPrice">
+                                                    <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
+                                                        ⚠️ Belum ada harga
+                                                    </span>
+                                                </template>
+                                            </td>
+
+                                            {{-- Subtotal Penjualan --}}
+                                            <td class="py-3 px-3 text-right font-mono font-bold text-body text-text whitespace-nowrap">
+                                                <span x-text="formatRp(rowSubtotal(row))"></span>
+                                            </td>
+
+                                            {{-- Margin Kas Bank Sampah --}}
+                                            <td class="py-3 px-3 text-right font-mono font-bold text-body whitespace-nowrap">
+                                                <span :class="rowMargin(row) > 0 ? 'text-success-text' : (rowMargin(row) < 0 ? 'text-danger-text' : 'text-text-muted')"
+                                                      x-text="formatRp(rowMargin(row))"></span>
+                                            </td>
+
+                                            {{-- Action Remove --}}
+                                            <td class="py-3 px-2 text-center">
+                                                <button type="button"
+                                                        @click="removeRow(i)"
+                                                        title="Hapus baris"
+                                                        class="p-1.5 rounded-radius-sm text-text-muted hover:text-danger hover:bg-danger-light transition-subtle cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- MOBILE VIEW: Stacked Adaptive Cards (< md) --}}
+                        <div class="block md:hidden space-y-3">
+                            <template x-for="(row, i) in rows" :key="row.catId">
+                                <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex-1">
+                                            <select x-model.number="row.catId"
+                                                    @change="onCategoryChange(row)"
+                                                    class="w-full text-body-sm font-semibold rounded-radius-md border border-border bg-surface text-text p-2">
+                                                <template x-for="cat in allCategories" :key="cat.id">
+                                                    <option :value="cat.id" x-text="cat.name" :selected="cat.id == row.catId"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <button type="button" @click="removeRow(i)" class="p-2 text-text-muted hover:text-danger">
+                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3 text-caption pt-1 border-t border-border-subtle">
+                                        <div>
+                                            <span class="text-text-muted uppercase font-bold block">Sisa Setoran</span>
+                                            <span class="font-mono font-bold text-body-sm text-text" x-text="row.remainingWeight !== undefined ? row.remainingWeight.toFixed(2) + ' ' + (row.unit || 'kg') : '-'"></span>
+                                        </div>
+                                        <div>
+                                            <span class="text-text-muted uppercase font-bold block">Harga Agregator</span>
+                                            <span class="font-mono font-bold text-body-sm text-text" x-text="row.hasPrice ? formatRp(row.price) : 'Belum ada harga'"></span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span class="block text-caption font-bold text-text-muted uppercase mb-1">Berat Dijual (kg)</span>
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0.01"
+                                               :max="row.remainingWeight || undefined"
+                                               x-model.number="row.weight"
+                                               placeholder="0.00"
+                                               class="w-full text-body font-mono font-bold rounded-radius-md border border-border p-2">
+                                        <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
+                                            <span class="text-caption text-danger font-semibold block mt-1">Melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
+                                        </template>
+                                    </div>
+
+                                    <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm">
+                                        <div>
+                                            <span class="text-caption text-text-muted block">Margin Kas:</span>
+                                            <span class="font-mono font-bold text-success-text" x-text="formatRp(rowMargin(row))"></span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-caption text-text-muted block">Subtotal:</span>
+                                            <span class="font-mono font-bold text-text text-heading-sm" x-text="formatRp(rowSubtotal(row))"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </x-ui.card>
+
+            {{-- ========================================================= --}}
+            {{-- STEP 4: TOTAL PENJUALAN & MARGIN KAS                      --}}
+            {{-- ========================================================= --}}
+            <x-ui.card variant="bordered" class="bg-surface">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center border-b border-border-subtle pb-5">
+                    <div>
+                        <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Material</span>
+                        <span class="text-heading-sm font-bold text-text" x-text="validRowCount() + ' jenis'"></span>
+                    </div>
+                    <div>
+                        <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Berat Muatan</span>
+                        <span class="text-heading-md font-extrabold text-text font-mono">
+                            <span x-text="grandTotalWeight().toFixed(2)"></span> <span class="text-body-sm font-normal text-text-muted">kg</span>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Nilai Penjualan Agregator</span>
+                        <span class="text-heading-lg font-extrabold text-text font-mono" x-text="formatRp(grandTotalAmount())"></span>
+                    </div>
+                    <div class="text-left sm:text-right">
+                        <span class="block text-caption font-bold uppercase tracking-wider text-primary">Margin Kas Bank Sampah</span>
+                        <span class="text-heading-xl font-extrabold text-primary font-mono" x-text="formatRp(grandTotalMargin())"></span>
+                    </div>
+                </div>
+
+                {{-- Action Buttons --}}
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
+                    <x-ui.button type="button" variant="ghost" onclick="window.location='{{ route('bank-sampah.sales.index') }}'">
+                        Batal
+                    </x-ui.button>
+
+                    <x-ui.button type="button"
+                                 variant="primary"
+                                 @click="submitSale()"
+                                 x-bind:disabled="submitting || hasErrors()">
+                        <template x-if="submitting">
+                            <x-ui.spinner size="sm" class="-ml-1 mr-2" />
+                        </template>
+                        <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span x-text="submitting ? 'Menyimpan...' : 'Konfirmasi Penjualan'"></span>
+                    </x-ui.button>
+                </div>
+            </x-ui.card>
+        </form>
+    </div>
+
+    {{-- Script Logika Alpine Penjualan --}}
     <script>
-        function saleForm() {
+        function saleCreateWorkflow() {
             const allCategories = @json($categoryOptions);
+            const prices = @json($wastePrices);
+
             return {
                 collectorId: '{{ old("collector_id", "") }}',
-                date: '{{ old("date", date("Y-m-d")) }}',
-                prices: @json($wastePrices),
+                date: '{{ old("date", request("date", date("Y-m-d"))) }}',
+                notes: '{{ old("notes", "") }}',
+                prices: prices,
+                allCategories: allCategories,
                 rows: [],
-                modalOpen: false,
-                modalSearch: '',
-                modalSelected: [],
+                availableRecap: [],
                 loadingRecap: false,
+                submitting: false,
+
                 init() {
                     const oldRows = @json(old('details', []));
                     if (oldRows && Object.keys(oldRows).length) {
                         Object.values(oldRows).forEach(d => {
                             if (!d.waste_category_id) return;
-                            const cat = allCategories.find(c => c.id == d.waste_category_id);
-                            if (cat) this.rows.push({
-                                catId: cat.id,
-                                name: cat.name,
-                                unit: cat.unit,
-                                price: Number(d.price_per_unit) || 0,
-                                weight: Number(d.weight) || 0,
-                                memberPrice: cat.member_price,
-                                hasPrice: false,
-                            });
+                            const cat = this.allCategories.find(c => c.id == d.waste_category_id);
+                            if (cat) {
+                                this.rows.push({
+                                    catId: cat.id,
+                                    name: cat.name,
+                                    unit: cat.unit,
+                                    price: Number(d.price_per_unit) || 0,
+                                    weight: Number(d.weight) || 0,
+                                    memberPrice: Math.round(cat.member_price),
+                                    remainingWeight: undefined,
+                                    hasPrice: false,
+                                });
+                            }
                         });
                     }
-                    if (this.collectorId) this.updatePrices();
+
+                    if (this.collectorId && this.date) {
+                        this.fetchRecap(false);
+                    }
+
+                    const preSelectCatId = '{{ request("category_id") }}';
+                    if (preSelectCatId && this.rows.length === 0) {
+                        this.addCategoryById(preSelectCatId);
+                    }
                 },
-                fetchRecap() {
+
+                fetchRecap(autoPopulate = true) {
                     if (!this.collectorId || !this.date) {
-                        alert('Silakan pilih Agregator dan Tanggal terlebih dahulu.');
+                        alert('Silakan pilih Mitra Agregator dan Tanggal terlebih dahulu.');
                         return;
                     }
                     this.loadingRecap = true;
+
                     fetch(`{{ route('bank-sampah.sales.daily-recap') }}?date=${encodeURIComponent(this.date)}&collector_id=${encodeURIComponent(this.collectorId)}`)
                         .then(res => res.json())
                         .then(res => {
                             this.loadingRecap = false;
                             if (res.status === 'success' && res.data) {
-                                if (res.data.length === 0) {
-                                    alert('Tidak ada sisa setoran yang tersedia untuk dijual ke agregator ini pada tanggal terpilih.');
+                                this.availableRecap = res.data;
+                                if (res.data.length === 0 && autoPopulate) {
+                                    alert('Tidak ada sisa setoran yang tersedia untuk dijual pada tanggal dan agregator ini.');
                                     return;
                                 }
-                                this.rows = [];
-                                res.data.forEach(item => {
-                                    this.rows.push({
-                                        catId: item.waste_category_id,
-                                        name: item.name,
-                                        unit: item.unit,
-                                        price: Math.round(item.collector_price),
-                                        memberPrice: Math.round(item.member_price),
-                                        remainingWeight: item.remaining_weight,
-                                        weight: item.remaining_weight,
-                                        hasPrice: true,
-                                    });
-                                });
+                                if (autoPopulate && this.rows.length === 0) {
+                                    this.populateFromRecap();
+                                } else {
+                                    this.syncRowsWithRecap();
+                                }
                             }
                         })
-                        .catch(err => {
+                        .catch(() => {
                             this.loadingRecap = false;
-                            alert('Gagal mengambil data rekap setoran.');
+                            alert('Gagal mengambil data sisa setoran.');
                         });
                 },
-                filteredCategories() {
-                    const q = this.modalSearch.toLowerCase();
-                    return allCategories.filter(c => c.name.toLowerCase().includes(q));
-                },
-                isAlreadySelected(catId) { return this.rows.some(r => r.catId == catId); },
-                addSelected() {
-                    this.modalSelected.forEach(catId => {
-                        if (this.isAlreadySelected(catId)) return;
-                        const cat = allCategories.find(c => c.id == catId);
-                        if (!cat) return;
-                        const row = {
-                            catId: cat.id,
-                            name: cat.name,
-                            unit: cat.unit,
-                            price: 0,
-                            weight: 0,
-                            memberPrice: cat.member_price,
-                            hasPrice: false,
-                        };
-                        this.fillRowPrice(row);
-                        this.rows.push(row);
+
+                populateFromRecap() {
+                    this.rows = [];
+                    this.availableRecap.forEach(item => {
+                        this.rows.push({
+                            catId: item.waste_category_id,
+                            name: item.name,
+                            unit: item.unit,
+                            price: Math.round(item.collector_price),
+                            memberPrice: Math.round(item.member_price),
+                            remainingWeight: Number(item.remaining_weight),
+                            weight: Number(item.remaining_weight),
+                            hasPrice: true,
+                        });
                     });
-                    this.modalSelected = []; this.modalSearch = ''; this.modalOpen = false;
                 },
-                removeRow(i) { this.rows.splice(i, 1); },
+
+                addCategoryById(catId) {
+                    const cat = this.allCategories.find(c => c.id == catId);
+                    if (!cat) return;
+                    if (this.rows.some(r => r.catId == cat.id)) return;
+
+                    const row = {
+                        catId: cat.id,
+                        name: cat.name,
+                        unit: cat.unit,
+                        price: 0,
+                        weight: '',
+                        memberPrice: Math.round(cat.member_price),
+                        remainingWeight: undefined,
+                        hasPrice: false,
+                    };
+                    this.fillRowPrice(row);
+                    this.rows.push(row);
+                    this.syncRowsWithRecap();
+                },
+
+                addRow() {
+                    const unselected = this.allCategories.find(c => !this.rows.some(r => r.catId == c.id));
+                    if (!unselected) {
+                        alert('Semua jenis sampah sudah dimasukkan.');
+                        return;
+                    }
+                    this.addCategoryById(unselected.id);
+                },
+
+                removeRow(idx) {
+                    this.rows.splice(idx, 1);
+                },
+
+                onCategoryChange(row) {
+                    const cat = this.allCategories.find(c => c.id == row.catId);
+                    if (cat) {
+                        row.name = cat.name;
+                        row.unit = cat.unit;
+                        row.memberPrice = Math.round(cat.member_price);
+                    }
+                    this.fillRowPrice(row);
+                    this.syncRowsWithRecap();
+                },
+
                 fillRowPrice(row) {
-                    if (!this.collectorId) { row.hasPrice = false; return; }
-                    const cp = this.prices[this.collectorId];
-                    if (cp && cp[row.catId]) {
-                        row.price = Math.round(cp[row.catId].collector_price);
+                    if (!this.collectorId || !row.catId) {
+                        row.hasPrice = false;
+                        row.price = 0;
+                        return;
+                    }
+                    const colPrices = this.prices[this.collectorId];
+                    if (colPrices && colPrices[row.catId]) {
+                        row.price = Math.round(colPrices[row.catId].collector_price);
                         row.hasPrice = true;
                     } else {
                         row.hasPrice = false;
+                        row.price = 0;
                     }
                 },
-                updatePrices() { this.rows.forEach(row => { this.fillRowPrice(row); }); },
-                rowMargin(row) { return row.weight && row.price ? (row.price - (row.memberPrice || 0)) * row.weight : 0; },
-                grandTotal() { return this.rows.reduce((s, r) => s + (r.weight * r.price || 0), 0); },
-                totalMargin() { return this.rows.reduce((s, r) => s + this.rowMargin(r), 0); },
-                formatRp(v) { return v ? 'Rp ' + Math.round(v).toLocaleString('id-ID') : '-'; }
-            }
+
+                updateAllPrices() {
+                    this.rows.forEach(r => this.fillRowPrice(r));
+                    if (this.collectorId && this.date) {
+                        this.fetchRecap(false);
+                    }
+                },
+
+                syncRowsWithRecap() {
+                    this.rows.forEach(r => {
+                        const found = this.availableRecap.find(item => item.waste_category_id == r.catId);
+                        if (found) {
+                            r.remainingWeight = Number(found.remaining_weight);
+                            if (r.price === 0) r.price = Math.round(found.collector_price);
+                            r.hasPrice = true;
+                        }
+                    });
+                },
+
+                rowMargin(row) {
+                    const w = parseFloat(row.weight) || 0;
+                    const p = parseFloat(row.price) || 0;
+                    const mp = parseFloat(row.memberPrice) || 0;
+                    return (p - mp) * w;
+                },
+
+                rowSubtotal(row) {
+                    const w = parseFloat(row.weight) || 0;
+                    const p = parseFloat(row.price) || 0;
+                    return w * p;
+                },
+
+                grandTotalAmount() {
+                    return this.rows.reduce((sum, r) => sum + this.rowSubtotal(r), 0);
+                },
+
+                grandTotalWeight() {
+                    return this.rows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+                },
+
+                grandTotalMargin() {
+                    return this.rows.reduce((sum, r) => sum + this.rowMargin(r), 0);
+                },
+
+                validRowCount() {
+                    return this.rows.filter(r => r.catId && (parseFloat(r.weight) || 0) > 0).length;
+                },
+
+                hasErrors() {
+                    if (this.rows.length === 0) return true;
+                    return this.rows.some(r => {
+                        const w = parseFloat(r.weight) || 0;
+                        if (w <= 0) return true;
+                        if (r.remainingWeight !== undefined && w > r.remainingWeight) return true;
+                        if (!r.hasPrice) return true;
+                        if (r.price < r.memberPrice) return true;
+                        return false;
+                    });
+                },
+
+                formatRp(val) {
+                    if (val === null || val === undefined || isNaN(val)) return 'Rp 0';
+                    return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+                },
+
+                submitSale() {
+                    if (!this.collectorId) {
+                        alert('Silakan pilih Mitra Agregator terlebih dahulu.');
+                        return;
+                    }
+                    if (this.validRowCount() === 0) {
+                        alert('Minimal satu jenis sampah harus diisi dengan berat > 0 kg.');
+                        return;
+                    }
+                    if (this.hasErrors()) {
+                        alert('Terdapat kesalahan pada baris timbangan (melebihi sisa setoran atau harga agregator rugi).');
+                        return;
+                    }
+                    this.submitting = true;
+                    document.getElementById('sale-form').submit();
+                }
+            };
         }
     </script>
 </x-layouts.dashboard>
