@@ -1,125 +1,266 @@
-<x-layouts.dashboard title="Detail Nasabah Bank Sampah">
-    <div class="max-w-4xl mx-auto space-y-6">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('bank-sampah.customers.index') }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-            </a>
-            <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Detail Nasabah</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Informasi profil nasabah dan ringkasan tabungan</p>
+<x-layouts.dashboard title="Detail Nasabah — {{ $customer->name }}">
+    <div class="space-y-6 max-w-7xl mx-auto pb-10">
+        {{-- Page Header --}}
+        <x-ui.page-header title="{{ $customer->name }}" description="Profil nasabah, ringkasan saldo tabungan, dan aksi transaksi langsung">
+            <x-slot:breadcrumbs>
+                <a href="{{ route('bank-sampah.dashboard') }}" class="hover:text-text transition-subtle">Dashboard</a>
+                <span>&rarr;</span>
+                <a href="{{ route('bank-sampah.customers.index') }}" class="hover:text-text transition-subtle">Nasabah</a>
+                <span>&rarr;</span>
+                <span class="text-text">{{ $customer->customer_code }}</span>
+            </x-slot:breadcrumbs>
+            <x-slot:actions>
+                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.customers.index') }}'">
+                    Kembali ke Daftar
+                </x-ui.button>
+                <x-ui.button variant="secondary" size="sm" onclick="window.location='{{ route('bank-sampah.customers.edit', $customer) }}'">
+                    <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Edit Profil
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
+
+        {{-- Flash Feedback --}}
+        @if(session('success'))
+            <div class="p-4 bg-success-light border border-success/30 text-success-text rounded-radius-md flex items-center gap-3 shadow-subtle">
+                <svg class="w-5 h-5 text-success shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div class="text-body-sm font-medium">{{ session('success') }}</div>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="p-4 bg-danger-light border border-danger/30 text-danger-text rounded-radius-md flex items-center gap-3 shadow-subtle">
+                <svg class="w-5 h-5 text-danger shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div class="text-body-sm font-medium">{{ session('error') }}</div>
+            </div>
+        @endif
+
+        {{-- ========================================================= --}}
+        {{-- 1. IDENTITY & CONNECT-THE-DOT ACTION BANNER               --}}
+        {{-- ========================================================= --}}
+        <x-ui.card variant="bordered" class="p-5 sm:p-7">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-heading-lg shadow-subtle shrink-0">
+                        {{ strtoupper(substr($customer->name, 0, 1)) }}
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="text-heading-lg font-bold text-text">{{ $customer->name }}</h2>
+                            @if($customer->status === 'active')
+                                <x-ui.badge variant="success" size="sm">Aktif</x-ui.badge>
+                            @else
+                                <x-ui.badge variant="neutral" size="sm">Nonaktif</x-ui.badge>
+                            @endif
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2.5 mt-1">
+                            <span class="font-mono text-body-sm font-semibold text-text-muted">
+                                {{ $customer->customer_code }}
+                            </span>
+                            <span class="text-caption text-text-muted">&bull;</span>
+                            @if($customer->user_id)
+                                <span class="text-caption font-semibold text-primary">
+                                    Terhubung ke Portal Warga
+                                </span>
+                            @else
+                                <span class="text-caption text-text-muted">
+                                    Nasabah Langsung (Tanpa Login)
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Action-First Buttons: Connect The Dots --}}
+                <div class="flex flex-wrap items-center gap-2.5">
+                    @can('manage_deposits')
+                        <x-ui.button variant="primary" size="md" onclick="window.location='{{ route('bank-sampah.deposits.create', ['customer_id' => $customer->id]) }}'">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Catat Setoran
+                        </x-ui.button>
+                    @endcan
+
+                    @can('manage_withdrawals')
+                        <x-ui.button variant="secondary" size="md" onclick="window.location='{{ route('bank-sampah.withdrawals.create') }}'">
+                            Tarik Saldo
+                        </x-ui.button>
+                    @endcan
+
+                    @can('view_waste_reports')
+                        <x-ui.button variant="outline" size="md" onclick="window.location='{{ route('bank-sampah.savings') }}'">
+                            Buku Tabungan &rarr;
+                        </x-ui.button>
+                    @endcan
+                </div>
+            </div>
+        </x-ui.card>
+
+        {{-- ========================================================= --}}
+        {{-- 2. FINANCIAL & TRANSACTION OVERVIEW (3 CARDS)             --}}
+        {{-- ========================================================= --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+            {{-- Card 1: Saldo Tabungan --}}
+            <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle flex flex-col justify-between space-y-2">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Saldo Tabungan Aktif</span>
+                    <div class="w-8 h-8 rounded-radius-sm bg-primary-light text-primary flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="font-mono text-heading-lg font-bold text-primary tracking-tight">
+                        Rp {{ number_format($balance, 0, ',', '.') }}
+                    </p>
+                    <p class="text-caption text-text-muted mt-0.5">Sisa saldo tabungan nasabah</p>
+                </div>
+            </div>
+
+            {{-- Card 2: Frekuensi Setoran --}}
+            <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle flex flex-col justify-between space-y-2">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Frekuensi Setoran</span>
+                    <div class="w-8 h-8 rounded-radius-sm bg-success-light text-success-text flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="font-mono text-heading-lg font-bold text-text tracking-tight">
+                        {{ $depositsCount }} <span class="text-body-sm font-normal text-text-muted">Kali</span>
+                    </p>
+                    <p class="text-caption text-text-muted mt-0.5">Penimbangan sampah tercatat</p>
+                </div>
+            </div>
+
+            {{-- Card 3: Frekuensi Penarikan --}}
+            <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle flex flex-col justify-between space-y-2">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Frekuensi Penarikan</span>
+                    <div class="w-8 h-8 rounded-radius-sm bg-surface-muted text-text flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="font-mono text-heading-lg font-bold text-text tracking-tight">
+                        {{ $withdrawalsCount }} <span class="text-body-sm font-normal text-text-muted">Kali</span>
+                    </p>
+                    <p class="text-caption text-text-muted mt-0.5">Pencairan tabungan tunai</p>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {{-- Profile Card --}}
-            <div class="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 flex flex-col items-center text-center transition-colors duration-300">
-                <div class="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4">
-                    <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                </div>
-                
-                <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">{{ $customer->name }}</h3>
-                <p class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{{ $customer->customer_code }}</p>
-                
-                <div class="mt-4 flex flex-wrap justify-center gap-2">
-                    @if($customer->status === 'active')
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300">
-                            Aktif
-                        </span>
-                    @else
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-400">
-                            Nonaktif
-                        </span>
-                    @endif
-                </div>
-
-                <div class="w-full border-t border-slate-100 dark:border-slate-800 my-5"></div>
-
-                <div class="w-full space-y-4 text-left">
-                    <div>
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block">Nomor Telepon</span>
-                        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ $customer->phone ?: 'Tidak ada kontak' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block">Alamat Lengkap</span>
-                        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ $customer->address ?: 'Tidak ada alamat' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500 block">Terdaftar Sejak</span>
-                        <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ $customer->joined_at ? $customer->joined_at->format('d M Y') : $customer->created_at->format('d M Y') }}</span>
-                    </div>
-                </div>
-
-                <div class="w-full border-t border-slate-100 dark:border-slate-800 my-5"></div>
-
-                <div class="flex gap-2 w-full">
-                    <a href="{{ route('bank-sampah.customers.edit', $customer) }}" class="flex-1 text-center bg-slate-800 dark:bg-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-900 dark:hover:bg-slate-600 transition">
-                        Edit
+        {{-- ========================================================= --}}
+        {{-- 3. PROFILE DETAILS & PORTAL ACCOUNT CONNECTION (2 COLS)   --}}
+        {{-- ========================================================= --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {{-- Col Left: Data Profil & Kontak --}}
+            <x-ui.card variant="bordered" class="p-5 sm:p-6 space-y-4">
+                <div class="border-b border-border-subtle pb-3 flex items-center justify-between">
+                    <h3 class="text-heading-sm font-bold text-text">Informasi Kontak & Alamat</h3>
+                    <a href="{{ route('bank-sampah.customers.edit', $customer) }}" class="text-caption font-semibold text-primary hover:underline">
+                        Ubah Data &rarr;
                     </a>
                 </div>
-            </div>
 
-            {{-- Detail & Financial Summary Card --}}
-            <div class="md:col-span-2 space-y-6">
-                {{-- Financial Overview --}}
-                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Informasi Keuangan</h3>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="p-4 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/30 rounded-xl">
-                            <span class="text-xs text-slate-500 dark:text-slate-400 block">Saldo Tabungan</span>
-                            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">Rp {{ number_format($balance, 2, ',', '.') }}</span>
-                        </div>
-                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                            <span class="text-xs text-slate-500 dark:text-slate-400 block">Total Setoran</span>
-                            <span class="text-lg font-bold text-slate-800 dark:text-slate-200 mt-1 block">{{ $depositsCount }} Kali</span>
-                        </div>
-                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                            <span class="text-xs text-slate-500 dark:text-slate-400 block">Total Penarikan</span>
-                            <span class="text-lg font-bold text-slate-800 dark:text-slate-200 mt-1 block">{{ $withdrawalsCount }} Kali</span>
-                        </div>
+                <div class="space-y-3.5 text-body-sm">
+                    <div>
+                        <span class="text-caption font-bold text-text-muted uppercase tracking-wider block">Nomor Telepon</span>
+                        @if($customer->phone)
+                            <span class="font-mono text-body font-semibold text-text block mt-0.5">
+                                {{ $customer->phone }}
+                            </span>
+                        @else
+                            <span class="text-text-muted italic block mt-0.5">Tidak ada nomor telepon</span>
+                        @endif
                     </div>
 
-                    <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-x-5 gap-y-2">
-                        @can('view_waste_reports')
-                            <a href="{{ route('bank-sampah.savings') }}" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Lihat di Buku Tabungan &rarr;</a>
-                        @endcan
-                        @can('manage_deposits')
-                            <a href="{{ route('bank-sampah.deposits.create') }}" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Catat Setoran &rarr;</a>
-                        @endcan
+                    <div>
+                        <span class="text-caption font-bold text-text-muted uppercase tracking-wider block">Alamat Lengkap</span>
+                        <span class="text-text block mt-0.5">
+                            {{ $customer->address ?: 'Belum ada data alamat tercatat.' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="text-caption font-bold text-text-muted uppercase tracking-wider block">Tanggal Bergabung</span>
+                        <span class="text-text block mt-0.5 font-medium">
+                            {{ $customer->joined_at ? $customer->joined_at->translatedFormat('d F Y') : $customer->created_at->translatedFormat('d F Y') }}
+                        </span>
                     </div>
                 </div>
+            </x-ui.card>
 
-                {{-- Account Connections --}}
-                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Koneksi Akun</h3>
-                    
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between p-3.5 border border-slate-100 dark:border-slate-800 rounded-xl">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 block">Akun Login Portal</span>
-                                    <span class="text-xs text-slate-500 dark:text-slate-400">Digunakan nasabah untuk memantau tabungan</span>
-                                </div>
+            {{-- Col Right: Akun Login Portal Warga --}}
+            <x-ui.card variant="bordered" class="p-5 sm:p-6 space-y-4">
+                <div class="border-b border-border-subtle pb-3">
+                    <h3 class="text-heading-sm font-bold text-text">Koneksi Akun Portal Warga</h3>
+                    <p class="text-caption text-text-muted mt-0.5">Akses mandiri nasabah untuk memantau saldo tabungan</p>
+                </div>
+
+                @if($customer->user)
+                    <div class="p-4 rounded-radius-md bg-primary-light/40 border border-primary/20 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-success"></span>
+                            <span class="text-body-sm font-bold text-text">Akun Pengguna Aktif</span>
+                        </div>
+                        <div class="text-body-sm space-y-1 pt-1">
+                            <div>
+                                <span class="text-caption text-text-muted block">Nama Akun:</span>
+                                <span class="font-semibold text-text">{{ $customer->user->name }}</span>
                             </div>
                             <div>
-                                @if($customer->user_id)
-                                    <div class="text-right">
-                                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">{{ $customer->user->name }}</span>
-                                        <span class="text-[10px] text-slate-500 dark:text-slate-400 block">{{ $customer->user->email }}</span>
-                                    </div>
-                                @else
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                                        Belum punya akun login
-                                    </span>
-                                @endif
+                                <span class="text-caption text-text-muted block">Email:</span>
+                                <span class="font-mono text-text">{{ $customer->user->email ?: '-' }}</span>
                             </div>
                         </div>
                     </div>
+                @else
+                    <div class="p-4 rounded-radius-md bg-surface-muted border border-border-subtle space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-text-muted"></span>
+                            <span class="text-body-sm font-bold text-text">Belum Terhubung</span>
+                        </div>
+                        <p class="text-caption text-text-muted leading-relaxed">
+                            Nasabah ini bertransaksi langsung di kasir Bank Sampah dan belum ditautkan ke akun login portal warga mandiri.
+                        </p>
+                    </div>
+                @endif
+
+                <div class="pt-2 text-caption text-text-muted">
+                    <span>Butuh bantuan penyesuaian profil?</span>
+                    <a href="{{ route('bank-sampah.customers.edit', $customer) }}" class="text-primary font-semibold hover:underline ml-1">
+                        Edit Profil Nasabah
+                    </a>
                 </div>
-            </div>
+            </x-ui.card>
         </div>
+
+        {{-- Danger Zone: Hapus Nasabah (Only if allowed) --}}
+        <div class="pt-4 border-t border-border-subtle flex items-center justify-between text-body-sm">
+            <span class="text-caption text-text-muted">
+                Nasabah yang memiliki riwayat timbangan atau tabungan tidak dapat dihapus demi integritas akuntansi.
+            </span>
+            <button type="button"
+                    @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.customers.destroy', $customer) }}'})"
+                    class="text-caption font-semibold text-danger hover:underline cursor-pointer">
+                Hapus Nasabah Ini
+            </button>
+        </div>
+
+        {{-- Confirmation Modal --}}
+        <x-confirm-delete-modal />
     </div>
 </x-layouts.dashboard>

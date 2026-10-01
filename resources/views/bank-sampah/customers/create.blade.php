@@ -1,67 +1,90 @@
 <x-layouts.dashboard title="Tambah Nasabah Bank Sampah">
-    <div class="max-w-2xl mx-auto space-y-6">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('bank-sampah.customers.index') }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-            </a>
-            <div>
-                <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Tambah Nasabah Bank Sampah</h2>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Daftarkan nasabah baru dengan data dirinya sendiri</p>
-            </div>
-        </div>
+    <div class="space-y-6 max-w-7xl mx-auto pb-10">
+        {{-- Page Header --}}
+        <x-ui.page-header title="Tambah Nasabah Baru" description="Daftarkan nasabah baru ke direktori Bank Sampah">
+            <x-slot:breadcrumbs>
+                <a href="{{ route('bank-sampah.dashboard') }}" class="hover:text-text transition-subtle">Dashboard</a>
+                <span>&rarr;</span>
+                <a href="{{ route('bank-sampah.customers.index') }}" class="hover:text-text transition-subtle">Nasabah</a>
+                <span>&rarr;</span>
+                <span class="text-text">Tambah Baru</span>
+            </x-slot:breadcrumbs>
+            <x-slot:actions>
+                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.customers.index') }}'">
+                    Kembali ke Daftar
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
-            <form method="POST" action="{{ route('bank-sampah.customers.store') }}">
+        {{-- Form Container --}}
+        <x-ui.card variant="bordered" class="p-6 sm:p-8">
+            <form method="POST" action="{{ route('bank-sampah.customers.store') }}" class="space-y-6">
                 @csrf
 
-                <div class="space-y-6">
-                    <div class="space-y-4">
-                        <div>
-                            <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nama Lengkap <span class="text-rose-500">*</span></label>
-                            <input type="text" name="name" id="name" value="{{ old('name') }}" class="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-slate-950 dark:text-slate-50 transition" placeholder="Nama lengkap nasabah" required>
-                            @error('name')
-                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="phone" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nomor Telepon</label>
-                            <input type="text" name="phone" id="phone" value="{{ old('phone') }}" class="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-slate-950 dark:text-slate-50 transition" placeholder="Contoh: 08123456789">
-                            @error('phone')
-                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="status" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Status Nasabah</label>
-                            <select name="status" id="status" class="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-slate-950 dark:text-slate-50 transition">
-                                <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active (Aktif)</option>
-                                <option value="inactive" {{ old('status', 'inactive') === 'inactive' ? 'selected' : '' }}>Inactive (Nonaktif)</option>
-                            </select>
-                            @error('status')
-                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
+                <div class="space-y-5">
+                    {{-- Nama Lengkap --}}
                     <div>
-                        <label for="address" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Alamat Lengkap</label>
-                        <textarea name="address" id="address" rows="3" class="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-slate-950 dark:text-slate-50 transition" placeholder="Alamat lengkap nasabah">{{ old('address') }}</textarea>
-                        @error('address')
-                            <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
-                        @enderror
+                        <x-input-label for="name" value="Nama Lengkap Nasabah" :required="true" />
+                        <x-text-input type="text"
+                                      name="name"
+                                      id="name"
+                                      value="{{ old('name') }}"
+                                      placeholder="Contoh: Ibu Rahayu, Pak Budi"
+                                      required
+                                      autofocus />
+                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
                     </div>
 
-                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
-                        <a href="{{ route('bank-sampah.customers.index') }}" class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                            Batal
-                        </a>
-                        <button type="submit" class="bg-emerald-600 dark:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 shadow-sm hover:shadow transition">
-                            Simpan Nasabah
-                        </button>
+                    {{-- Nomor Telepon --}}
+                    <div>
+                        <x-input-label for="phone" value="Nomor Telepon / WhatsApp (Opsional)" />
+                        <x-text-input type="text"
+                                      name="phone"
+                                      id="phone"
+                                      value="{{ old('phone') }}"
+                                      placeholder="Contoh: 08123456789" />
+                        <p class="text-caption text-text-muted mt-1">Digunakan untuk verifikasi setoran dan pencarian instan.</p>
+                        <x-input-error :messages="$errors->get('phone')" class="mt-1" />
+                    </div>
+
+                    {{-- Status Nasabah --}}
+                    <div>
+                        <x-input-label for="status" value="Status Nasabah" :required="true" />
+                        <select name="status"
+                                id="status"
+                                required
+                                class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
+                            <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Aktif (Dapat mencatat setoran & penarikan)</option>
+                            <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Nonaktif (Akun ditangguhkan sementara)</option>
+                        </select>
+                        <x-input-error :messages="$errors->get('status')" class="mt-1" />
+                    </div>
+
+                    {{-- Alamat --}}
+                    <div>
+                        <x-input-label for="address" value="Alamat Lengkap / Keterangan Domisili (Opsional)" />
+                        <textarea name="address"
+                                  id="address"
+                                  rows="3"
+                                  placeholder="Contoh: RT 03 / RW 05, Blok C No. 12"
+                                  class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">{{ old('address') }}</textarea>
+                        <x-input-error :messages="$errors->get('address')" class="mt-1" />
+                    </div>
+                </div>
+
+                {{-- Action Buttons --}}
+                <div class="pt-5 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <x-ui.button type="button" variant="ghost" onclick="window.location='{{ route('bank-sampah.customers.index') }}'">
+                        Batal
+                    </x-ui.button>
+
+                    <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                        <x-ui.button type="submit" variant="primary">
+                            Simpan Nasabah Baru
+                        </x-ui.button>
                     </div>
                 </div>
             </form>
-        </div>
+        </x-ui.card>
     </div>
 </x-layouts.dashboard>
