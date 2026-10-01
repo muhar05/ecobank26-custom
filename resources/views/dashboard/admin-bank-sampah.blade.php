@@ -1,21 +1,19 @@
 <x-layouts.dashboard title="Dashboard Bank Sampah">
     <div class="space-y-6 max-w-7xl mx-auto pb-10">
 
-        {{-- ========================================================= --}}
-        {{-- 1. HERO / ACTION-FIRST HEADER                             --}}
-        {{-- ========================================================= --}}
+        {{-- 1. Hero / action-first header --}}
         <div class="bg-surface border border-border rounded-radius-lg shadow-subtle p-5 sm:p-7 flex flex-col md:flex-row md:items-center gap-5 md:gap-6 transition-subtle">
             {{-- LEFT: contextual label, title, description, primary actions --}}
             <div class="flex-1 min-w-0 space-y-4">
                 <div class="space-y-1.5 max-w-xl">
                     <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-radius-sm bg-primary-light text-primary text-caption font-semibold">
-                        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
                         Pusat Kendali Bank Sampah
                     </div>
                     <h1 class="text-heading-lg sm:text-heading-xl font-bold text-text tracking-tight">
                         Bank Sampah EcoBank026
                     </h1>
-                    <p class="text-body-sm text-text-muted leading-relaxed">
+                    <p class="text-body text-text-muted leading-relaxed">
                         Kelola penimbangan sampah nasabah, kas operasional, dan transaksi penjualan agregator secara terpadu dan transparan.
                     </p>
                 </div>
@@ -47,14 +45,12 @@
             </div>
         </div>
 
-        {{-- ========================================================= --}}
-        {{-- 2. CORE OPERATIONAL KPIS (4 PRIMARY CARDS)                --}}
-        {{-- ========================================================= --}}
+        {{-- 2. Core operational KPIs (4 primary cards) --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {{-- KPI 1: Kas Bank Sampah --}}
             <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle hover:border-primary/40 transition-subtle flex flex-col justify-between space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Kas Bank Sampah</span>
+                    <span class="text-body-sm font-bold text-text-muted uppercase tracking-wider">Kas Bank Sampah</span>
                     <div class="w-9 h-9 rounded-radius-md bg-primary-light text-primary flex items-center justify-center shrink-0 shadow-subtle">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -65,14 +61,13 @@
                     <p class="font-mono text-heading-lg font-bold text-text tracking-tight truncate">
                         Rp {{ number_format($wasteBankCashBalance, 0, ',', '.') }}
                     </p>
-                    <p class="text-caption text-text-muted mt-1">Saldo kas fisik operasional</p>
                 </div>
             </div>
 
             {{-- KPI 2: Total Saldo Nasabah --}}
             <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle hover:border-primary/40 transition-subtle flex flex-col justify-between space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Total Saldo Nasabah</span>
+                    <span class="text-body-sm font-bold text-text-muted uppercase tracking-wider">Total Saldo Nasabah</span>
                     <div class="w-9 h-9 rounded-radius-md bg-surface-muted text-text flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -83,14 +78,13 @@
                     <p class="font-mono text-heading-lg font-bold text-text tracking-tight truncate">
                         Rp {{ number_format($totalSavings, 0, ',', '.') }}
                     </p>
-                    <p class="text-caption text-text-muted mt-1">Akumulasi simpanan warga</p>
                 </div>
             </div>
 
             {{-- KPI 3: Total Nasabah --}}
             <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle hover:border-primary/40 transition-subtle flex flex-col justify-between space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Nasabah Terdaftar</span>
+                    <span class="text-body-sm font-bold text-text-muted uppercase tracking-wider">Nasabah Terdaftar</span>
                     <div class="w-9 h-9 rounded-radius-md bg-surface-muted text-text flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -101,16 +95,14 @@
                     <p class="font-mono text-heading-lg font-bold text-text tracking-tight">
                         {{ number_format($totalCustomers, 0, ',', '.') }} <span class="text-body-sm font-normal text-text-muted">Orang</span>
                     </p>
-                    <a href="{{ route('bank-sampah.customers.index') }}" class="text-caption font-semibold text-primary hover:underline inline-flex items-center gap-1 mt-1">
-                        Lihat Data Nasabah &rarr;
-                    </a>
+             
                 </div>
             </div>
 
             {{-- KPI 4: Total Setoran Masuk --}}
             <div class="bg-surface border border-border rounded-radius-lg p-5 shadow-subtle hover:border-primary/40 transition-subtle flex flex-col justify-between space-y-3">
                 <div class="flex items-center justify-between gap-3">
-                    <span class="text-caption font-bold text-text-muted uppercase tracking-wider">Total Setoran</span>
+                    <span class="text-body-sm font-bold text-text-muted uppercase tracking-wider">Total Setoran</span>
                     <div class="w-9 h-9 rounded-radius-md bg-success-light text-success-text flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
@@ -121,14 +113,11 @@
                     <p class="font-mono text-heading-lg font-bold text-text tracking-tight truncate">
                         Rp {{ number_format($totalCredit, 0, ',', '.') }}
                     </p>
-                    <p class="text-caption text-text-muted mt-1">Akumulasi seluruh timbangan</p>
                 </div>
             </div>
         </div>
 
-        {{-- ========================================================= --}}
-        {{-- 3. SUPPORTING VOLUME METRICS (SECONDARY ROW)              --}}
-        {{-- ========================================================= --}}
+        {{-- 3. Supporting volume metrics (secondary row) --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-surface border border-border rounded-radius-md p-4 shadow-subtle flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3 min-w-0">
@@ -136,13 +125,13 @@
                         &minus;
                     </div>
                     <div class="min-w-0">
-                        <span class="block text-caption font-semibold text-text-muted uppercase">Total Penarikan Saldo</span>
+                        <span class="block text-body-sm font-semibold text-text-muted uppercase">Total Penarikan Saldo</span>
                         <span class="font-mono font-bold text-body text-text truncate block">
                             Rp {{ number_format($totalDebit, 0, ',', '.') }}
                         </span>
                     </div>
                 </div>
-                <a href="{{ route('bank-sampah.withdrawals.index') }}" class="text-caption font-semibold text-text-muted hover:text-primary shrink-0 transition-subtle">
+                <a href="{{ route('bank-sampah.withdrawals.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary shrink-0 transition-subtle">
                     Daftar Penarikan &rarr;
                 </a>
             </div>
@@ -155,28 +144,26 @@
                         </svg>
                     </div>
                     <div class="min-w-0">
-                        <span class="block text-caption font-semibold text-text-muted uppercase">Total Penjualan Agregator</span>
+                        <span class="block text-body-sm font-semibold text-text-muted uppercase">Total Penjualan Agregator</span>
                         <span class="font-mono font-bold text-body text-text truncate block">
                             Rp {{ number_format($totalSales, 0, ',', '.') }}
                         </span>
                     </div>
                 </div>
-                <a href="{{ route('bank-sampah.sales.index') }}" class="text-caption font-semibold text-text-muted hover:text-primary shrink-0 transition-subtle">
+                <a href="{{ route('bank-sampah.sales.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary shrink-0 transition-subtle">
                     Riwayat Penjualan &rarr;
                 </a>
             </div>
         </div>
 
-        {{-- ========================================================= --}}
-        {{-- 4. CHARTS & FINANCIAL ARUS (HONEST EMPTY STATES)           --}}
-        {{-- ========================================================= --}}
+        {{-- 4. Charts and fund flow (honest empty states) --}}
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {{-- Chart 1: Arus Timbangan (Setoran vs Penarikan) --}}
             <div class="lg:col-span-7 bg-surface border border-border rounded-radius-lg p-5 sm:p-6 shadow-subtle flex flex-col justify-between space-y-4">
                 <div class="flex items-start justify-between gap-4 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">Arus Timbangan (Setoran vs Penarikan)</h2>
-                        <p class="text-caption text-text-muted mt-0.5">Perbandingan akumulasi setoran sampah masuk vs penarikan tabungan</p>
+                        <p class="text-body-sm text-text-muted mt-0.5">Perbandingan akumulasi setoran sampah masuk vs penarikan tabungan</p>
                     </div>
                 </div>
 
@@ -191,15 +178,15 @@
                         </div>
                         <div>
                             <p class="text-body-sm font-bold text-text">Belum Ada Arus Timbangan</p>
-                            <p class="text-caption text-text-muted mt-1 max-w-sm">Grafik perbandingan setoran masuk dan penarikan akan muncul otomatis setelah transaksi timbangan mulai dicatat.</p>
+                            <p class="text-body-sm text-text-muted mt-1 max-w-sm">Grafik perbandingan setoran masuk dan penarikan akan muncul otomatis setelah transaksi timbangan mulai dicatat.</p>
                         </div>
-                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary text-white text-caption font-semibold shadow-subtle hover:bg-primary-hover transition-subtle">
+                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary text-white text-body-sm font-semibold shadow-subtle hover:bg-primary-hover transition-subtle">
                             + Catat Setoran Sekarang
                         </a>
                     </div>
                 @endif
 
-                <div class="pt-3 border-t border-border-subtle flex items-center justify-between text-caption text-text-muted font-mono">
+                <div class="pt-3 border-t border-border-subtle flex items-center justify-between text-body-sm text-text-muted font-mono">
                     <span>Setoran: <strong class="text-text font-bold">Rp {{ number_format($totalCredit, 0, ',', '.') }}</strong></span>
                     <span>Penarikan: <strong class="text-text font-bold">Rp {{ number_format($totalDebit, 0, ',', '.') }}</strong></span>
                 </div>
@@ -210,7 +197,7 @@
                 <div class="flex items-start justify-between gap-4 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">Komposisi Distribusi Dana</h2>
-                        <p class="text-caption text-text-muted mt-0.5">Proporsi saldo nasabah, kas fisik, dan omzet agregator</p>
+                        <p class="text-body-sm text-text-muted mt-0.5">Proporsi saldo nasabah, kas fisik, dan omzet agregator</p>
                     </div>
                 </div>
 
@@ -226,30 +213,28 @@
                         </div>
                         <div>
                             <p class="text-body-sm font-bold text-text">Belum Ada Distribusi Dana</p>
-                            <p class="text-caption text-text-muted mt-1 max-w-xs">Komposisi dana operasional dan tabungan warga akan terlihat setelah transaksi mulai tercatat.</p>
+                            <p class="text-body-sm text-text-muted mt-1 max-w-xs">Komposisi dana operasional dan tabungan warga akan terlihat setelah transaksi mulai tercatat.</p>
                         </div>
                     </div>
                 @endif
 
-                <div class="pt-3 border-t border-border-subtle text-caption text-text-muted flex items-center justify-between">
+                <div class="pt-3 border-t border-border-subtle text-body-sm text-text-muted flex items-center justify-between">
                     <span>Penjualan Agregator:</span>
                     <span class="font-mono font-bold text-text">Rp {{ number_format($totalSales, 0, ',', '.') }}</span>
                 </div>
             </div>
         </div>
 
-        {{-- ========================================================= --}}
-        {{-- 5. RECENT ACTIVITY LISTS (TABUNGAN & KAS)                 --}}
-        {{-- ========================================================= --}}
+        {{-- 5. Recent activity lists (tabungan and kas) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {{-- Activity Left: Mutasi Tabungan Nasabah Terbaru --}}
             <div class="bg-surface border border-border rounded-radius-lg p-5 sm:p-6 shadow-subtle space-y-4">
                 <div class="flex items-center justify-between border-b border-border-subtle pb-3">
                     <div>
                         <h3 class="text-heading-sm font-bold text-text">Mutasi Tabungan Terbaru</h3>
-                        <p class="text-caption text-text-muted mt-0.5">Catatan setoran dan penarikan nasabah terkini</p>
+                        <p class="text-body-sm text-text-muted mt-0.5">Catatan setoran dan penarikan nasabah terkini</p>
                     </div>
-                    <a href="{{ route('bank-sampah.savings') }}" class="text-caption font-semibold text-primary hover:underline">
+                    <a href="{{ route('bank-sampah.savings') }}" class="text-body-sm font-semibold text-primary hover:underline">
                         Buku Tabungan &rarr;
                     </a>
                 </div>
@@ -271,7 +256,7 @@
                             </span>
                         </div>
                     @empty
-                        <div class="py-8 text-center text-caption text-text-muted border border-dashed border-border-subtle rounded-radius-md">
+                        <div class="py-8 text-center text-body-sm text-text-muted border border-dashed border-border-subtle rounded-radius-md">
                             Belum ada riwayat mutasi tabungan nasabah.
                         </div>
                     @endforelse
@@ -283,9 +268,9 @@
                 <div class="flex items-center justify-between border-b border-border-subtle pb-3">
                     <div>
                         <h3 class="text-heading-sm font-bold text-text">Arus Kas Operasional Terbaru</h3>
-                        <p class="text-caption text-text-muted mt-0.5">Catatan kas masuk dan kas keluar kasir bank sampah</p>
+                        <p class="text-body-sm text-text-muted mt-0.5">Catatan kas masuk dan kas keluar kasir bank sampah</p>
                     </div>
-                    <a href="{{ route('bank-sampah.cash-report') }}" class="text-caption font-semibold text-primary hover:underline">
+                    <a href="{{ route('bank-sampah.cash-report') }}" class="text-body-sm font-semibold text-primary hover:underline">
                         Laporan Kas &rarr;
                     </a>
                 </div>
@@ -307,7 +292,7 @@
                             </span>
                         </div>
                     @empty
-                        <div class="py-8 text-center text-caption text-text-muted border border-dashed border-border-subtle rounded-radius-md">
+                        <div class="py-8 text-center text-body-sm text-text-muted border border-dashed border-border-subtle rounded-radius-md">
                             Belum ada catatan arus kas operasional.
                         </div>
                     @endforelse
@@ -316,9 +301,7 @@
         </div>
     </div>
 
-    {{-- ========================================================= --}}
-    {{-- CHART SCRIPTS (LIFECYCLE & SPA COMPATIBLE)                --}}
-    {{-- ========================================================= --}}
+    {{-- Chart scripts (lifecycle and SPA compatible) --}}
     @push('scripts')
     <script>
     function initDashboardCharts() {
