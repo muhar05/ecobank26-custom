@@ -52,7 +52,7 @@ $maxWidthClasses = [
         class="fixed inset-0 transform transition-all"
         @click="show = false"
     >
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-xs"></div>
     </div>
 
     {{-- Dialog Box --}}

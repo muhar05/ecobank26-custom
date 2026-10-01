@@ -11,6 +11,9 @@
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2.5">
+                @can('manage_waste_customers')
+                    <a href="{{ route('bank-sampah.customers.index') }}" class="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition px-2 py-1">Data Nasabah &rarr;</a>
+                @endcan
                 <a href="{{ route('bank-sampah.deposits.import') }}" class="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold shadow-xs transition w-full sm:w-auto justify-center">
                     <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Import Excel

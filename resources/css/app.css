@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================================================= */
+/* PLUS JAKARTA SANS — self-hosted global typography (no external CDN)      */
+/* Weights: 400 body/caption, 500 nav/buttons, 600 titles, 700 numbers,     */
+/* 800 retained only for existing financial-number emphasis.                 */
+/* ========================================================================= */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-400-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-500-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-600-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-700-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-800-latin.woff2') format('woff2');
+}
+
 [x-cloak] { display: none !important; }
 
 :root {
@@ -95,4 +136,43 @@
 /* Subtle motion transitions */
 .transition-subtle {
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================================================= */
+/* SPA VIEW TRANSITIONS & CONTENT ISOLATION (POC)                            */
+/* ========================================================================= */
+#app-content {
+  view-transition-name: main-content;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+@keyframes eco-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-3px); }
+}
+@keyframes eco-fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+::view-transition-old(main-content) {
+  animation: 80ms cubic-bezier(0.4, 0, 1, 1) both eco-fade-out;
+}
+::view-transition-new(main-content) {
+  animation: 130ms cubic-bezier(0, 0, 0.2, 1) both eco-fade-in;
+}
+
+/* ========================================================================= */
+/* DASHBOARD HERO ILLUSTRATION (Phase 3.1 visual polish)                     */
+/* Simple dark-mode treatment so the flat illustration stays legible.        */
+/* ========================================================================= */
+.hero-illustration {
+  shape-rendering: geometricPrecision;
+}
+.dark .hero-illustration {
+  filter: brightness(1.07) saturate(1.05);
 }

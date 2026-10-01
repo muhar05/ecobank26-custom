@@ -1,15 +1,42 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-Bv-ijL1m.css",
+    "file": "assets/app-CnZaQQvP.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "assets": [
+      "assets/plus-jakarta-sans-400-latin-Dhut76fR.woff2",
+      "assets/plus-jakarta-sans-500-latin-Bf-nb4oT.woff2",
+      "assets/plus-jakarta-sans-600-latin-DLTa1BUW.woff2",
+      "assets/plus-jakarta-sans-700-latin-CfpNZvy6.woff2",
+      "assets/plus-jakarta-sans-800-latin-CusIZhrK.woff2"
+    ]
+  },
+  "resources/fonts/plus-jakarta-sans-400-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-400-latin-Dhut76fR.woff2",
+    "src": "resources/fonts/plus-jakarta-sans-400-latin.woff2"
+  },
+  "resources/fonts/plus-jakarta-sans-500-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-500-latin-Bf-nb4oT.woff2",
+    "src": "resources/fonts/plus-jakarta-sans-500-latin.woff2"
+  },
+  "resources/fonts/plus-jakarta-sans-600-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-600-latin-DLTa1BUW.woff2",
+    "src": "resources/fonts/plus-jakarta-sans-600-latin.woff2"
+  },
+  "resources/fonts/plus-jakarta-sans-700-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-700-latin-CfpNZvy6.woff2",
+    "src": "resources/fonts/plus-jakarta-sans-700-latin.woff2"
+  },
+  "resources/fonts/plus-jakarta-sans-800-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-800-latin-CusIZhrK.woff2",
+    "src": "resources/fonts/plus-jakarta-sans-800-latin.woff2"
   },
   "resources/js/app.js": {
-    "file": "assets/app-CLEmmr2Q.js",
+    "file": "assets/app-ClyLt0RV.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

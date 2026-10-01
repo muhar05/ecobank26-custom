@@ -8,9 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Ecobank026') }} — Sistem Bank Sampah</title>
     <meta name="description" content="Kelola bank sampah secara digital: nasabah, setoran sampah, saldo tabungan, penarikan, penjualan, dan laporan dalam satu sistem.">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }

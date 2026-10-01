@@ -36,7 +36,8 @@ class DepositController extends Controller
     public function create(Request $request)
     {
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
-        $categories = WasteCategory::orderBy('name')->get();
+        $categories = WasteCategory::with('wasteCategoryGroup')->orderBy('name')->get();
+        $groups = \App\Models\WasteCategoryGroup::active()->orderBy('name')->get();
 
         $selectedDate = $request->input('date', date('Y-m-d'));
         $todayDeposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
@@ -51,6 +52,7 @@ class DepositController extends Controller
         return view('bank-sampah.deposits.create', compact(
             'customers',
             'categories',
+            'groups',
             'todayDeposits',
             'todayTotalWeight',
             'todayTotalAmount',
@@ -94,9 +96,10 @@ class DepositController extends Controller
     {
         $deposit->load(['details.wasteCategory', 'wasteCustomer']);
         $customers = WasteCustomer::where('status', 'active')->orderBy('name')->get();
-        $categories = WasteCategory::orderBy('name')->get();
+        $categories = WasteCategory::with('wasteCategoryGroup')->orderBy('name')->get();
+        $groups = \App\Models\WasteCategoryGroup::active()->orderBy('name')->get();
 
-        return view('bank-sampah.deposits.edit', compact('deposit', 'customers', 'categories'));
+        return view('bank-sampah.deposits.edit', compact('deposit', 'customers', 'categories', 'groups'));
     }
 
     public function update(Request $request, Deposit $deposit)

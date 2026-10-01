@@ -13,7 +13,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Plus Jakarta Sans', ...defaultTheme.fontFamily.sans],
             },
             fontSize: {
                 'body': ['1rem', { lineHeight: '1.5rem' }],          // 16px (Baseline body text per DESIGN.md)

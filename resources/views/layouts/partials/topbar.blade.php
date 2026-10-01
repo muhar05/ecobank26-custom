@@ -12,7 +12,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                 </svg>
             </button>
-            <h2 class="text-heading-sm font-bold text-text truncate">{{ $title ?? 'Dashboard' }}</h2>
+            <h2 id="topbar-page-title" class="text-heading-sm font-bold text-text truncate">{{ $title ?? 'Dashboard' }}</h2>
         </div>
 
         {{-- Right: toggle + user menu --}}

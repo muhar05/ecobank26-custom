@@ -13,8 +13,6 @@
             }
         })();
     </script>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-slate-50 to-white dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950 transition-colors duration-300">

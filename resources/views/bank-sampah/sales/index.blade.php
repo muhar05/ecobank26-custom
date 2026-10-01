@@ -5,7 +5,11 @@
                 <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100">Penjualan ke Agregator</h2>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola transaksi penjualan sampah dari bank sampah ke mitra agregator</p>
             </div>
-            <div class="flex items-center">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                @can('manage_waste_prices')
+                    <a href="{{ route('bank-sampah.collectors.index') }}" class="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition px-1 py-1">Agregator &rarr;</a>
+                    <a href="{{ route('bank-sampah.waste-prices.index') }}" class="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition px-1 py-1">Harga Sampah &rarr;</a>
+                @endcan
                 <a href="{{ route('bank-sampah.sales.create') }}" class="inline-flex items-center gap-2 bg-emerald-600 dark:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-400 shadow-sm hover:shadow transition w-full sm:w-auto justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Catat Penjualan

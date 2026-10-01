@@ -78,6 +78,15 @@
                             <span class="text-lg font-bold text-slate-800 dark:text-slate-200 mt-1 block">{{ $withdrawalsCount }} Kali</span>
                         </div>
                     </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-x-5 gap-y-2">
+                        @can('view_waste_reports')
+                            <a href="{{ route('bank-sampah.savings') }}" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Lihat di Buku Tabungan &rarr;</a>
+                        @endcan
+                        @can('manage_deposits')
+                            <a href="{{ route('bank-sampah.deposits.create') }}" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Catat Setoran &rarr;</a>
+                        @endcan
+                    </div>
                 </div>
 
                 {{-- Account Connections --}}
