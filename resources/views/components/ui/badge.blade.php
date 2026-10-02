@@ -8,7 +8,7 @@
 $baseClasses = 'inline-flex items-center font-semibold rounded-radius-sm transition-subtle';
 
 $sizeClasses = [
-    'sm' => 'text-caption px-2 py-0.5 gap-1',
+    'sm' => 'text-body-sm px-2 py-0.5 gap-1',
     'md' => 'text-body-sm px-2.5 py-1 gap-1.5',
 ][$size] ?? 'text-body-sm px-2.5 py-1 gap-1.5';
 

@@ -388,8 +388,21 @@ class DepositImportService
                         $materialStatus = 'ALIAS';
                         $reasons[] = $resolution['reason'];
                     } else {
-                        $materialStatus = 'NEEDS MAPPING';
-                        $reasons[] = "Material '{$rawMat}' belum terdaftar di master maupun alias";
+                        // Final concept: every Excel label automatically becomes
+                        // its own material (1 label = 1 material). Material
+                        // mapping is never blocking; grouping into a category
+                        // stays optional via Rekap. Unknown labels therefore
+                        // never yield NEEDS MAPPING here.
+                        $autoCategory = $this->findOrCreateAutoMaterial($rawMat);
+                        if ($autoCategory) {
+                            $matchedCategory = $autoCategory;
+                            $categoryById[$autoCategory->id] = $autoCategory;
+                            $materialStatus = 'VALID';
+                            $reasons[] = "Material '{$rawMat}' tercatat sebagai material tersendiri.";
+                        } else {
+                            $materialStatus = 'NEEDS MAPPING';
+                            $reasons[] = "Material '{$rawMat}' belum terdaftar di master maupun alias";
+                        }
                     }
                 }
             }
@@ -615,6 +628,46 @@ class DepositImportService
                 $created[] = $customer;
             }
             return $created;
+        });
+    }
+
+    /**
+     * Find or automatically provision the dedicated material for one Excel
+     * label (strictly 1 label = 1 material). Unknown labels become their own
+     * material with the raw label as its name and no category group, plus a
+     * persistent alias so re-imports resolve identically. Never merges.
+     */
+    public function findOrCreateAutoMaterial(string $rawLabel): ?WasteCategory
+    {
+        $clean = trim($rawLabel);
+        if ($clean === '') {
+            return null;
+        }
+
+        $canonical = $this->mappingService->findCanonical($clean);
+        if ($canonical) {
+            return $canonical;
+        }
+
+        $alias = $this->mappingService->findAlias($clean, MaterialAlias::SOURCE_BANK_SAMPAH, null);
+        if ($alias && $alias->is_active && $alias->wasteCategory) {
+            return $alias->wasteCategory;
+        }
+
+        return DB::transaction(function () use ($clean) {
+            // Re-check inside the transaction (processRows may run repeatedly
+            // within one import session; concurrent runs stay idempotent).
+            $canonical = $this->mappingService->findCanonical($clean);
+            if ($canonical) {
+                return $canonical;
+            }
+
+            $alias = $this->mappingService->findAlias($clean, MaterialAlias::SOURCE_BANK_SAMPAH, null);
+            if ($alias && $alias->is_active && $alias->wasteCategory) {
+                return $alias->wasteCategory;
+            }
+
+            return $this->quickAddCategory($clean, null, 'kg', 0.0, $clean);
         });
     }
 

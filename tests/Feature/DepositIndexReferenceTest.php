@@ -134,21 +134,110 @@ class DepositIndexReferenceTest extends TestCase
         $res->assertSee($customer->customer_code, false);
         $res->assertSee('DEP-' . str_pad($deposit->id, 5, '0', STR_PAD_LEFT), false);
 
-        // Material & Values
-        $res->assertSee('Botol PET Bening', false);
+        // Summary values (transaction-level, no per-material breakdown on index)
+        $res->assertSee('Jumlah Material', false);
+        $res->assertSee('1 Material', false);
         $res->assertSee('15,00', false); // weight in id-ID format
         $res->assertSee('Rp 45.000', false);
-        $res->assertSee('Barang titipan RT 04', false);
+
+        // Material names and notes live on the Detail page, not the index summary
+        $res->assertDontSee('Botol PET Bening', false);
+        $res->assertDontSee('Barang titipan RT 04', false);
 
         // Responsive structure
         $res->assertSee('hidden md:block', false);
         $res->assertSee('block md:hidden', false);
 
         // Actions
-        $res->assertSee('Rincian', false);
+        $res->assertSee('Detail', false);
         $res->assertSee('Edit', false);
         $res->assertSee('Hapus', false);
         $res->assertSee('confirm-delete-modal', false);
+    }
+
+    public function test_deposit_show_renders_per_detail_rows_from_snapshot(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+        $date = now()->format('Y-m-d');
+
+        $group = WasteCategoryGroup::create(['name' => 'Plastik', 'code' => 'PLS']);
+        $catA = WasteCategory::create([
+            'name' => 'Botol PET Bening',
+            'code' => 'PET.01',
+            'unit' => 'kg',
+            'member_price' => 3000,
+            'waste_category_group_id' => $group->id,
+        ]);
+        $catB = WasteCategory::create([
+            'name' => 'Kardus Tebal',
+            'code' => 'KRD.01',
+            'unit' => 'kg',
+            'member_price' => 2000,
+            'waste_category_group_id' => $group->id,
+        ]);
+        $customer = WasteCustomer::create([
+            'name' => 'Ibu Fatimah',
+            'customer_code' => WasteCustomer::generateNextCustomerCode(),
+            'phone' => '081233445566',
+            'status' => 'active',
+        ]);
+
+        $deposit = Deposit::create([
+            'waste_customer_id' => $customer->id,
+            'date' => $date,
+            'total_amount' => 61000,
+            'notes' => 'Barang titipan RT 04',
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $catA->id,
+            'weight' => 15,
+            'price_per_unit' => 3000,
+            'subtotal' => 45000,
+        ]);
+        // Snapshot price differs from master price on purpose
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $catB->id,
+            'weight' => 8,
+            'price_per_unit' => 2000,
+            'subtotal' => 16000,
+        ]);
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->get(route('bank-sampah.deposits.show', $deposit));
+
+        $res->assertStatus(200);
+
+        // Header & context
+        $res->assertSee('Detail Setoran', false);
+        $res->assertSee('DEP-' . str_pad($deposit->id, 5, '0', STR_PAD_LEFT), false);
+        $res->assertSee('Ibu Fatimah', false);
+        $res->assertSee($customer->customer_code, false);
+        $res->assertSee('Barang titipan RT 04', false);
+        $res->assertSee('Edit Setoran', false);
+
+        // Table headers use transaction terminology
+        $res->assertSee('Harga Satuan', false);
+
+        // One row per DepositDetail, values from snapshot columns
+        $res->assertSee('Botol PET Bening', false);
+        $res->assertSee('Kardus Tebal', false);
+        $res->assertSee('15,00', false);
+        $res->assertSee('8,00', false);
+        $res->assertSee('Rp 45.000', false);
+        $res->assertSee('Rp 16.000', false);
+
+        // Totals aggregated from details
+        $res->assertSee('Total Material', false);
+        $res->assertSee('Total Berat', false);
+        $res->assertSee('23,00', false);
+        $res->assertSee('Rp 61.000', false);
+
+        // No master-data terminology on the transaction page
+        $res->assertDontSee('Master Material', false);
+        $res->assertDontSee('Jenis Sampah', false);
     }
 
     public function test_deposit_index_spa_fragment_contains_no_micro_text_or_slate(): void

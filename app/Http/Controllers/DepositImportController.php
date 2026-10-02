@@ -541,6 +541,8 @@ class DepositImportController extends Controller
 
     /**
      * Quick Add a new canonical WasteCategory and optionally register a persistent alias.
+     * Strictly 1 raw label = 1 material. Bulk merge (several raw labels into
+     * one material) is rejected: each Excel material stays its own material.
      */
     public function quickAddCategory(Request $request)
     {
@@ -557,20 +559,33 @@ class DepositImportController extends Controller
         ]);
 
         $token = $request->input('token');
-        if (!Cache::has("deposit_import_{$token}")) {
+        $isDirect = ($token === 'direct_form' || empty($token));
+
+        if (!$isDirect && !Cache::has("deposit_import_{$token}")) {
             return redirect()->route('bank-sampah.deposits.import')
                 ->withErrors(['file' => 'Sesi impor telah kedaluwarsa.']);
         }
 
-        $staging = Cache::get("deposit_import_{$token}");
-
-        // Support both single raw_material and bulk raw_materials array
-        $rawMaterials = array_filter(array_unique(array_merge(
+        // Collect the single raw label (legacy raw_materials array is tolerated
+        // only when it carries exactly one label).
+        $rawMaterials = array_values(array_filter(array_unique(array_merge(
             (array) $request->input('raw_materials', []),
             $request->filled('raw_material') ? [(string) $request->input('raw_material')] : []
-        )));
+        ))));
 
-        $firstRaw = !empty($rawMaterials) ? reset($rawMaterials) : null;
+        // Final concept: several Excel labels may never become one material.
+        if (count($rawMaterials) > 1) {
+            $count = count($rawMaterials);
+            $redirect = $isDirect
+                ? redirect()->back()
+                : redirect()->route('bank-sampah.deposits.import', ['token' => $token]);
+
+            return $redirect->withErrors([
+                'raw_materials' => "Anda memilih {$count} label Excel. Satu label hanya bisa menjadi satu material. Tambahkan material satu per satu, atau hubungkan masing-masing ke material yang sudah ada.",
+            ])->withInput();
+        }
+
+        $firstRaw = $rawMaterials[0] ?? null;
 
         $group = $this->resolveCategoryGroup($request);
         $groupId = $group ? $group->id : null;
@@ -583,12 +598,33 @@ class DepositImportController extends Controller
             $request->boolean('save_alias', true) ? $firstRaw : null
         );
 
-        // Map every selected raw material and register alias
-        foreach ($rawMaterials as $raw) {
-            $staging['material_mappings'][$raw] = $category->id;
+        if ($isDirect) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'category' => [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'unit' => $category->unit,
+                        'member_price' => (float) $category->member_price,
+                        'code' => $category->code,
+                    ],
+                    'message' => "Material '{$category->name}' berhasil dibuat.",
+                ]);
+            }
+
+            return redirect()->back()
+                ->with('success', "Material baru '{$category->name}' berhasil ditambahkan.");
+        }
+
+        $staging = Cache::get("deposit_import_{$token}");
+
+        // Map the single raw label and register its alias (1 label = 1 material)
+        if ($firstRaw !== null) {
+            $staging['material_mappings'][$firstRaw] = $category->id;
             if ($request->boolean('save_alias', true)) {
                 $this->mappingService->registerAlias(
-                    $raw,
+                    $firstRaw,
                     $category->id,
                     MaterialAlias::SOURCE_BANK_SAMPAH,
                     null,
@@ -608,17 +644,14 @@ class DepositImportController extends Controller
 
         Cache::put("deposit_import_{$token}", $staging, now()->addHours(3));
 
-        $count = count($rawMaterials);
-        $msg = $count > 1
-            ? "Master Material baru '{$category->name}' ({$category->code}) berhasil dibuat dan terhubung ke {$count} material Excel."
-            : "Master Material baru '{$category->name}' ({$category->code}) berhasil dibuat dan terhubung otomatis.";
+        $msg = "Material baru '{$category->name}' ({$category->code}) berhasil dibuat dan terhubung otomatis.";
 
         return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
             ->with('success', $msg);
     }
 
     /**
-     * Batch assign administrative category (group) to selected Master Materials from Rekap Material view.
+     * Batch assign administrative category (group) to selected materials from Rekap Material view.
      */
     public function assignMaterialCategory(Request $request)
     {
@@ -741,7 +774,7 @@ class DepositImportController extends Controller
             Cache::forget("deposit_import_{$token}");
         }
 
-        return redirect()->route('bank-sampah.deposits.import')
-            ->with('success', 'Sesi impor telah dibatalkan.');
+        return redirect()->route('bank-sampah.deposits.index')
+            ->with('success', 'Sesi impor telah dibatalkan. Seluruh progress sesi dibersihkan dan tidak ada data yang masuk ke database.');
     }
 }

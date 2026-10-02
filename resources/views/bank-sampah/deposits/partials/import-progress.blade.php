@@ -1,11 +1,11 @@
 @php
     /**
      * Progress utama Import Setoran (4 tahap):
-     * Upload → Pemetaan → Rekap & Validasi → Selesai.
-     * Nasabah / Material / Kategori BUKAN tahap tersendiri; mereka sub-tab di dalam Pemetaan.
+     * Upload → Hubungkan Data → Rekap & Validasi → Selesai.
+     * Nasabah / Material adalah tab navigasi utama di dalam tahap Hubungkan Data.
      *
      * $progressStage = jumlah tahap yang sudah dicapai:
-     * 1 = Upload berjalan, 2 = Pemetaan berjalan, 3 = Rekap berjalan, 4 = seluruh tahap selesai.
+     * 1 = Upload berjalan, 2 = Hubungkan Data berjalan, 3 = Rekap berjalan, 4 = seluruh tahap selesai.
      */
     $progressStep = $step ?? 'upload';
     $progressSubView = $subView ?? 'resolve';
@@ -19,7 +19,7 @@
     $progressAllComplete = $progressStage >= 4;
     $progressItems = [
         ['label' => 'Upload'],
-        ['label' => 'Pemetaan'],
+        ['label' => 'Hubungkan Data'],
         ['label' => 'Rekap & Validasi'],
         ['label' => 'Selesai'],
     ];
@@ -44,11 +44,11 @@
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </span>
                 @elseif($isCurrent)
-                    <span aria-hidden="true" class="w-7 h-7 shrink-0 rounded-full border-2 border-primary bg-primary-light text-primary flex items-center justify-center text-caption font-bold">
+                    <span aria-hidden="true" class="w-7 h-7 shrink-0 rounded-full border-2 border-primary bg-primary-light text-primary flex items-center justify-center text-body-sm font-bold">
                         {{ $i + 1 }}
                     </span>
                 @else
-                    <span aria-hidden="true" class="w-7 h-7 shrink-0 rounded-full border border-border bg-surface text-text-muted flex items-center justify-center text-caption font-semibold">
+                    <span aria-hidden="true" class="w-7 h-7 shrink-0 rounded-full border border-border bg-surface text-text-muted flex items-center justify-center text-body-sm font-semibold">
                         {{ $i + 1 }}
                     </span>
                 @endif

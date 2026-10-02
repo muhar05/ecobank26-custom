@@ -83,9 +83,9 @@
                 <div x-show="!selectedCustomer" class="space-y-4">
                     <div class="flex items-center justify-between border-b border-border-subtle pb-3">
                         <label for="customer-search-input" class="block font-semibold text-body-sm text-text">
-                            1. Cari & Pilih Nasabah <span class="text-caption font-medium text-danger ml-1">(Wajib diisi)</span>
+                            1. Cari & Pilih Nasabah <span class="text-body-sm font-medium text-danger ml-1">(Wajib diisi)</span>
                         </label>
-                        <span class="text-caption text-text-muted">Ketik nama / kode nasabah</span>
+                        <span class="text-body-sm text-text-muted">Ketik nama / kode nasabah</span>
                     </div>
 
                     {{-- Search Input Bar --}}
@@ -117,17 +117,17 @@
                                 <div @mousedown.prevent="selectCustomer(cust)"
                                      @mouseenter="customerHighlightIndex = cIdx"
                                      :class="customerHighlightIndex === cIdx ? 'bg-primary-light text-primary' : 'hover:bg-surface-muted text-text'"
-                                     class="p-3 text-body-sm cursor-pointer flex items-center justify-between transition-subtle">
+                                     class="p-3 text-body cursor-pointer flex items-center justify-between transition-subtle">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center font-bold text-caption text-text shrink-0">
                                             <span x-text="cust.name.substr(0, 1).toUpperCase()"></span>
                                         </div>
                                         <div>
                                             <p class="font-bold text-text" x-text="cust.name"></p>
-                                            <p class="text-caption text-text-muted font-mono" x-text="cust.code"></p>
+                                            <p class="text-body-sm text-text-muted font-mono" x-text="cust.code"></p>
                                         </div>
                                     </div>
-                                    <span class="text-caption text-text-muted font-mono" x-text="cust.phone || ''"></span>
+                                    <span class="text-body-sm text-text-muted font-mono" x-text="cust.phone || ''"></span>
                                 </div>
                             </template>
                         </div>
@@ -139,9 +139,9 @@
                         <template x-for="rc in recentCustomers" :key="rc.id">
                             <button type="button" 
                                     @click="selectCustomer(rc)"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-surface-muted hover:bg-primary-light hover:text-primary border border-border text-body-sm font-medium transition-subtle cursor-pointer select-none">
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-surface-muted hover:bg-primary-light hover:text-primary border border-border text-body font-medium transition-subtle cursor-pointer select-none min-h-[44px]"
                                 <span x-text="rc.name"></span>
-                                <span class="text-caption text-text-muted font-mono" x-text="'(' + rc.code + ')'"></span>
+                                <span class="text-body-sm text-text-muted font-mono" x-text="'(' + rc.code + ')'"></span>
                             </button>
                         </template>
                     </div>
@@ -216,7 +216,7 @@
                             <template x-for="(row, i) in rows" :key="row.id">
                                 <tr class="group hover:bg-surface-muted/50 transition-subtle">
                                     {{-- Index --}}
-                                    <td class="py-3 px-3 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
+                                    <td class="py-3 px-3 text-center text-body font-mono text-text-muted" x-text="i + 1"></td>
 
                                     {{-- Material Search Combobox --}}
                                     <td class="py-3 px-3 relative" @click.outside="row.dropdownOpen = false">
@@ -253,7 +253,7 @@
                                                 <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                      @mouseenter="row.highlightedIndex = catIdx"
                                                      :class="row.highlightedIndex === catIdx ? 'bg-primary-light text-primary' : 'hover:bg-surface-muted text-text'"
-                                                     class="p-2.5 text-body-sm cursor-pointer flex items-center justify-between transition-subtle">
+                                                     class="p-2.5 text-body cursor-pointer flex items-center justify-between transition-subtle">
                                                     <div>
                                                         <div class="flex items-center gap-2">
                                                             <span class="font-bold" x-text="cat.name"></span>
@@ -262,7 +262,7 @@
                                                             </template>
                                                         </div>
                                                         <template x-if="cat.isAlias">
-                                                            <p class="text-caption text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
+                                                            <p class="text-body-sm text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
                                                         </template>
                                                     </div>
                                                     <div class="text-right shrink-0">
@@ -276,7 +276,7 @@
                                                     <p>Material tidak ditemukan.</p>
                                                     <button type="button" 
                                                             @click="openQuickAddModal(row.searchQuery, i)"
-                                                            class="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline">
+                                                            class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline min-h-[44px]"
                                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                                         + Tambah Sebagai Jenis Sampah Baru
                                                     </button>
@@ -305,13 +305,13 @@
                                         <template x-if="!row.editingPrice">
                                             <div class="flex items-center justify-end gap-2">
                                                 <div class="text-right">
-                                                    <span class="font-mono text-body-sm font-semibold text-text" x-text="formatRp(row.price)"></span>
+                                                    <span class="font-mono text-body font-semibold text-text" x-text="formatRp(row.price)"></span>
                                                     <span class="text-caption text-text-muted" x-text="'/' + row.unit"></span>
                                                     <template x-if="row.price !== row.defaultPrice && row.defaultPrice > 0">
-                                                        <span class="block text-caption text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
+                                                        <span class="block text-body-sm text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
                                                     </template>
                                                 </div>
-                                                <button type="button" @click="row.editingPrice = true" class="text-caption font-semibold text-text-muted hover:text-primary underline">
+                                                <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline min-h-[44px] inline-flex items-center">
                                                     Ubah
                                                 </button>
                                             </div>
@@ -324,7 +324,7 @@
                                                        min="0" 
                                                        x-model.number="row.price" 
                                                        @keydown.enter.prevent="row.editingPrice = false"
-                                                       class="w-24 px-2 py-1 text-body-sm text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
+                                                       class="w-24 px-2 py-1 text-body text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
                                                 <x-ui.button type="button" variant="secondary" size="sm" @click="row.editingPrice = false">
                                                     OK
                                                 </x-ui.button>
@@ -376,7 +376,7 @@
                                             <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                  @mouseenter="row.highlightedIndex = catIdx"
                                                  :class="row.highlightedIndex === catIdx ? 'bg-primary-light text-primary' : 'hover:bg-surface-muted text-text'"
-                                                 class="p-2.5 text-body-sm cursor-pointer flex items-center justify-between transition-subtle">
+                                                 class="p-2.5 text-body cursor-pointer flex items-center justify-between transition-subtle">
                                                 <div>
                                                     <div class="flex items-center gap-2">
                                                         <span class="font-bold" x-text="cat.name"></span>
@@ -385,7 +385,7 @@
                                                         </template>
                                                     </div>
                                                     <template x-if="cat.isAlias">
-                                                        <p class="text-caption text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
+                                                        <p class="text-body-sm text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
                                                     </template>
                                                 </div>
                                                 <div class="text-right shrink-0">
@@ -399,7 +399,7 @@
                                                 <p>Material tidak ditemukan.</p>
                                                 <button type="button"
                                                         @click="openQuickAddModal(row.searchQuery, i)"
-                                                        class="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline">
+                                                        class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline min-h-[44px]"
                                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                                     + Tambah Sebagai Jenis Sampah Baru
                                                 </button>
@@ -414,7 +414,7 @@
 
                             <div class="grid grid-cols-2 gap-3 pt-1">
                                 <div>
-                                    <span class="block text-caption font-bold text-text-muted uppercase mb-1">Berat (kg)</span>
+                                    <span class="block text-body-sm font-bold text-text-muted uppercase mb-1">Berat (kg)</span>
                                     <input type="number" step="any" min="0"
                                            :id="'weight-input-mobile-' + i"
                                            x-model="row.weight"
@@ -423,16 +423,16 @@
                                            class="w-full text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text p-2 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                                 </div>
                                 <div>
-                                    <span class="block text-caption font-bold text-text-muted uppercase mb-1">Harga Beli</span>
+                                    <span class="block text-body-sm font-bold text-text-muted uppercase mb-1">Harga Beli</span>
                                     <template x-if="!row.editingPrice">
                                         <div class="mt-1.5">
                                             <p class="text-body font-mono font-bold text-text" x-text="formatRp(row.price)"></p>
                                             <div class="flex items-center gap-2 mt-0.5">
                                                 <template x-if="row.price !== row.defaultPrice && row.defaultPrice > 0">
-                                                    <span class="text-caption text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
+                                                    <span class="text-body-sm text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
                                                 </template>
                                                 <template x-if="row.catId">
-                                                    <button type="button" @click="row.editingPrice = true" class="text-caption font-semibold text-text-muted hover:text-primary underline">Ubah</button>
+                                                    <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline min-h-[44px] inline-flex items-center">Ubah</button>
                                                 </template>
                                             </div>
                                         </div>
@@ -441,7 +441,7 @@
                                         <div class="flex items-center gap-1.5 mt-1.5">
                                             <input type="number" step="1" min="0" x-model.number="row.price"
                                                    @keydown.enter.prevent="row.editingPrice = false"
-                                                   class="w-full px-2 py-1.5 text-body-sm text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
+                                                   class="w-full px-2 py-1.5 text-body text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
                                             <x-ui.button type="button" variant="secondary" size="sm" @click="row.editingPrice = false">
                                                 OK
                                             </x-ui.button>
@@ -450,7 +450,7 @@
                                 </div>
                             </div>
 
-                            <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm font-bold">
+                            <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body font-bold">
                                 <span class="text-text-muted">Subtotal:</span>
                                 <span class="text-primary font-mono text-heading-sm" x-text="formatRp(calculateRowSubtotal(row))"></span>
                             </div>
@@ -519,7 +519,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                        <span class="text-body-sm font-bold text-text">Rekap Timbangan Hari Ini</span>
+                        <span class="text-body font-bold text-text">Rekap Timbangan Hari Ini</span>
                         <span class="text-caption text-text-muted ml-2">({{ $todayDeposits->count() }} Setoran &bull; {{ number_format($todayTotalWeight, 2, ',', '.') }} kg &bull; Rp {{ number_format($todayTotalAmount, 0, ',', '.') }})</span>
                     </div>
                 </div>
@@ -567,12 +567,12 @@
                     <div>
                         <x-input-label for="new_cat_price" value="Harga Beli Nasabah (Rp)" :required="true" />
                         <x-text-input type="number" step="1" min="0" name="member_price" id="new_cat_price" value="0" required />
-                        <p class="text-caption text-text-muted mt-1">Harga resmi yang dibayarkan Bank Sampah ke nasabah saat penimbangan.</p>
+                        <p class="text-body-sm text-text-muted mt-1">Harga resmi yang dibayarkan Bank Sampah ke nasabah saat penimbangan.</p>
                     </div>
 
                     <label class="flex items-center gap-2 cursor-pointer text-text">
                         <input type="checkbox" name="save_alias" value="1" checked class="rounded border-border text-primary focus:ring-primary">
-                        <span class="text-caption font-semibold">Simpan nama ini sebagai alias material otomatis</span>
+                        <span class="text-body-sm font-semibold">Simpan nama ini sebagai alias material otomatis</span>
                     </label>
                 </div>
 

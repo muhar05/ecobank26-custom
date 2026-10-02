@@ -9,7 +9,7 @@
             </x-slot:breadcrumbs>
             <x-slot:actions>
                 @can('manage_waste_customers')
-                    <a href="{{ route('bank-sampah.customers.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1">
+                    <a href="{{ route('bank-sampah.customers.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1 inline-flex items-center min-h-[44px]">
                         Data Nasabah &rarr;
                     </a>
                 @endcan
@@ -54,7 +54,7 @@
                         <input type="date"
                                name="start_date"
                                value="{{ $startDate ?? '' }}"
-                               class="border-0 p-0 text-body-sm bg-transparent text-text focus:ring-0">
+                               class="border-0 p-0 text-body bg-transparent text-text focus:ring-0">
                     </div>
 
                     <div class="flex items-center gap-2 bg-surface rounded-radius-md border border-border px-3 py-1.5 shadow-subtle">
@@ -62,7 +62,7 @@
                         <input type="date"
                                name="end_date"
                                value="{{ $endDate ?? '' }}"
-                               class="border-0 p-0 text-body-sm bg-transparent text-text focus:ring-0">
+                               class="border-0 p-0 text-body bg-transparent text-text focus:ring-0">
                     </div>
 
                     {{-- Tombol Filter --}}
@@ -73,7 +73,7 @@
                     {{-- Tombol Reset jika filter aktif --}}
                     @if(!empty($search) || !empty($startDate) || !empty($endDate))
                         <a href="{{ route('bank-sampah.deposits.index') }}"
-                           class="text-body-sm font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle">
+                           class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle inline-flex items-center min-h-[44px]">
                             Reset
                         </a>
                     @endif
@@ -91,7 +91,7 @@
                             <tr class="border-b border-border bg-surface-muted/40 text-body-sm font-bold text-text-muted uppercase tracking-wider">
                                 <th scope="col" class="py-3.5 px-4 w-36">Tanggal</th>
                                 <th scope="col" class="py-3.5 px-4 min-w-[200px]">Nasabah</th>
-                                <th scope="col" class="py-3.5 px-4 min-w-[220px]">Material Timbangan</th>
+                                <th scope="col" class="py-3.5 px-4 min-w-[180px]">Jumlah Material</th>
                                 <th scope="col" class="py-3.5 px-4 w-36 text-right">Total Berat</th>
                                 <th scope="col" class="py-3.5 px-4 w-40 text-right">Nilai Setoran</th>
                                 <th scope="col" class="py-3.5 px-4 w-44 text-right">Aksi</th>
@@ -101,11 +101,9 @@
                             @foreach($deposits as $d)
                                 @php
                                     $detailCount = $d->details->count();
-                                    $materialNames = $d->details->map(fn($item) => $item->wasteCategory->name ?? null)->filter()->unique()->values();
                                     $totalWeight = $d->details->sum('weight');
                                 @endphp
-                                <tbody x-data="{ expanded: false }" class="divide-y divide-border-subtle">
-                                    <tr class="hover:bg-surface-muted/50 transition-subtle group">
+                                    <tr class="hover:bg-surface-muted/50 transition-subtle">
                                         {{-- Kolom Tanggal & ID --}}
                                         <td class="py-3.5 px-4 whitespace-nowrap">
                                             <div class="text-body font-semibold text-text">
@@ -135,28 +133,14 @@
                                             </div>
                                         </td>
 
-                                        {{-- Kolom Material (Compact Summary) --}}
+                                        {{-- Kolom Jumlah Material (jumlah DepositDetail transaksi) --}}
                                         <td class="py-3.5 px-4">
                                             @if($detailCount > 0)
-                                                <div class="text-body font-semibold text-text">
-                                                    {{ $detailCount }} Jenis Material
-                                                </div>
-                                                <div class="text-body-sm text-text-muted truncate max-w-xs mt-0.5" title="{{ $materialNames->join(', ') }}">
-                                                    @if($materialNames->count() <= 3)
-                                                        {{ $materialNames->join(' · ') }}
-                                                    @else
-                                                        {{ $materialNames->take(3)->join(' · ') }} 
-                                                        <span class="font-bold text-primary">+{{ $materialNames->count() - 3 }}</span>
-                                                    @endif
-                                                </div>
+                                                <span class="text-body font-semibold text-text">
+                                                    {{ $detailCount }} Material
+                                                </span>
                                             @else
-                                                <span class="text-body-sm text-text-muted italic">Tanpa item</span>
-                                            @endif
-
-                                            @if($d->notes)
-                                                <div class="text-body-sm text-text-muted italic truncate max-w-xs mt-0.5" title="{{ $d->notes }}">
-                                                    "{{ $d->notes }}"
-                                                </div>
+                                                <span class="text-body text-text-muted italic">Tanpa item</span>
                                             @endif
                                         </td>
 
@@ -177,18 +161,13 @@
 
                                         {{-- Kolom Aksi --}}
                                         <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                                            <div class="inline-flex items-center justify-end gap-3 text-body-sm font-semibold">
-                                                {{-- Toggle Detail --}}
-                                                <button type="button" 
-                                                        @click="expanded = !expanded" 
-                                                        class="inline-flex items-center gap-1 text-primary hover:underline transition-subtle cursor-pointer">
-                                                    <span x-text="expanded ? 'Tutup' : 'Rincian'"></span>
-                                                    <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </button>
+                                            <div class="inline-flex items-center justify-end gap-3 text-body font-semibold">
+                                                <a href="{{ route('bank-sampah.deposits.show', $d) }}"
+                                                   class="text-primary hover:underline transition-subtle">
+                                                    Detail
+                                                </a>
 
-                                                <a href="{{ route('bank-sampah.deposits.edit', $d) }}" 
+                                                <a href="{{ route('bank-sampah.deposits.edit', $d) }}"
                                                    class="text-text-muted hover:text-text transition-subtle">
                                                     Edit
                                                 </a>
@@ -201,41 +180,6 @@
                                             </div>
                                         </td>
                                     </tr>
-
-                                    {{-- Expandable Drawer Rincian Timbangan --}}
-                                    <tr x-show="expanded" x-cloak class="bg-surface-muted/40">
-                                        <td colspan="6" class="py-4 px-6">
-                                            <div class="rounded-radius-md border border-border bg-surface p-4 space-y-3 shadow-subtle">
-                                                <div class="flex items-center justify-between border-b border-border-subtle pb-2.5">
-                                                    <span class="text-body-sm font-bold text-text-muted uppercase tracking-wider">
-                                                        Rincian Material &bull; DEP-{{ str_pad($d->id, 5, '0', STR_PAD_LEFT) }} ({{ $d->wasteCustomer->name ?? '-' }})
-                                                    </span>
-                                                    @if($d->notes)
-                                                        <span class="text-body-sm text-text-muted italic">Catatan: {{ $d->notes }}</span>
-                                                    @endif
-                                                </div>
-
-                                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    @foreach($d->details as $det)
-                                                        <div class="p-3 rounded-radius-md bg-surface-muted border border-border-subtle flex items-center justify-between text-body-sm">
-                                                            <div>
-                                                                <div class="font-bold text-text text-body">
-                                                                    {{ $det->wasteCategory->name ?? 'Material' }}
-                                                                </div>
-                                                                <div class="font-mono text-body-sm text-text-muted mt-0.5">
-                                                                    {{ number_format($det->weight, 2, ',', '.') }} {{ $det->wasteCategory->unit ?? 'kg' }} @ Rp {{ number_format($det->price_per_unit, 0, ',', '.') }}
-                                                                </div>
-                                                            </div>
-                                                            <div class="text-right font-mono font-bold text-primary text-body">
-                                                                Rp {{ number_format($det->subtotal, 0, ',', '.') }}
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
                             @endforeach
                         </tbody>
                     </table>
@@ -246,10 +190,9 @@
                     @foreach($deposits as $d)
                         @php
                             $detailCount = $d->details->count();
-                            $materialNames = $d->details->map(fn($item) => $item->wasteCategory->name ?? null)->filter()->unique()->values();
                             $totalWeight = $d->details->sum('weight');
                         @endphp
-                        <div x-data="{ expanded: false }" class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
+                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
                             {{-- Card Header: Nasabah & Tanggal --}}
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -268,7 +211,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <span class="text-body-sm font-semibold text-text block">
+                                    <span class="text-body font-semibold text-text block">
                                         {{ $d->date ? $d->date->translatedFormat('d M Y') : '-' }}
                                     </span>
                                     <span class="font-mono text-body-sm text-text-muted mt-0.5 block">
@@ -294,64 +237,27 @@
                             </div>
 
                             {{-- Material Summary --}}
-                            <div class="text-body-sm">
-                                <span class="font-bold text-text">
-                                    {{ $detailCount }} Material:
-                                </span>
-                                @if($materialNames->count() > 0)
-                                    <span class="text-text-muted">
-                                        {{ $materialNames->take(3)->join(', ') }}
-                                        @if($materialNames->count() > 3)
-                                            <span class="font-bold text-primary">+{{ $materialNames->count() - 3 }}</span>
-                                        @endif
+                            <div class="text-body">
+                                @if($detailCount > 0)
+                                    <span class="font-bold text-text">
+                                        {{ $detailCount }} Material
                                     </span>
                                 @else
                                     <span class="text-text-muted italic">Tanpa item</span>
                                 @endif
                             </div>
 
-                            @if($d->notes)
-                                <p class="text-body-sm text-text-muted italic">
-                                    "{{ $d->notes }}"
-                                </p>
-                            @endif
-
-                            {{-- Rincian Expandable pada Mobile --}}
-                            <div x-show="expanded" x-cloak class="pt-2 border-t border-border-subtle space-y-2">
-                                <p class="text-body-sm font-bold text-text-muted uppercase tracking-wider">Item Timbangan:</p>
-                                @foreach($d->details as $det)
-                                    <div class="flex items-center justify-between text-body-sm py-1.5 border-b border-border-subtle last:border-b-0">
-                                        <div>
-                                            <span class="font-bold text-text block">{{ $det->wasteCategory->name ?? 'Material' }}</span>
-                                            <span class="font-mono text-body-sm text-text-muted block">
-                                                {{ number_format($det->weight, 2, ',', '.') }} kg @ Rp {{ number_format($det->price_per_unit, 0, ',', '.') }}
-                                            </span>
-                                        </div>
-                                        <span class="font-mono font-bold text-primary">
-                                            Rp {{ number_format($det->subtotal, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                @endforeach
-                            </div>
-
                             {{-- Actions Footer --}}
-                            <div class="flex items-center justify-between pt-2 border-t border-border-subtle text-body-sm">
-                                <button type="button" 
-                                        @click="expanded = !expanded" 
-                                        class="text-body-sm font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer">
-                                    <span x-text="expanded ? 'Tutup Rincian' : 'Rincian Material (' + {{ $detailCount }} + ')'"></span>
-                                    <svg class="w-4 h-4 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </button>
-                                <div class="flex items-center gap-2">
-                                    <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.deposits.edit', $d) }}'">
-                                        Edit
-                                    </x-ui.button>
-                                    <x-ui.button variant="ghost" size="sm" class="text-danger" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.deposits.destroy', $d) }}'})">
-                                        Hapus
-                                    </x-ui.button>
-                                </div>
+                            <div class="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle text-body">
+                                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.deposits.show', $d) }}'">
+                                    Detail
+                                </x-ui.button>
+                                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.deposits.edit', $d) }}'">
+                                    Edit
+                                </x-ui.button>
+                                <x-ui.button variant="ghost" size="sm" class="text-danger" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.deposits.destroy', $d) }}'})">
+                                    Hapus
+                                </x-ui.button>
                             </div>
                         </div>
                     @endforeach
@@ -381,10 +287,10 @@
                         </p>
                     </div>
                     <div class="flex items-center gap-3 pt-2">
-                        <a href="{{ route('bank-sampah.deposits.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-surface border border-border text-body-sm font-semibold text-text hover:bg-surface-muted transition-subtle">
+                        <a href="{{ route('bank-sampah.deposits.index') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-surface border border-border text-body font-semibold text-text hover:bg-surface-muted transition-subtle">
                             Reset Filter
                         </a>
-                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary text-white text-body-sm font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
+                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary text-white text-body font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
                             + Catat Setoran Baru
                         </a>
                     </div>
@@ -404,7 +310,7 @@
                         </p>
                     </div>
                     <div class="pt-2">
-                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-radius-md bg-primary text-white text-body-sm font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
+                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-radius-md bg-primary text-white text-body font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                             </svg>

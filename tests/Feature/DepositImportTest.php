@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Deposit;
 use App\Models\DepositDetail;
+use App\Models\MaterialAlias;
 use App\Models\SavingsLedger;
 use App\Models\User;
 use App\Models\WasteCategory;
@@ -653,7 +654,19 @@ class DepositImportTest extends TestCase
         $recapView->assertSee('Rekap Nasabah', false);
         $recapView->assertSee('Grand Total', false);
         $recapView->assertSee('Kembali ke Resolusi', false);
-        $recapView->assertSee('Import 4 Baris', false);
+        $recapView->assertSee('Simpan & Import 4 Data', false);
+
+        // Recap search + pagination controls for both tables
+        $recapView->assertSee('Cari material...', false);
+        $recapView->assertSee('Cari nasabah...', false);
+
+        // Sticky grand total summary (Berat + Nilai side by side)
+        $recapView->assertSee('Grand Total Berat', false);
+        $recapView->assertSee('Grand Total Nilai', false);
+
+        // Cancel session action with confirmation copy
+        $recapView->assertSee('Batalkan Sesi Import', false);
+        $recapView->assertSee('Batalkan Sesi Import?', false);
 
         $staging = Cache::get("deposit_import_{$token}");
         $service = app(\App\Services\DepositImportService::class);
@@ -941,7 +954,12 @@ class DepositImportTest extends TestCase
             }
         }
         $this->assertCount(8, $unmatchedCustomers);
-        $this->assertCount(3, $unmatchedMaterials);
+        // Final concept: unknown materials automatically become their own
+        // (3 distinct materials, 0 blocking) instead of NEEDS MAPPING
+        $this->assertCount(0, $unmatchedMaterials);
+        $autoCats = WasteCategory::whereIn('name', array_keys($newMaterials))->get();
+        $this->assertCount(3, $autoCats);
+        $this->assertCount(3, $autoCats->pluck('id')->unique());
 
         // Existing exact matches remain automatically VALID
         $exactValid = array_filter($staging['rows'], fn($r) => in_array($r['raw_customer'], ['Bu Sarti', 'Pak Budi'], true));
@@ -1080,7 +1098,7 @@ class DepositImportTest extends TestCase
         $resolve = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
         $resolve->assertStatus(200);
         $resolve->assertSee('Nasabah (10)', false);
-        $resolve->assertSee('Material (2)', false);
+        $resolve->assertSee('Material (5)', false);
 
         // Bulk add all 10 unique new customers in ONE operation
         $payload = ['token' => $token, 'customers' => []];
@@ -1105,7 +1123,7 @@ class DepositImportTest extends TestCase
         // Recap view renders and commit succeeds with 10 deposits (1 per unique customer)
         $recap = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']));
         $recap->assertStatus(200);
-        $recap->assertSee('Import 100 Baris', false);
+        $recap->assertSee('Simpan & Import 100 Data', false);
 
         $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), ['token' => $token]);
         $this->assertEquals(10, Deposit::whereDate('date', '2026-09-28')->count());
@@ -1147,13 +1165,16 @@ class DepositImportTest extends TestCase
         $resolve->assertStatus(200);
         // Entity-level tabs with unique counts (50 customers, 17 materials)
         $resolve->assertSee('Nasabah (50)', false);
-        $resolve->assertSee('Material (17)', false);
-        // Search + pagination controls exist; bounded mapping controls (one select per unique label)
+        $resolve->assertSee('Material (20)', false);
+        // Search + pagination controls exist; new-customer rows are status-only
+        // (no per-row select: one bulk action covers all 50), material keeps per-label selects
         $resolve->assertSee('Search nasabah', false);
         $resolve->assertSee('Search material', false);
         $resolve->assertSee('Halaman', false);
-        $this->assertEquals(50, substr_count($resolve->getContent(), 'name="customer_mappings['));
-        $this->assertEquals(17, substr_count($resolve->getContent(), 'name="material_mappings['));
+        $resolve->assertSee('+ Tambahkan 50 Nasabah Baru', false);
+        $this->assertEquals(0, substr_count($resolve->getContent(), 'name="customer_mappings['));
+        // No per-row material mapping inputs: all 20 labels auto-listed as their own materials
+        $this->assertEquals(0, substr_count($resolve->getContent(), 'name="material_mappings['));
 
         // Bulk add all 50, then map all 17 materials in ONE submit
         $payload = ['token' => $token, 'customers' => []];
@@ -1178,7 +1199,7 @@ class DepositImportTest extends TestCase
         // Recap + commit: 50 deposits for 1000 rows
         $recap = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']));
         $recap->assertStatus(200);
-        $recap->assertSee('Import 1000 Baris', false);
+        $recap->assertSee('Simpan & Import 1000 Data', false);
 
         $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), ['token' => $token]);
         $this->assertEquals(50, Deposit::whereDate('date', '2026-09-28')->count());
@@ -1293,6 +1314,10 @@ class DepositImportTest extends TestCase
         $preview->assertSee('Tambahkan 10 Nasabah & Hubungkan Otomatis', false);
         $preview->assertSee('otomatis dihubungkan ke seluruh baris Excel yang sesuai', false);
 
+        // Bulk button opens the modal via window event (scope-independent wiring)
+        $preview->assertSee("open-bulk-nasabah-modal", false);
+        $preview->assertSee('bulkNsbOpen', false);
+
         // ONE submit creates all 10 and propagates to staged rows
         $payload = ['token' => $token, 'customers' => []];
         for ($i = 1; $i <= 10; $i++) {
@@ -1313,8 +1338,9 @@ class DepositImportTest extends TestCase
         // Resolution summary flips to complete
         $after = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
         $after->assertStatus(200);
-        $after->assertSee('10/10 Nasabah selesai', false);
-        $after->assertSee('Semua nasabah terselesaikan', false);
+        $after->assertSee('Nasabah (10)', false);
+        $after->assertSee('10/10', false);
+        $after->assertSee('Nasabah Terhubung.', false);
     }
 
     public function test_bulk_add_ux_many_unresolved_needs_single_action_not_52_individual(): void
@@ -1477,14 +1503,22 @@ class DepositImportTest extends TestCase
         $preview = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
         $preview->assertStatus(200);
 
-        // Verify modal is not nested inside any tab container with x-show
+        // Verify modal is not nested inside any tab container with x-show.
+        // It carries its own scope and opens via window event (scope-independent).
         $doc = new \DOMDocument();
         libxml_use_internal_errors(true);
         $doc->loadHTML($preview->getContent());
         $xpath = new \DOMXPath($doc);
-        $modals = $xpath->query("//*[@x-show='bulkModalOpen']");
+        $modals = $xpath->query("//*[@x-show='bulkNsbOpen']");
         $this->assertEquals(1, $modals->length);
-        $parent = $modals->item(0)->parentNode;
+        $modal = $modals->item(0);
+        $this->assertTrue($modal->hasAttribute('x-data'), 'Modal must carry its own Alpine scope');
+        $this->assertStringContainsString(
+            'open-bulk-nasabah-modal',
+            $modal->getAttribute('x-on:open-bulk-nasabah-modal.window') . $modal->ownerDocument->saveHTML($modal),
+            'Modal must listen for the bulk open event'
+        );
+        $parent = $modal->parentNode;
         $this->assertFalse($parent->hasAttribute('x-show'), 'Modal must not be nested inside any tab with x-show');
 
         // 1. Tab Nasabah (53) and primary action
@@ -1500,7 +1534,8 @@ class DepositImportTest extends TestCase
         }
 
         // 3. Counter and readiness before resolution
-        $preview->assertSee('0/53 Nasabah selesai', false);
+        $preview->assertSee('Nasabah (53)', false);
+        $preview->assertSee('0/53', false);
         $preview->assertSee('Belum Siap Diimpor', false);
 
         // 4. Submit bulk add for all 53 customers
@@ -1526,13 +1561,13 @@ class DepositImportTest extends TestCase
             $this->assertNotNull($r['customer_id']);
         }
 
-        // 7. Counter changes to 53/53 Nasabah selesai, readiness updated
+        // 7. Tab counter changes to Nasabah (53) 53/53, readiness updated
         $after = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
         $after->assertStatus(200);
-        $after->assertSee('53/53 Nasabah selesai', false);
-        $after->assertSee('Semua nasabah terselesaikan', false);
+        $after->assertSee('53/53', false);
+        $after->assertSee('Nasabah Terhubung.', false);
         $after->assertSee('Siap Diimpor', false);
-        $after->assertSee('Nasabah (0)', false);
+        $after->assertSee('Nasabah (53)', false);
     }
 
     public function test_batch_assign_existing_category_to_materials_from_recap(): void
@@ -1686,21 +1721,24 @@ class DepositImportTest extends TestCase
         $preview->assertStatus(200);
 
         // Nasabah is 1/1 resolved
-        $preview->assertSee('1/1 Nasabah selesai', false);
-        $preview->assertSee('Semua nasabah terselesaikan', false);
+        $preview->assertSee('Nasabah (1)', false);
+        $preview->assertSee('1/1', false);
+        $preview->assertSee('Nasabah Terhubung.', false);
         // Bulk Add button is NOT shown because all customers are resolved
         $preview->assertDontSee('+ Tambahkan 1 Nasabah Baru', false);
 
-        // Global status banner displays: Belum Siap Diimpor — 2 material perlu dipetakan
-        $preview->assertSee('Belum Siap Diimpor', false);
-        $preview->assertSee('2 material perlu dipetakan', false);
+        // Final concept: unknown materials auto-become their own — import is
+        // ready immediately, no material mapping needed
+        $preview->assertSee('Siap Diimpor', false);
+        $preview->assertDontSee('Belum Siap Diimpor', false);
 
-        // Clear CTA to proceed to material mapping
-        $preview->assertSee('Lanjut ke Pemetaan Material (2)', false);
-        $preview->assertSee('Tindakan Berikutnya', false);
-
-        // Material mapping CTA: Simpan Pemetaan Material
-        $preview->assertSee('Simpan Pemetaan Material', false);
+        // Material tab lists each label as its own material with Rekap CTA
+        $preview->assertSee('2 Material Terdaftar', false);
+        $preview->assertSee('Material Belum Dipetakan 1', false);
+        $preview->assertSee('Material Belum Dipetakan 2', false);
+        $preview->assertSee('Lanjut ke Rekap', false);
+        $preview->assertDontSee('Tambah sebagai Material Baru', false);
+        $preview->assertDontSee('Belum terhubung', false);
 
         // Submit mapping
         $mapRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.resolve'), [
@@ -1718,7 +1756,7 @@ class DepositImportTest extends TestCase
         // Access resolve view: shows all data ready status and CTA Lanjut ke Rekap
         $afterResolve = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'resolve']));
         $afterResolve->assertStatus(200);
-        $afterResolve->assertSee('✓ Semua data siap diimpor', false);
+        $afterResolve->assertSee('2 Material Terdaftar', false);
         $afterResolve->assertSee('Lanjut ke Rekap', false);
     }
 
@@ -1795,18 +1833,19 @@ class DepositImportTest extends TestCase
             $this->assertEquals('active', $cust->status);
         }
 
-        // STEP 2B: Verify Nasabah selesai & Material is Next Step
+        // STEP 2B: Verify Nasabah Terhubung & Material is Next Step
         $step2B = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
         $step2B->assertStatus(200);
-        $step2B->assertSee('53/53 Nasabah selesai', false);
-        $step2B->assertSee('Semua nasabah terselesaikan', false);
+        $step2B->assertSee('Nasabah (53)', false);
+        $step2B->assertSee('53/53', false);
+        $step2B->assertSee('Nasabah Terhubung.', false);
         // Bulk Add button is NOT shown because all are registered
         $step2B->assertDontSee('+ Tambahkan 53 Nasabah Baru', false);
-        $step2B->assertSee('Belum Siap Diimpor', false);
-        $step2B->assertSee('30 material perlu dipetakan', false);
-        $step2B->assertSee('Lanjut ke Pemetaan Material (30)', false);
-        $step2B->assertSee('Tindakan Berikutnya', false);
-        $step2B->assertSee('Simpan Pemetaan Material', false);
+        // Final concept: 30 labels auto-became 30 materials — ready, no mapping
+        $step2B->assertSee('Siap Diimpor', false);
+        $step2B->assertDontSee('Belum Siap Diimpor', false);
+        $step2B->assertSee('30 Material Terdaftar', false);
+        $step2B->assertSee('Lanjut ke Rekap', false);
 
         // STEP 2C: Map all 30 unique materials
         $materialMappings = [];
@@ -1929,6 +1968,319 @@ class DepositImportTest extends TestCase
 
         // Rollback verified: 0 deposits, 0 details, 0 savings ledgers
         $this->assertEquals(0, Deposit::whereDate('date', '2026-09-28')->count());
+        $this->assertEquals(0, DepositDetail::count());
+        $this->assertEquals(0, SavingsLedger::count());
+    }
+
+    protected function seedBulkGuardStaging(string $token): void
+    {
+        Cache::put("deposit_import_{$token}", [
+            'token' => $token,
+            'file_path' => storage_path('app/temp_imports/' . $token . '.xlsx'),
+            'filename' => 'catatan_timbangan.xlsx',
+            'sheets' => ['28-09-2026'],
+            'default_date' => '2026-09-28',
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+            'batch_code' => 'IMP-TEST-' . $token,
+            'fingerprint' => md5($token),
+            'raw_rows' => [],
+            'rows' => [],
+            'customer_mappings' => [],
+            'material_mappings' => [],
+            'price_modes' => [],
+            'duplicate_policies' => [],
+        ], now()->addHours(3));
+    }
+
+    public function test_bulk_quick_add_without_confirmation_is_blocked(): void
+    {
+        $token = 'bulk-guard-' . uniqid();
+        $this->seedBulkGuardStaging($token);
+
+        $res = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.quick-add-category'), [
+            'token' => $token,
+            'raw_materials' => ['Jelantah', 'Aki'],
+            'name' => 'Lain Lain',
+        ]);
+
+        $res->assertRedirect(route('bank-sampah.deposits.import', ['token' => $token]));
+        $res->assertSessionHasErrors('raw_materials');
+
+        // Nothing is created: no master, no aliases, no staging mappings
+        $this->assertDatabaseMissing('waste_categories', ['name' => 'Lain Lain']);
+        $this->assertEquals(0, MaterialAlias::whereIn('external_name', ['Jelantah', 'Aki'])->count());
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEmpty($staging['material_mappings']);
+    }
+
+    public function test_bulk_quick_add_is_blocked_even_with_confirmation(): void
+    {
+        $token = 'bulk-guard-' . uniqid();
+        $this->seedBulkGuardStaging($token);
+
+        // Final concept: several Excel labels may never become one material,
+        // with or without confirmation. Each label stays its own material.
+        $res = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.quick-add-category'), [
+            'token' => $token,
+            'raw_materials' => ['Jelantah', 'Aki'],
+            'name' => 'Lain Lain',
+            'confirm_bulk_merge' => '1',
+        ]);
+
+        $res->assertRedirect(route('bank-sampah.deposits.import', ['token' => $token]));
+        $res->assertSessionHasErrors('raw_materials');
+
+        // Nothing is created: no merged material, no aliases, no staging mappings
+        $this->assertDatabaseMissing('waste_categories', ['name' => 'Lain Lain']);
+        $this->assertEquals(0, MaterialAlias::whereIn('external_name', ['Jelantah', 'Aki'])->count());
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEmpty($staging['material_mappings']);
+    }
+
+    public function test_single_element_raw_materials_array_creates_one_material(): void
+    {
+        $token = 'bulk-guard-' . uniqid();
+        $this->seedBulkGuardStaging($token);
+
+        $res = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.quick-add-category'), [
+            'token' => $token,
+            'raw_materials' => ['Jelantah'],
+            'name' => 'Minyak Jelantah',
+        ]);
+
+        $res->assertRedirect(route('bank-sampah.deposits.import', ['token' => $token]));
+        $res->assertSessionHas('success');
+
+        $cat = WasteCategory::where('name', 'Minyak Jelantah')->first();
+        $this->assertNotNull($cat);
+        $this->assertDatabaseHas('material_aliases', [
+            'external_name' => 'Jelantah',
+            'waste_category_id' => $cat->id,
+        ]);
+    }
+
+    public function test_unknown_materials_auto_become_own_materials_and_commit_without_mapping(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Kardus Bekas', 5, 3000, 15000],
+                ['Bu Sarti', 'Koran', 3, 2500, 7500],
+                ['Pak Budi', 'Kardus Remuk', 4, 3000, 12000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        // No material mapping performed at all: each label is its own material
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertCount(3, $staging['rows']);
+        foreach ($staging['rows'] as $r) {
+            $this->assertNotEquals('NEEDS MAPPING', $r['status']);
+            $this->assertNotNull($r['category_id']);
+        }
+        $catIds = collect($staging['rows'])->pluck('category_id', 'raw_material');
+        $this->assertCount(3, $catIds->unique());
+        $this->assertEquals('Kardus Bekas', WasteCategory::find($catIds['Kardus Bekas'])->name);
+        $this->assertEquals('Koran', WasteCategory::find($catIds['Koran'])->name);
+        $this->assertEquals('Kardus Remuk', WasteCategory::find($catIds['Kardus Remuk'])->name);
+
+        // Material tab lists all three as their own with Rekap CTA, nothing blocking
+        $view = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $view->assertStatus(200);
+        $view->assertSee('3 Material Terdaftar', false);
+        $view->assertSee('Lanjut ke Rekap', false);
+        $view->assertDontSee('Tambah sebagai Material Baru', false);
+        $view->assertDontSee('Belum terhubung', false);
+
+        // Commit directly without any material mapping or category
+        $commitRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), ['token' => $token]);
+        $commitRes->assertRedirect(route('bank-sampah.deposits.import', ['result' => 'success']));
+
+        $this->assertEquals(2, Deposit::whereDate('date', '2026-09-28')->count());
+        $this->assertEquals(3, DepositDetail::count());
+        $detailsByCat = DepositDetail::pluck('waste_category_id');
+        $this->assertCount(3, $detailsByCat->unique());
+    }
+
+    public function test_new_customer_rows_render_status_only_without_per_row_actions(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Warga Baru A', 'Asoy', 2, 3000, 6000],
+                ['Warga Baru B', 'Asoy', 3, 3000, 9000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $view = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $view->assertStatus(200);
+
+        // Single bulk action, status-only rows
+        $view->assertSee('+ Tambahkan 2 Nasabah Baru', false);
+        $view->assertSee('Nasabah Baru', false);
+        $view->assertSee('Nasabah (2)', false);
+        $view->assertSee('0/2', false);
+
+        // No per-row manual actions for genuinely new names
+        $view->assertDontSee('-- Pilih Nasabah --', false);
+        $view->assertDontSee('Daftar Baru', false);
+        $view->assertDontSee('Hubungkan Nasabah Terpilih', false);
+    }
+
+    public function test_auto_matched_customer_row_shows_connected_status(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 5, 3000, 15000],
+                ['Warga Baru C', 'Asoy', 2, 3000, 6000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $view = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $view->assertStatus(200);
+
+        $view->assertSee('Nasabah (2)', false);
+        $view->assertSee('1/2', false);
+        $view->assertSee('✓ Terhubung otomatis', false);
+        $view->assertSee('+ Tambahkan 1 Nasabah Baru', false);
+        $view->assertDontSee('-- Pilih Nasabah --', false);
+    }
+
+    public function test_exact_customer_code_auto_matches_without_mapping(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                [$this->custSarti->customer_code, 'Asoy', 5, 3000, 15000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('VALID', $staging['rows'][0]['status']);
+        $this->assertEquals('MATCHED', $staging['rows'][0]['customer_status']);
+        $this->assertEquals($this->custSarti->id, $staging['rows'][0]['customer_id']);
+
+        $view = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $view->assertStatus(200);
+        $view->assertSee('Nasabah (1)', false);
+        $view->assertSee('1/1', false);
+        $view->assertDontSee('-- Pilih Nasabah --', false);
+    }
+
+    public function test_exact_normalized_name_auto_matches_without_mapping(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['  bu   SARTI ', 'Asoy', 5, 3000, 15000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('VALID', $staging['rows'][0]['status']);
+        $this->assertEquals('MATCHED', $staging['rows'][0]['customer_status']);
+        $this->assertEquals($this->custSarti->id, $staging['rows'][0]['customer_id']);
+    }
+
+    public function test_single_quick_add_without_confirmation_still_works(): void
+    {
+        $token = 'bulk-guard-' . uniqid();
+        $this->seedBulkGuardStaging($token);
+
+        $res = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.quick-add-category'), [
+            'token' => $token,
+            'raw_material' => 'Jelantah',
+            'name' => 'Minyak Jelantah',
+        ]);
+
+        $res->assertRedirect(route('bank-sampah.deposits.import', ['token' => $token]));
+        $res->assertSessionHas('success');
+
+        $cat = WasteCategory::where('name', 'Minyak Jelantah')->first();
+        $this->assertNotNull($cat);
+        $this->assertDatabaseHas('material_aliases', [
+            'external_name' => 'Jelantah',
+            'waste_category_id' => $cat->id,
+        ]);
+    }
+
+    public function test_cancel_session_cleans_staging_and_returns_to_deposits_without_touching_db(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 5, 3000, 15000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $this->assertNotNull(Cache::get("deposit_import_{$token}"));
+
+        $res = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.reset'), [
+            'token' => $token,
+        ]);
+
+        // Back to Setoran page with confirmation message
+        $res->assertRedirect(route('bank-sampah.deposits.index'));
+        $res->assertSessionHas('success');
+
+        // Staging/session/cache cleaned, nothing committed to operational tables
+        $this->assertNull(Cache::get("deposit_import_{$token}"));
+        $this->assertEquals(0, Deposit::count());
         $this->assertEquals(0, DepositDetail::count());
         $this->assertEquals(0, SavingsLedger::count());
     }

@@ -2,14 +2,14 @@
     {{-- Header --}}
     <div class="flex items-center justify-between border-b border-border-subtle pb-3">
         <div>
-            <h3 class="text-caption font-bold text-text-muted uppercase tracking-wider">
+            <h3 class="text-body-sm font-bold text-text-muted uppercase tracking-wider">
                 Rekap Timbangan Hari Ini
             </h3>
-            <p class="text-body-sm font-semibold text-text mt-0.5">
+            <p class="text-body font-semibold text-text mt-0.5">
                 {{ \Carbon\Carbon::parse($selectedDate ?? date('Y-m-d'))->translatedFormat('l, d F Y') }}
             </p>
         </div>
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-caption font-semibold bg-success-light text-success-text border border-success/30">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-body-sm font-semibold bg-success-light text-success-text border border-success/30">
             {{ $todayDeposits->count() }} Transaksi
         </span>
     </div>
@@ -17,26 +17,26 @@
     {{-- Ringkasan Angka --}}
     <div class="grid grid-cols-2 gap-3">
         <div class="p-3 bg-surface-muted rounded-radius-md border border-border-subtle">
-            <span class="block text-caption font-semibold text-text-muted uppercase">Total Berat</span>
+            <span class="block text-body-sm font-semibold text-text-muted uppercase">Total Berat</span>
             <span class="text-heading-sm font-bold text-text mt-0.5 block">
-                {{ number_format($todayTotalWeight ?? 0, 2, ',', '.') }} <span class="text-caption font-normal text-text-muted">kg</span>
+                {{ number_format($todayTotalWeight ?? 0, 2, ',', '.') }} <span class="text-body-sm font-normal text-text-muted">kg</span>
             </span>
         </div>
         <div class="p-3 bg-primary-light/40 rounded-radius-md border border-primary/20">
-            <span class="block text-caption font-semibold text-primary uppercase">Total Nilai</span>
+            <span class="block text-body-sm font-semibold text-primary uppercase">Total Nilai</span>
             <span class="text-heading-sm font-bold text-primary mt-0.5 block truncate">
                 Rp {{ number_format($todayTotalAmount ?? 0, 0, ',', '.') }}
             </span>
         </div>
         <div class="p-2.5 bg-surface-muted rounded-radius-md border border-border-subtle">
-            <span class="block text-caption font-semibold text-text-muted uppercase">Nasabah Setor</span>
-            <span class="text-body-sm font-bold text-text mt-0.5 block">
-                {{ $todayCustomerCount ?? 0 }} <span class="text-caption font-normal text-text-muted">orang</span>
+            <span class="block text-body-sm font-semibold text-text-muted uppercase">Nasabah Setor</span>
+            <span class="text-body font-bold text-text mt-0.5 block">
+                {{ $todayCustomerCount ?? 0 }} <span class="text-body-sm font-normal text-text-muted">orang</span>
             </span>
         </div>
         <div class="p-2.5 bg-surface-muted rounded-radius-md border border-border-subtle">
-            <span class="block text-caption font-semibold text-text-muted uppercase">Rata-rata / Setoran</span>
-            <span class="text-body-sm font-bold text-text mt-0.5 block truncate">
+            <span class="block text-body-sm font-semibold text-text-muted uppercase">Rata-rata / Setoran</span>
+            <span class="text-body font-bold text-text mt-0.5 block truncate">
                 Rp {{ number_format($todayDeposits->count() > 0 ? ($todayTotalAmount / $todayDeposits->count()) : 0, 0, ',', '.') }}
             </span>
         </div>
@@ -45,7 +45,7 @@
     {{-- Daftar Antrean Setoran Hari Ini --}}
     <div>
         <div class="flex items-center justify-between mb-2">
-            <h4 class="text-caption font-bold text-text-muted uppercase tracking-wider">
+            <h4 class="text-body-sm font-bold text-text-muted uppercase tracking-wider">
                 Daftar Nasabah Sudah Setor
             </h4>
             <span class="text-caption text-text-muted font-mono">Terbaru di atas</span>
@@ -53,16 +53,16 @@
 
         <div class="overflow-y-auto max-h-[360px] divide-y divide-border-subtle pr-1 -mr-1">
             @forelse($todayDeposits as $idx => $dep)
-                <div class="py-2.5 flex items-start justify-between gap-3 text-body-sm hover:bg-surface-muted rounded-radius-md px-2 -mx-2 transition-subtle">
+                <div class="py-2.5 flex items-start justify-between gap-3 text-body hover:bg-surface-muted rounded-radius-md px-2 -mx-2 transition-subtle">
                     <div class="flex items-start gap-2.5 min-w-0">
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-surface-muted text-text-muted text-caption font-bold shrink-0 mt-0.5">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-muted text-text-muted text-body-sm font-bold shrink-0 mt-0.5">
                             {{ $idx + 1 }}
                         </span>
                         <div class="min-w-0">
                             <p class="font-bold text-text truncate">
                                 {{ $dep->wasteCustomer->name ?? 'Nasabah' }}
                             </p>
-                            <p class="text-caption text-text-muted truncate mt-0.5" title="{{ $dep->details->pluck('wasteCategory.name')->filter()->join(', ') }}">
+                            <p class="text-body-sm text-text-muted truncate mt-0.5" title="{{ $dep->details->pluck('wasteCategory.name')->filter()->join(', ') }}">
                                 {{ $dep->details->count() }} Material:
                                 <span class="text-text">
                                     {{ $dep->details->pluck('wasteCategory.name')->filter()->join(', ') }}
@@ -74,7 +74,7 @@
                         <p class="font-bold text-text">
                             {{ number_format($dep->details->sum('weight'), 2, ',', '.') }} kg
                         </p>
-                        <p class="text-caption font-semibold text-primary mt-0.5">
+                        <p class="text-body-sm font-semibold text-primary mt-0.5">
                             Rp {{ number_format($dep->total_amount, 0, ',', '.') }}
                         </p>
                     </div>
@@ -92,12 +92,12 @@
     </div>
 
     {{-- Panduan Cepat Keyboard --}}
-    <div class="p-3 bg-surface-muted rounded-radius-md border border-border-subtle text-caption text-text-muted space-y-1.5">
-        <p class="font-bold text-text uppercase tracking-wider text-caption flex items-center gap-1.5">
+    <div class="p-3 bg-surface-muted rounded-radius-md border border-border-subtle text-body-sm text-text-muted space-y-1.5">
+        <p class="font-bold text-text uppercase tracking-wider text-body-sm flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Tombol Pintas Cepat (Keyboard)
         </p>
-        <div class="grid grid-cols-1 gap-1 text-caption pt-1">
+        <div class="grid grid-cols-1 gap-1 text-body-sm pt-1">
             <div class="flex items-center justify-between">
                 <span>Pindah kolom</span>
                 <kbd class="px-1.5 py-0.5 bg-surface border border-border rounded font-mono font-semibold text-text-muted">Tab</kbd>

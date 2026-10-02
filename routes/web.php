@@ -112,7 +112,7 @@ Route::middleware(['auth', 'permission:manage_deposits', 'track_admin_device'])-
     Route::post('deposits/import/quick-add-category', [\App\Http\Controllers\DepositImportController::class, 'quickAddCategory'])->name('deposits.import.quick-add-category');
     Route::post('deposits/import/commit', [\App\Http\Controllers\DepositImportController::class, 'commitImport'])->name('deposits.import.commit');
     Route::post('deposits/import/reset', [\App\Http\Controllers\DepositImportController::class, 'resetImport'])->name('deposits.import.reset');
-    Route::resource('deposits', DepositController::class)->except(['show']);
+    Route::resource('deposits', DepositController::class);
 });
 
 // Bank Sampah - Withdrawals

@@ -16,7 +16,6 @@
                 'code' => $c->code,
                 'unit' => $c->unit,
                 'member_price' => (float) $c->member_price,
-                'group_name' => $c->wasteCategoryGroup->name ?? '',
             ];
         })->values()->all();
 
@@ -26,10 +25,9 @@
             ->get()
             ->map(function ($a) {
                 return [
-                    'external_name' => $a->external_name,
-                    'normalized_name' => $a->normalized_name,
-                    'category_id' => $a->waste_category_id,
-                    'category_name' => $a->wasteCategory->name ?? '',
+                    'id' => $a->waste_category_id,
+                    'name' => $a->external_name,
+                    'canonicalName' => $a->wasteCategory->name ?? '',
                     'unit' => $a->wasteCategory->unit ?? 'kg',
                     'member_price' => (float) ($a->wasteCategory->member_price ?? 0),
                 ];
@@ -47,15 +45,15 @@
         })->values()->all();
     @endphp
 
-    <div x-data="depositEditWorkflow()" @keydown.window="handleGlobalKeydown($event)" x-cloak class="max-w-5xl mx-auto space-y-6 pb-12">
-        {{-- Page Header --}}
+    <div x-data="depositEditWorkflow()" @keydown.window="handleGlobalKeydown($event)" x-cloak class="max-w-7xl mx-auto space-y-5 pb-32">
+        {{-- Page Header & Breadcrumb --}}
         <x-ui.page-header title="Edit Setoran Sampah" description="Ubah data transaksi penimbangan sampah nasabah">
             <x-slot:breadcrumbs>
                 <a href="{{ route('bank-sampah.dashboard') }}" class="hover:text-text transition-subtle">Dashboard</a>
                 <span>&rarr;</span>
                 <a href="{{ route('bank-sampah.deposits.index') }}" class="hover:text-text transition-subtle">Setoran</a>
                 <span>&rarr;</span>
-                <span class="text-text">DEP-{{ str_pad($deposit->id, 5, '0', STR_PAD_LEFT) }}</span>
+                <span class="text-text font-mono font-bold">DEP-{{ str_pad($deposit->id, 5, '0', STR_PAD_LEFT) }}</span>
             </x-slot:breadcrumbs>
             <x-slot:actions>
                 <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.deposits.index') }}'">
@@ -65,95 +63,100 @@
         </x-ui.page-header>
 
         {{-- Warning Banner Penyesuaian Saldo --}}
-        <div class="p-4 bg-warning-light border border-warning/30 rounded-radius-md flex items-start gap-3">
+        <div class="p-4 bg-warning-light border border-warning/30 rounded-radius-md flex items-start gap-3 shadow-subtle">
             <svg class="w-5 h-5 text-warning shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <div class="text-body-sm text-warning-text">
+            <div class="text-body text-warning-text">
                 <span class="font-bold">Perhatian:</span> Mengubah data timbangan ini akan menyesuaikan saldo tabungan nasabah secara otomatis pada buku kas dan jurnal tabungan.
             </div>
         </div>
 
         {{-- Form Transaksi --}}
-        <form id="deposit-edit-form" method="POST" action="{{ route('bank-sampah.deposits.update', $deposit) }}" @submit="submitting = true" class="space-y-6">
+        <form id="deposit-edit-form" method="POST" action="{{ route('bank-sampah.deposits.update', $deposit) }}" @submit="submitting = true" class="space-y-5">
             @csrf
             @method('PUT')
             <input type="hidden" name="waste_customer_id" :value="selectedCustomerId" required>
 
             {{-- ========================================================= --}}
-            {{-- STEP 1: NASABAH (CONTEXT DISPLAY)                         --}}
+            {{-- 1. HEADER KONTEKS: NASABAH, TANGGAL, CATATAN              --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered">
-                <div class="space-y-4">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-radius-md bg-surface-muted/60 border border-border">
-                        <div class="flex items-center gap-3.5">
-                            <div class="w-11 h-11 rounded-radius-md bg-primary text-white flex items-center justify-center font-bold text-heading-sm shadow-subtle shrink-0">
-                                <span>{{ strtoupper(substr($deposit->wasteCustomer->name ?? 'N', 0, 1)) }}</span>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h3 class="text-heading-sm font-bold text-text">{{ $deposit->wasteCustomer->name ?? 'Nasabah' }}</h3>
-                                    <x-ui.badge variant="success" size="sm">Nasabah Terdaftar</x-ui.badge>
-                                </div>
-                                <p class="text-body-sm text-text-muted font-mono mt-0.5">{{ $deposit->wasteCustomer->customer_code ?? '-' }}</p>
-                            </div>
+            <div class="bg-surface rounded-radius-lg border border-border p-4 sm:p-5 shadow-subtle space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-radius-md bg-surface-muted/60 border border-border">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-radius-md bg-primary text-white flex items-center justify-center font-bold text-heading-sm shadow-subtle shrink-0">
+                            <span>{{ strtoupper(substr($deposit->wasteCustomer->name ?? 'N', 0, 1)) }}</span>
                         </div>
-
-                        <span class="text-caption font-mono text-text-muted">DEP-{{ str_pad($deposit->id, 5, '0', STR_PAD_LEFT) }}</span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-heading-sm font-bold text-text">{{ $deposit->wasteCustomer->name ?? 'Nasabah' }}</h3>
+                                <x-ui.badge variant="success" size="sm">Nasabah Terdaftar</x-ui.badge>
+                            </div>
+                            <p class="text-body-sm text-text-muted font-mono mt-0.5">{{ $deposit->wasteCustomer->customer_code ?? '-' }}</p>
+                        </div>
                     </div>
 
-                    {{-- Form Tanggal & Catatan --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 pt-2">
-                        <div class="sm:col-span-4">
-                            <x-input-label for="date" value="Tanggal Timbangan" :required="true" />
-                            <x-text-input type="date" name="date" id="date" value="{{ old('date', $deposit->date->format('Y-m-d')) }}" required />
-                        </div>
-                        <div class="sm:col-span-8">
-                            <x-input-label for="notes" value="Catatan / Keterangan Timbangan (Opsional)" />
-                            <x-text-input type="text" name="notes" id="notes" value="{{ old('notes', $deposit->notes) }}" placeholder="Contoh: Titipan RT 03..." />
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-caption uppercase tracking-wider text-text-muted font-semibold">Nomor Transaksi:</span>
+                        <span class="text-body font-mono font-bold text-text bg-surface px-2.5 py-1 rounded-radius-sm border border-border">
+                            DEP-{{ str_pad($deposit->id, 5, '0', STR_PAD_LEFT) }}
+                        </span>
                     </div>
                 </div>
-            </x-ui.card>
+
+                {{-- Form Tanggal & Catatan --}}
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 pt-1">
+                    <div class="sm:col-span-4">
+                        <x-input-label for="date" value="Tanggal Timbangan" :required="true" />
+                        <x-text-input type="date" name="date" id="date" value="{{ old('date', $deposit->date->format('Y-m-d')) }}" required />
+                    </div>
+                    <div class="sm:col-span-8">
+                        <x-input-label for="notes" value="Catatan / Keterangan Timbangan (Opsional)" />
+                        <x-text-input type="text" name="notes" id="notes" value="{{ old('notes', $deposit->notes) }}" placeholder="Contoh: Titipan RT 03..." />
+                    </div>
+                </div>
+            </div>
 
             {{-- ========================================================= --}}
-            {{-- STEP 2: MATERIAL SETORAN (HYBRID TABLE-LIKE INPUT)        --}}
+            {{-- 2. TABEL UTAMA: RINCIAN MATERIAL TIMBANGAN                --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
+            <div class="bg-surface rounded-radius-lg border border-border shadow-subtle overflow-hidden">
+                <div class="p-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface">
                     <div>
-                        <h2 class="text-heading-sm font-bold text-text">2. Rincian Material Timbangan</h2>
+                        <h2 class="text-heading-sm font-bold text-text">Rincian Material Timbangan</h2>
                         <p class="text-body-sm text-text-muted mt-0.5">
-                            Sesuaikan berat atau harga material pada baris di bawah
+                            Sesuaikan material, berat timbangan, atau harga satuan transaksi
                         </p>
                     </div>
-                    <x-ui.button type="button" variant="secondary" size="sm" @click="addRow(true)">
-                        <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        + Tambah Material
-                    </x-ui.button>
+                    <button type="button"
+                            @click="addRow(true)"
+                            class="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-body font-bold px-4 py-2 rounded-radius-md shadow-subtle transition-subtle cursor-pointer select-none min-h-[44px]"
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span>+ Tambah Baris Material</span>
+                    </button>
                 </div>
 
-                {{-- DESKTOP VIEW --}}
-                <div class="hidden md:block overflow-x-visible">
+                {{-- DESKTOP OPERATIONAL TABLE (DENSE & STICKY HEADER) --}}
+                <div class="hidden md:block overflow-x-auto max-h-[580px] overflow-y-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-border text-caption font-bold text-text-muted uppercase tracking-wider">
-                                <th class="py-3 px-3 w-8 text-center">#</th>
-                                <th class="py-3 px-3 min-w-[240px]">Material / Jenis Sampah</th>
-                                <th class="py-3 px-3 w-36 text-right">Berat (kg)</th>
-                                <th class="py-3 px-3 w-40 text-right">Harga Beli</th>
-                                <th class="py-3 px-3 w-40 text-right">Subtotal</th>
-                                <th class="py-3 px-2 w-12 text-center"></th>
+                        <thead class="sticky top-0 z-10 bg-surface-muted border-b border-border shadow-xs text-caption font-bold text-text-muted uppercase tracking-wider">
+                            <tr>
+                                <th class="py-2.5 px-3 w-10 text-center">#</th>
+                                <th class="py-2.5 px-3 min-w-[280px]">Material</th>
+                                <th class="py-2.5 px-3 w-40 text-right">Berat (kg)</th>
+                                <th class="py-2.5 px-3 w-48 text-right">Harga Satuan</th>
+                                <th class="py-2.5 px-3 w-48 text-right">Total (Rp)</th>
+                                <th class="py-2.5 px-2 w-12 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             <template x-for="(row, i) in rows" :key="row.id">
                                 <tr class="group hover:bg-surface-muted/50 transition-subtle">
                                     {{-- Index --}}
-                                    <td class="py-3 px-3 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
+                                    <td class="py-2 px-3 text-center text-body font-mono text-text-muted" x-text="i + 1"></td>
 
                                     {{-- Material Search Combobox --}}
-                                    <td class="py-3 px-3 relative" @click.outside="row.dropdownOpen = false">
+                                    <td class="py-2 px-3 relative" @click.outside="row.dropdownOpen = false">
                                         <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
 
                                         <div class="relative">
@@ -165,7 +168,7 @@
                                                    @keydown.arrow-down.prevent="navigateMaterialDown(row)"
                                                    @keydown.arrow-up.prevent="navigateMaterialUp(row)"
                                                    @keydown.enter.prevent="selectHighlightedMaterial(row, i)"
-                                                   placeholder="Ketik/Pilih Material..."
+                                                   placeholder="Cari atau pilih material..."
                                                    autocomplete="off"
                                                    class="w-full text-body rounded-radius-md border border-border bg-surface text-text pl-3 pr-8 py-2 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                                             
@@ -187,40 +190,30 @@
                                                 <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                      @mouseenter="row.highlightedIndex = catIdx"
                                                      :class="row.highlightedIndex === catIdx ? 'bg-primary-light text-primary' : 'hover:bg-surface-muted text-text'"
-                                                     class="p-2.5 text-body-sm cursor-pointer flex items-center justify-between transition-subtle">
-                                                    <div>
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="font-bold" x-text="cat.name"></span>
-                                                            <template x-if="cat.isAlias">
-                                                                <x-ui.badge variant="alias" size="sm">Alias</x-ui.badge>
-                                                            </template>
-                                                        </div>
-                                                        <template x-if="cat.isAlias">
-                                                            <p class="text-caption text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
-                                                        </template>
+                                                     class="p-2.5 text-body cursor-pointer flex items-center justify-between transition-subtle">
+                                                    <div class="font-bold" x-text="cat.name"></div>
+                                                    <div class="text-right shrink-0">
+                                                        <span class="font-mono font-bold text-primary" x-text="formatRp(cat.member_price)"></span>
+                                                        <span class="text-caption text-text-muted" x-text="'/' + cat.unit"></span>
                                                     </div>
-                                                     <div class="text-right shrink-0">
-                                                         <span class="font-mono font-bold text-primary" x-text="formatRp(cat.member_price)"></span>
-                                                         <span class="text-caption text-text-muted" x-text="'/' + cat.unit"></span>
-                                                     </div>
-                                                 </div>
-                                             </template>
-                                             <template x-if="getFilteredMaterials(row.searchQuery).length === 0">
-                                                 <div class="p-3 text-center text-body-sm text-text-muted space-y-2">
-                                                     <p>Material tidak ditemukan.</p>
-                                                     <button type="button"
-                                                             @click="openQuickAddModal(row.searchQuery, i)"
-                                                             class="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline">
-                                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                                         + Tambah Sebagai Jenis Sampah Baru
-                                                     </button>
-                                                 </div>
-                                             </template>
-                                         </div>
-                                     </td>
+                                                </div>
+                                            </template>
+                                            <template x-if="getFilteredMaterials(row.searchQuery).length === 0">
+                                                <div class="p-3 text-center text-body-sm text-text-muted space-y-2">
+                                                    <p>Material tidak ditemukan.</p>
+                                                    <button type="button"
+                                                            @click="openQuickAddModal(row.searchQuery, i)"
+                                                            class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline cursor-pointer min-h-[44px]"
+                                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                        <span>+ Tambah Material Baru</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </td>
 
                                     {{-- Weight Input --}}
-                                    <td class="py-3 px-3 text-right">
+                                    <td class="py-2 px-3 text-right">
                                         <input type="number"
                                                step="any"
                                                min="0"
@@ -232,20 +225,20 @@
                                                class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                                     </td>
 
-                                    {{-- Price with Override Support --}}
-                                    <td class="py-3 px-3 text-right whitespace-nowrap">
+                                    {{-- Harga Satuan with Override Support --}}
+                                    <td class="py-2 px-3 text-right whitespace-nowrap">
                                         <input type="hidden" :name="'details[' + i + '][price_per_unit]'" :value="row.price">
 
                                         <template x-if="!row.editingPrice">
                                             <div class="flex items-center justify-end gap-2">
                                                 <div class="text-right">
-                                                    <span class="font-mono text-body-sm font-semibold text-text" x-text="formatRp(row.price)"></span>
+                                                    <span class="font-mono text-body font-semibold text-text" x-text="formatRp(row.price)"></span>
                                                     <span class="text-caption text-text-muted" x-text="'/' + row.unit"></span>
                                                     <template x-if="row.price !== row.defaultPrice && row.defaultPrice > 0">
-                                                        <span class="block text-caption text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
+                                                        <span class="block text-body-sm text-warning-text font-semibold" x-text="'Manual (Standar ' + formatRp(row.defaultPrice) + ')'"></span>
                                                     </template>
                                                 </div>
-                                                <button type="button" @click="row.editingPrice = true" class="text-caption font-semibold text-text-muted hover:text-primary underline">
+                                                <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline cursor-pointer min-h-[44px] inline-flex items-center">
                                                     Ubah
                                                 </button>
                                             </div>
@@ -258,7 +251,7 @@
                                                        min="0" 
                                                        x-model.number="row.price" 
                                                        @keydown.enter.prevent="row.editingPrice = false"
-                                                       class="w-24 px-2 py-1 text-body-sm text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
+                                                       class="w-24 px-2 py-1 text-body text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
                                                 <x-ui.button type="button" variant="secondary" size="sm" @click="row.editingPrice = false">
                                                     OK
                                                 </x-ui.button>
@@ -266,11 +259,11 @@
                                         </template>
                                     </td>
 
-                                    {{-- Subtotal --}}
-                                    <td class="py-3 px-3 text-right font-mono font-bold text-body text-text whitespace-nowrap" x-text="formatRp(calculateRowSubtotal(row))"></td>
+                                    {{-- Total Subtotal --}}
+                                    <td class="py-2 px-3 text-right font-mono font-bold text-body text-text whitespace-nowrap" x-text="formatRp(calculateRowSubtotal(row))"></td>
 
                                     {{-- Delete Row Action --}}
-                                    <td class="py-3 px-2 text-center">
+                                    <td class="py-2 px-2 text-center">
                                         <button type="button" 
                                                 @click="removeRow(i)" 
                                                 title="Hapus baris ini"
@@ -284,10 +277,23 @@
                     </table>
                 </div>
 
+                {{-- Action Bar Tambah di Bawah Tabel --}}
+                <div class="hidden md:flex items-center justify-between p-3 border-t border-border-subtle bg-surface-muted/40">
+                    <span class="text-body-sm text-text-muted">
+                        Tekan <kbd class="px-1.5 py-0.5 rounded-radius-sm bg-surface border border-border font-mono text-body-sm text-text font-bold">Enter</kbd> pada kolom berat untuk beralih atau menambah baris berikutnya.
+                    </span>
+                    <button type="button"
+                            @click="addRow(true)"
+                            class="inline-flex items-center gap-1.5 text-body font-bold text-primary hover:underline cursor-pointer min-h-[44px]"
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span>+ Tambah Baris Material</span>
+                    </button>
+                </div>
+
                 {{-- MOBILE VIEW --}}
-                <div class="block md:hidden space-y-3">
+                <div class="block md:hidden space-y-3 p-4">
                     <template x-for="(row, i) in rows" :key="row.id">
-                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
+                        <div class="p-3.5 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
                             <div class="flex items-start justify-between gap-3">
                                 <span class="text-caption font-bold text-text-muted font-mono" x-text="'#' + (i + 1)"></span>
                                 <div class="flex-1 relative" @click.outside="row.dropdownOpen = false">
@@ -309,18 +315,8 @@
                                             <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                  @mouseenter="row.highlightedIndex = catIdx"
                                                  :class="row.highlightedIndex === catIdx ? 'bg-primary-light text-primary' : 'hover:bg-surface-muted text-text'"
-                                                 class="p-2.5 text-body-sm cursor-pointer flex items-center justify-between transition-subtle">
-                                                <div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="font-bold" x-text="cat.name"></span>
-                                                        <template x-if="cat.isAlias">
-                                                            <x-ui.badge variant="alias" size="sm">Alias</x-ui.badge>
-                                                        </template>
-                                                    </div>
-                                                    <template x-if="cat.isAlias">
-                                                        <p class="text-caption text-text-muted font-medium mt-0.5" x-text="'&rarr; ' + cat.canonicalName"></p>
-                                                    </template>
-                                                </div>
+                                                 class="p-2.5 text-body cursor-pointer flex items-center justify-between transition-subtle">
+                                                <div class="font-bold" x-text="cat.name"></div>
                                                 <div class="text-right shrink-0">
                                                     <span class="font-mono font-bold text-primary" x-text="formatRp(cat.member_price)"></span>
                                                     <span class="text-caption text-text-muted" x-text="'/' + cat.unit"></span>
@@ -332,22 +328,22 @@
                                                 <p>Material tidak ditemukan.</p>
                                                 <button type="button"
                                                         @click="openQuickAddModal(row.searchQuery, i)"
-                                                        class="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline">
+                                                        class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline cursor-pointer min-h-[44px]"
                                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                                    + Tambah Sebagai Jenis Sampah Baru
+                                                    <span>+ Tambah Material Baru</span>
                                                 </button>
                                             </div>
                                         </template>
                                     </div>
                                 </div>
-                                <button type="button" @click="removeRow(i)" title="Hapus baris ini" class="p-2 text-text-muted hover:text-danger hover:bg-danger-light rounded-radius-sm transition-subtle">
+                                <button type="button" @click="removeRow(i)" title="Hapus baris ini" class="p-2 text-text-muted hover:text-danger hover:bg-danger-light rounded-radius-sm transition-subtle cursor-pointer">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3 pt-1">
                                 <div>
-                                    <span class="block text-caption font-bold text-text-muted uppercase mb-1">Berat (kg)</span>
+                                    <span class="block text-body-sm font-bold text-text-muted uppercase mb-1">Berat (kg)</span>
                                     <input type="number" step="any" min="0"
                                            :id="'weight-input-mobile-' + i"
                                            x-model="row.weight"
@@ -356,16 +352,16 @@
                                            class="w-full text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text p-2 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                                 </div>
                                 <div>
-                                    <span class="block text-caption font-bold text-text-muted uppercase mb-1">Harga Beli</span>
+                                    <span class="block text-body-sm font-bold text-text-muted uppercase mb-1">Harga Satuan</span>
                                     <template x-if="!row.editingPrice">
                                         <div class="mt-1.5">
-                                            <p class="text-body font-mono font-bold text-text" x-text="formatRp(row.price)"></p>
+                                            <p class="text-body font-mono font-bold text-text" x-text="formatRp(row.price) + ' / ' + row.unit"></p>
                                             <div class="flex items-center gap-2 mt-0.5">
                                                 <template x-if="row.price !== row.defaultPrice && row.defaultPrice > 0">
-                                                    <span class="text-caption text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
+                                                    <span class="text-body-sm text-warning-text font-semibold" x-text="'Manual (Standar ' + formatRp(row.defaultPrice) + ')'"></span>
                                                 </template>
                                                 <template x-if="row.catId">
-                                                    <button type="button" @click="row.editingPrice = true" class="text-caption font-semibold text-text-muted hover:text-primary underline">Ubah</button>
+                                                    <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline cursor-pointer min-h-[44px] inline-flex items-center">Ubah</button>
                                                 </template>
                                             </div>
                                         </div>
@@ -374,7 +370,7 @@
                                         <div class="flex items-center gap-1.5 mt-1.5">
                                             <input type="number" step="1" min="0" x-model.number="row.price"
                                                    @keydown.enter.prevent="row.editingPrice = false"
-                                                   class="w-full px-2 py-1.5 text-body-sm text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
+                                                   class="w-full px-2 py-1.5 text-body text-right font-mono font-bold rounded-radius-sm border border-warning bg-warning-light/40 text-text">
                                             <x-ui.button type="button" variant="secondary" size="sm" @click="row.editingPrice = false">
                                                 OK
                                             </x-ui.button>
@@ -383,102 +379,86 @@
                                 </div>
                             </div>
 
-                            <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm font-bold">
-                                <span class="text-text-muted">Subtotal:</span>
+                            <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body font-bold">
+                                <span class="text-text-muted">Total:</span>
                                 <span class="text-primary font-mono text-heading-sm" x-text="formatRp(calculateRowSubtotal(row))"></span>
                             </div>
                         </div>
                     </template>
+
+                    <button type="button"
+                            @click="addRow(true)"
+                            class="w-full py-2.5 px-4 rounded-radius-md border border-dashed border-border text-primary font-bold text-body hover:bg-surface-muted transition-subtle flex items-center justify-center gap-1.5 min-h-[44px]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span>+ Tambah Baris Material</span>
+                    </button>
                 </div>
-            </x-ui.card>
+            </div>
 
             {{-- ========================================================= --}}
-            {{-- STEP 3: TOTAL SETORAN & ACTION BUTTONS                    --}}
+            {{-- 3. STICKY BOTTOM ACTION BAR                               --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="bg-surface">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center border-b border-border-subtle pb-5">
+            <div class="sticky bottom-4 z-20 bg-surface/95 backdrop-blur-md border border-border rounded-radius-lg shadow-popover p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 transition-subtle">
+                    <div class="flex items-center gap-6 sm:gap-8 flex-wrap text-body">
                     <div>
                         <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Material</span>
-                        <span class="text-heading-sm font-bold text-text" x-text="validRowCount() + ' jenis'"></span>
+                        <span class="text-heading-sm font-bold text-text font-mono mt-0.5 block" x-text="validRowCount() + ' jenis'"></span>
                     </div>
-                    <div class="text-left sm:text-center">
-                        <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Berat Timbangan</span>
-                        <span class="text-heading-md font-extrabold text-text font-mono">
+                    <div class="h-8 w-px bg-border hidden sm:block"></div>
+                    <div>
+                        <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Berat</span>
+                        <span class="text-heading-sm font-bold text-text font-mono mt-0.5 block">
                             <span x-text="grandTotalWeight().toFixed(2)"></span> <span class="text-body-sm font-normal text-text-muted">kg</span>
                         </span>
                     </div>
-                    <div class="text-left sm:text-right">
+                    <div class="h-8 w-px bg-border hidden sm:block"></div>
+                    <div>
                         <span class="block text-caption font-bold uppercase tracking-wider text-primary">Total Nilai Tabungan</span>
-                        <span class="text-heading-xl font-extrabold text-primary font-mono" x-text="formatRp(grandTotalAmount())"></span>
+                        <span class="text-heading-md font-bold text-primary font-mono mt-0.5 block" x-text="formatRp(grandTotalAmount())"></span>
                     </div>
                 </div>
 
-                {{-- Action Buttons --}}
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5">
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end shrink-0">
                     <x-ui.button type="button" variant="ghost" onclick="window.location='{{ route('bank-sampah.deposits.index') }}'">
                         Batal
                     </x-ui.button>
-
                     <x-ui.button type="submit" variant="primary" x-bind:disabled="submitting">
                         <template x-if="submitting">
                             <x-ui.spinner size="sm" class="-ml-1 mr-2" />
                         </template>
                         <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        <span x-text="submitting ? 'Menyimpan...' : 'Perbarui Setoran (Ctrl+Enter)'"></span>
+                        <span x-text="submitting ? 'Menyimpan...' : 'Simpan Perubahan (Ctrl+Enter)'"></span>
                     </x-ui.button>
                 </div>
-            </x-ui.card>
+            </div>
         </form>
 
         {{-- ========================================================= --}}
-        {{-- MODAL QUICK ADD MATERIAL BARU (pola sama dengan create)   --}}
+        {{-- MODAL QUICK ADD MATERIAL (DIRECT DARI EDIT SETORAN)       --}}
         {{-- ========================================================= --}}
-        <x-ui.modal name="quick-add-material-modal" title="Tambah Sebagai Jenis Sampah Baru" description="Daftarkan material baru resmi ke master kategori" maxWidth="md">
-            <form method="POST" action="{{ route('bank-sampah.deposits.import.quick-add-category') }}">
-                @csrf
-                <input type="hidden" name="token" value="direct_form">
-                <input type="hidden" name="raw_material" :value="quickAddRawMaterial">
-
-                <div class="space-y-4 text-left">
-                    <div>
-                        <x-input-label for="new_cat_name" value="Nama Resmi Material" :required="true" />
-                        <x-text-input type="text" name="name" id="new_cat_name" x-model="quickAddRawMaterial" required />
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <x-input-label for="new_cat_group" value="Grup Induk" :required="true" />
-                            <select name="waste_category_group_id" id="new_cat_group" required class="w-full text-body rounded-radius-md border border-border bg-surface text-text p-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                                <option value="">-- Pilih Grup --</option>
-                                @foreach($groups as $grp)
-                                    <option value="{{ $grp->id }}">{{ $grp->name }} ({{ $grp->code }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <x-input-label for="new_cat_unit" value="Satuan" :required="true" />
-                            <x-text-input type="text" name="unit" id="new_cat_unit" value="kg" required />
-                        </div>
-                    </div>
-
-                    <div>
-                        <x-input-label for="new_cat_price" value="Harga Beli Nasabah (Rp)" :required="true" />
-                        <x-text-input type="number" step="1" min="0" name="member_price" id="new_cat_price" value="0" required />
-                        <p class="text-caption text-text-muted mt-1">Harga resmi yang dibayarkan Bank Sampah ke nasabah saat penimbangan.</p>
-                    </div>
-
-                    <label class="flex items-center gap-2 cursor-pointer text-text">
-                        <input type="checkbox" name="save_alias" value="1" checked class="rounded border-border text-primary focus:ring-primary">
-                        <span class="text-caption font-semibold">Simpan nama ini sebagai alias material otomatis</span>
+        <x-ui.modal name="quick-add-material-modal" title="Tambah Material Baru" maxWidth="sm">
+            <form @submit.prevent="submitQuickAdd()" class="space-y-4 text-left">
+                <div class="space-y-1.5">
+                    <label for="modal_quick_name" class="block text-body-sm font-semibold text-text">
+                        Nama Material <span class="text-danger">*</span>
                     </label>
+                    <input type="text"
+                           id="modal_quick_name"
+                           x-model="quickAddMaterialName"
+                           required
+                           placeholder="Masukkan nama material..."
+                            class="w-full text-body rounded-radius-md border border-border bg-surface text-text p-2.5 focus:border-primary focus:ring-primary shadow-subtle">
                 </div>
 
-                <div class="pt-5 mt-5 border-t border-border-subtle flex items-center justify-end gap-3">
+                <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
                     <x-ui.button type="button" variant="ghost" size="sm" @click="$dispatch('close-modal', 'quick-add-material-modal')">
                         Batal
                     </x-ui.button>
-                    <x-ui.button type="submit" variant="primary" size="sm">
-                        Simpan Material
+                    <x-ui.button type="submit" variant="primary" size="sm" x-bind:disabled="quickAddLoading">
+                        <template x-if="quickAddLoading">
+                            <x-ui.spinner size="sm" class="-ml-1 mr-1" />
+                        </template>
+                        <span x-text="quickAddLoading ? 'Menyimpan...' : 'Simpan Material'"></span>
                     </x-ui.button>
                 </div>
             </form>
@@ -497,8 +477,9 @@
                 activeAliases: activeAliases,
                 selectedCustomerId: '{{ $deposit->waste_customer_id }}',
                 rows: [],
-                quickAddRawMaterial: '',
+                quickAddMaterialName: '',
                 targetRowIndex: null,
+                quickAddLoading: false,
                 submitting: false,
 
                 init() {
@@ -593,20 +574,17 @@
                         name: c.name,
                         unit: c.unit,
                         member_price: c.member_price,
-                        isAlias: false,
                         uniqueKey: 'cat_' + c.id
                     }));
 
                     const aliasMatches = this.activeAliases.filter(a => 
-                        a.external_name.toLowerCase().includes(q)
+                        a.name.toLowerCase().includes(q)
                     ).map(a => ({
-                        id: a.category_id,
-                        name: a.external_name,
-                        canonicalName: a.category_name,
+                        id: a.id,
+                        name: a.name,
                         unit: a.unit,
                         member_price: a.member_price,
-                        isAlias: true,
-                        uniqueKey: 'alias_' + a.category_id + '_' + a.external_name
+                        uniqueKey: 'alias_' + a.id + '_' + a.name
                     }));
 
                     return [...canonicals, ...aliasMatches].slice(0, 10);
@@ -638,7 +616,7 @@
 
                 selectMaterial(row, cat, idx) {
                     row.catId = cat.id;
-                    row.name = cat.isAlias ? cat.canonicalName : cat.name;
+                    row.name = cat.name;
                     row.unit = cat.unit;
                     row.price = Math.round(cat.member_price);
                     row.defaultPrice = Math.round(cat.member_price);
@@ -719,11 +697,44 @@
                     return Math.round(val).toLocaleString('id-ID');
                 },
 
-                // Quick Add Modal Trigger (same pattern as create)
+                // Quick Add Modal Trigger (Direct dari Edit Setoran)
                 openQuickAddModal(rawName, idx) {
-                    this.quickAddRawMaterial = rawName;
+                    this.quickAddMaterialName = rawName || '';
                     this.targetRowIndex = idx;
                     this.$dispatch('open-modal', 'quick-add-material-modal');
+                },
+
+                async submitQuickAdd() {
+                    if (!this.quickAddMaterialName || !this.quickAddMaterialName.trim()) return;
+                    this.quickAddLoading = true;
+                    try {
+                        const res = await fetch("{{ route('bank-sampah.deposits.import.quick-add-category') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                token: 'direct_form',
+                                name: this.quickAddMaterialName.trim(),
+                                raw_material: this.quickAddMaterialName.trim()
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success && data.category) {
+                            this.allCategories.push(data.category);
+                            if (this.targetRowIndex !== null && this.rows[this.targetRowIndex]) {
+                                this.selectMaterial(this.rows[this.targetRowIndex], data.category, this.targetRowIndex);
+                            }
+                            this.$dispatch('close-modal', 'quick-add-material-modal');
+                            this.quickAddMaterialName = '';
+                        }
+                    } catch (err) {
+                        console.error('Gagal menambahkan material:', err);
+                    } finally {
+                        this.quickAddLoading = false;
+                    }
                 },
 
                 handleGlobalKeydown(e) {

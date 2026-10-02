@@ -92,6 +92,13 @@ class DepositController extends Controller
             ->with('success', 'Setoran sampah berhasil dicatat.');
     }
 
+    public function show(Deposit $deposit)
+    {
+        $deposit->load(['wasteCustomer', 'details.wasteCategory']);
+
+        return view('bank-sampah.deposits.show', compact('deposit'));
+    }
+
     public function edit(Deposit $deposit)
     {
         $deposit->load(['details.wasteCategory', 'wasteCustomer']);
