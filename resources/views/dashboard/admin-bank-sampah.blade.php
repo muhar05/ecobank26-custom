@@ -163,7 +163,6 @@
                 <div class="flex items-start justify-between gap-4 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">Arus Timbangan (Setoran vs Penarikan)</h2>
-                        <p class="text-body-sm text-text-muted mt-0.5">Perbandingan akumulasi setoran sampah masuk vs penarikan tabungan</p>
                     </div>
                 </div>
 
@@ -178,7 +177,6 @@
                         </div>
                         <div>
                             <p class="text-body-sm font-bold text-text">Belum Ada Arus Timbangan</p>
-                            <p class="text-body-sm text-text-muted mt-1 max-w-sm">Grafik perbandingan setoran masuk dan penarikan akan muncul otomatis setelah transaksi timbangan mulai dicatat.</p>
                         </div>
                         <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary text-white text-body-sm font-semibold shadow-subtle hover:bg-primary-hover transition-subtle">
                             + Catat Setoran Sekarang
@@ -192,35 +190,35 @@
                 </div>
             </div>
 
-            {{-- Chart 2: Komposisi Distribusi Dana --}}
+            {{-- Chart 2: Setoran per Material --}}
             <div class="lg:col-span-5 bg-surface border border-border rounded-radius-lg p-5 sm:p-6 shadow-subtle flex flex-col justify-between space-y-4">
                 <div class="flex items-start justify-between gap-4 border-b border-border-subtle pb-3">
                     <div>
-                        <h2 class="text-heading-sm font-bold text-text">Komposisi Distribusi Dana</h2>
-                        <p class="text-body-sm text-text-muted mt-0.5">Proporsi saldo nasabah, kas fisik, dan omzet agregator</p>
+                        <h2 class="text-heading-sm font-bold text-text">Setoran per Material</h2>
                     </div>
                 </div>
 
-                @if($totalSavings > 0 || $wasteBankCashBalance > 0 || $totalSales > 0)
-                    <div id="chart-bs-composition" class="min-h-[260px] flex items-center justify-center"></div>
+                @if($depositWeightByMaterial->isNotEmpty())
+                    <div id="chart-bs-material" class="min-h-[260px]"></div>
                 @else
                     <div class="py-12 px-4 text-center border-2 border-dashed border-border-subtle rounded-radius-md flex flex-col items-center justify-center space-y-3">
                         <div class="w-11 h-11 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
                         </div>
                         <div>
-                            <p class="text-body-sm font-bold text-text">Belum Ada Distribusi Dana</p>
-                            <p class="text-body-sm text-text-muted mt-1 max-w-xs">Komposisi dana operasional dan tabungan warga akan terlihat setelah transaksi mulai tercatat.</p>
+                            <p class="text-body-sm font-bold text-text">Belum Ada Data Setoran</p>
                         </div>
+                        <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary text-white text-body-sm font-semibold shadow-subtle hover:bg-primary-hover transition-subtle">
+                            + Catat Setoran Sekarang
+                        </a>
                     </div>
                 @endif
 
                 <div class="pt-3 border-t border-border-subtle text-body-sm text-text-muted flex items-center justify-between">
-                    <span>Penjualan Agregator:</span>
-                    <span class="font-mono font-bold text-text">Rp {{ number_format($totalSales, 0, ',', '.') }}</span>
+                    <span>Total berat setoran:</span>
+                    <span class="font-mono font-bold text-text">{{ number_format($totalDepositWeight, 2, ',', '.') }} kg</span>
                 </div>
             </div>
         </div>
@@ -232,7 +230,6 @@
                 <div class="flex items-center justify-between border-b border-border-subtle pb-3">
                     <div>
                         <h3 class="text-heading-sm font-bold text-text">Mutasi Tabungan Terbaru</h3>
-                        <p class="text-body-sm text-text-muted mt-0.5">Catatan setoran dan penarikan nasabah terkini</p>
                     </div>
                     <a href="{{ route('bank-sampah.savings') }}" class="text-body-sm font-semibold text-primary hover:underline">
                         Buku Tabungan &rarr;
@@ -268,7 +265,6 @@
                 <div class="flex items-center justify-between border-b border-border-subtle pb-3">
                     <div>
                         <h3 class="text-heading-sm font-bold text-text">Arus Kas Operasional Terbaru</h3>
-                        <p class="text-body-sm text-text-muted mt-0.5">Catatan kas masuk dan kas keluar kasir bank sampah</p>
                     </div>
                     <a href="{{ route('bank-sampah.cash-report') }}" class="text-body-sm font-semibold text-primary hover:underline">
                         Laporan Kas &rarr;
@@ -307,7 +303,7 @@
     function initDashboardCharts() {
         if (typeof ApexCharts === 'undefined') return;
         const flowEl = document.querySelector('#chart-bs-flow');
-        const compEl = document.querySelector('#chart-bs-composition');
+        const matEl = document.querySelector('#chart-bs-material');
         const charts = [];
 
         const isDark = document.documentElement.classList.contains('dark');
@@ -348,24 +344,30 @@
             charts.push(chartFlow);
         }
 
-        if (compEl) {
-            compEl.innerHTML = '';
-            const chartComp = new ApexCharts(compEl, {
+        if (matEl) {
+            matEl.innerHTML = '';
+            const matCategories = @json($depositWeightByMaterial->pluck('name'));
+            const matWeights = @json($depositWeightByMaterial->pluck('total_weight')->map(fn ($w) => (float) $w));
+            const matKg = v => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(v) + ' kg';
+            const chartMat = new ApexCharts(matEl, {
                 ...baseOpts,
-                chart: { ...baseOpts.chart, type: 'donut', height: 260 },
-                series: [{{ (float)$totalSavings }}, {{ (float)$wasteBankCashBalance }}, {{ (float)$totalSales }}],
-                labels: ['Saldo Nasabah', 'Kas Bank Sampah', 'Penjualan Agregator'],
-                colors: ['#059669', '#d97706', '#0ea5e9'],
-                stroke: { show: true, colors: isDark ? ['#1c1917'] : ['#ffffff'], width: 3 },
+                chart: { ...baseOpts.chart, type: 'bar', height: 260, parentHeightOffset: 0, animations: { enabled: false } },
+                series: [{ name: 'Berat setoran', data: matWeights }],
+                xaxis: {
+                    labels: { formatter: matKg, style: { colors: isDark ? '#a8a29e' : '#78716c' } },
+                    axisBorder: { show: false }, axisTicks: { show: false }
+                },
+                yaxis: {
+                    labels: { style: { colors: isDark ? '#a8a29e' : '#78716c', fontSize: '12px', fontWeight: 600 } }
+                },
+                colors: ['#059669'],
+                plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
                 dataLabels: { enabled: false },
-                legend: { position: 'bottom', fontSize: '12px', labels: { colors: isDark ? '#f5f5f4' : '#1c1917' }, markers: { radius: 6 }, itemMargin: { horizontal: 8, vertical: 4 } },
-                tooltip: { y: { formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) }, theme: isDark ? 'dark' : 'light' },
-                plotOptions: {
-                    pie: { donut: { size: '72%', labels: { show: true, name: { show: true, color: isDark ? '#a8a29e' : '#78716c' }, value: { show: true, color: isDark ? '#f5f5f4' : '#1c1917', formatter: v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v) } } } }
-                }
+                legend: { show: false },
+                tooltip: { y: { formatter: matKg }, theme: isDark ? 'dark' : 'light' }
             });
-            chartComp.render();
-            charts.push(chartComp);
+            chartMat.render();
+            charts.push(chartMat);
         }
 
         window._ecoDashboardCharts = charts;

@@ -23,13 +23,31 @@
             if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
         })();
     </script>
+    <style>
+        @media (min-width: 1024px) {
+            html.sidebar-collapsed #sidebar-container,
+            html.sidebar-collapsed #sidebar-aside {
+                width: 5rem !important;
+                min-width: 5rem !important;
+            }
+            html.sidebar-collapsed #sidebar-aside [x-show="!sidebarCollapsed"] {
+                display: none !important;
+            }
+            html.sidebar-collapsed #sidebar-aside [x-show="sidebarCollapsed"] {
+                display: block !important;
+            }
+        }
+    </style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-background text-text transition-colors duration-200"
     x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true', darkMode: document.documentElement.classList.contains('dark') }"
-    x-init="$watch('darkMode', v => { localStorage.theme = v ? 'dark' : 'light'; document.documentElement.classList.toggle('dark', v) }); $watch('sidebarCollapsed', val => localStorage.setItem('sidebarCollapsed', val))"
+    x-init="$watch('darkMode', v => { localStorage.theme = v ? 'dark' : 'light'; document.documentElement.classList.toggle('dark', v) }); $watch('sidebarCollapsed', val => { localStorage.setItem('sidebarCollapsed', val); document.documentElement.classList.toggle('sidebar-collapsed', val); })"
     @close-sidebar.window="sidebarOpen = false">
 
 {{-- SPA Navigation Topbar Progress Indicator --}}
@@ -37,7 +55,7 @@
 
 <div class="flex h-screen overflow-hidden">
     {{-- Sidebar: desktop (collapsible 256px / 80px, state persists via localStorage) --}}
-    <div class="hidden lg:flex transition-all duration-200 flex-shrink-0"
+    <div id="sidebar-container" class="hidden lg:flex transition-all duration-200 flex-shrink-0 lg:w-64 lg:min-w-[16rem]"
          :class="sidebarCollapsed ? 'lg:w-20 lg:min-w-[5rem]' : 'lg:w-64 lg:min-w-[16rem]'">
         @include('layouts.partials.sidebar')
     </div>

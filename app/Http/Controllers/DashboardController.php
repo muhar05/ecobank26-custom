@@ -14,6 +14,14 @@ class DashboardController extends Controller
         $recentLedgers = \App\Models\SavingsLedger::with('wasteCustomer')
             ->latest('id')->limit(5)->get();
         $recentCashLedgers = \App\Models\WasteBankCashLedger::latest('id')->limit(5)->get();
+        $depositWeightByMaterial = \App\Models\DepositDetail::query()
+            ->join('waste_categories', 'waste_categories.id', '=', 'deposit_details.waste_category_id')
+            ->selectRaw('waste_categories.name as name, SUM(deposit_details.weight) as total_weight')
+            ->groupBy('deposit_details.waste_category_id', 'waste_categories.name')
+            ->orderByDesc('total_weight')
+            ->limit(5)
+            ->get();
+        $totalDepositWeight = (float) \App\Models\DepositDetail::sum('weight');
 
         return view('dashboard.admin-bank-sampah', [
             'totalSavings' => $totalCredit - $totalDebit,
@@ -24,6 +32,8 @@ class DashboardController extends Controller
             'wasteBankCashBalance' => $wasteBankCashBalance,
             'recentLedgers' => $recentLedgers,
             'recentCashLedgers' => $recentCashLedgers,
+            'depositWeightByMaterial' => $depositWeightByMaterial,
+            'totalDepositWeight' => $totalDepositWeight,
         ]);
     }
 }

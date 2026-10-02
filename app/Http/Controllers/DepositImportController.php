@@ -167,12 +167,25 @@ class DepositImportController extends Controller
                 }
             }
 
+            // Calculate unique entity metrics distinguishing row count from unique entity count
+            $uniqueRawCustomers = collect($rows)->pluck('raw_customer')->map(fn($v) => trim($v))->filter()->unique();
+            $uniqueRawMaterials = collect($rows)->pluck('raw_material')->map(fn($v) => trim($v))->filter()->unique();
+
+            $uniqueCounts = [
+                'total_rows'           => count($rows),
+                'unique_customers'     => $uniqueRawCustomers->count(),
+                'unique_materials'     => $uniqueRawMaterials->count(),
+                'unresolved_customers' => count($unmatchedCustomers),
+                'unresolved_materials' => count($unmatchedMaterials),
+            ];
+
             return view('bank-sampah.deposits.import', [
                 'step' => 'preview',
                 'token' => $token,
                 'staging' => $staging,
                 'rows' => $rows,
                 'counts' => $counts,
+                'uniqueCounts' => $uniqueCounts,
                 'canCommit' => $canCommit,
                 'unmatchedCustomers' => $unmatchedCustomers,
                 'unmatchedMaterials' => $unmatchedMaterials,

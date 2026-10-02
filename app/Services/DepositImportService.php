@@ -211,6 +211,46 @@ class DepositImportService
         $activeCustomers = WasteCustomer::where('status', 'active')->get();
         $categories = WasteCategory::all();
 
+        // In-memory customer index by ID to avoid N+1 queries during mapping resolution
+        $customerById = $activeCustomers->keyBy('id');
+        $mappedCustomerIds = array_filter(array_values($customerMappings));
+        $missingCustIds = array_diff($mappedCustomerIds, $customerById->keys()->toArray());
+        if (!empty($missingCustIds)) {
+            $extraCustomers = WasteCustomer::whereIn('id', $missingCustIds)->get();
+            foreach ($extraCustomers as $ec) {
+                $customerById[$ec->id] = $ec;
+            }
+        }
+
+        // In-memory category index by ID to avoid N+1 queries during mapping resolution
+        $categoryById = $categories->keyBy('id');
+        $mappedCategoryIds = array_filter(array_values($materialMappings));
+        $missingCatIds = array_diff($mappedCategoryIds, $categoryById->keys()->toArray());
+        if (!empty($missingCatIds)) {
+            $extraCategories = WasteCategory::whereIn('id', $missingCatIds)->get();
+            foreach ($extraCategories as $ecat) {
+                $categoryById[$ecat->id] = $ecat;
+            }
+        }
+
+        // Build normalized customer and material mapping lookups for robust propagation
+        $customerMappingsNorm = [];
+        foreach ($customerMappings as $raw => $cid) {
+            if (!empty($cid)) {
+                $customerMappingsNorm[$this->normalizeString($raw)] = (int) $cid;
+            }
+        }
+
+        $materialMappingsNorm = [];
+        foreach ($materialMappings as $raw => $mid) {
+            if (!empty($mid)) {
+                $materialMappingsNorm[$this->normalizeString($raw)] = (int) $mid;
+            }
+        }
+
+        // Memoization cache for material alias resolution to execute at most once per unique material
+        $materialResolutionCache = [];
+
         // Build customer lookup maps
         $customerByCode = [];
         $customerByNameNorm = [];
@@ -287,9 +327,11 @@ class DepositImportService
 
             // 2. Customer matching
             if ($rawCust !== '') {
-                // Check manual mapping first
+                // Check manual mapping first (exact or normalized)
                 if (isset($customerMappings[$rawCust])) {
-                    $matchedCustomer = WasteCustomer::find($customerMappings[$rawCust]);
+                    $matchedCustomer = $customerById[$customerMappings[$rawCust]] ?? null;
+                } elseif (isset($customerMappingsNorm[$this->normalizeString($rawCust)])) {
+                    $matchedCustomer = $customerById[$customerMappingsNorm[$this->normalizeString($rawCust)]] ?? null;
                 }
 
                 // If not mapped, check exact code or normalized name
@@ -313,21 +355,30 @@ class DepositImportService
 
             // 3. Material matching
             if ($rawMat !== '') {
-                // Check temporary session mapping first
+                // Check temporary session mapping first (exact or normalized)
                 if (isset($materialMappings[$rawMat])) {
-                    $matchedCategory = WasteCategory::find($materialMappings[$rawMat]);
+                    $matchedCategory = $categoryById[$materialMappings[$rawMat]] ?? null;
+                    if ($matchedCategory) {
+                        $materialStatus = 'MAPPED';
+                    }
+                } elseif (isset($materialMappingsNorm[$this->normalizeString($rawMat)])) {
+                    $matchedCategory = $categoryById[$materialMappingsNorm[$this->normalizeString($rawMat)]] ?? null;
                     if ($matchedCategory) {
                         $materialStatus = 'MAPPED';
                     }
                 }
 
-                // If not mapped in session, resolve via MaterialMappingService pipeline
+                // If not mapped in session, resolve via MaterialMappingService pipeline (memoized per unique material)
                 if (!$matchedCategory) {
-                    $resolution = $this->mappingService->resolve(
-                        $rawMat,
-                        MaterialAlias::SOURCE_BANK_SAMPAH,
-                        null
-                    );
+                    $normMatKey = $this->normalizeString($rawMat);
+                    if (!isset($materialResolutionCache[$normMatKey])) {
+                        $materialResolutionCache[$normMatKey] = $this->mappingService->resolve(
+                            $rawMat,
+                            MaterialAlias::SOURCE_BANK_SAMPAH,
+                            null
+                        );
+                    }
+                    $resolution = $materialResolutionCache[$normMatKey];
 
                     if ($resolution['status'] === 'VALID') {
                         $matchedCategory = $resolution['category'];
@@ -472,6 +523,8 @@ class DepositImportService
                     'status'        => 'active',
                     'joined_at'     => now(),
                 ]);
+
+                $customer->raw_customer = $item['raw_customer'] ?? $name;
 
                 app(ActivityLogService::class)->logInfo(
                     'waste_customer.create',

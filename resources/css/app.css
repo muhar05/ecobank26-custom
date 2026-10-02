@@ -45,6 +45,20 @@
 
 [x-cloak] { display: none !important; }
 
+@media (min-width: 1024px) {
+  html.sidebar-collapsed #sidebar-container,
+  html.sidebar-collapsed #sidebar-aside {
+    width: 5rem !important;
+    min-width: 5rem !important;
+  }
+  html.sidebar-collapsed #sidebar-aside [x-show="!sidebarCollapsed"] {
+    display: none !important;
+  }
+  html.sidebar-collapsed #sidebar-aside [x-show="sidebarCollapsed"] {
+    display: block !important;
+  }
+}
+
 :root {
   /* ========================================================================= */
   /* ECOBANK026 CORE SEMANTIC TOKENS (LIGHT THEME - EARTHY MODERN OPERATIONAL)  */

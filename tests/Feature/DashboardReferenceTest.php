@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminDevice;
 use App\Models\Deposit;
+use App\Models\DepositDetail;
 use App\Models\SavingsLedger;
 use App\Models\User;
 use App\Models\WasteBankCashLedger;
@@ -86,7 +87,7 @@ class DashboardReferenceTest extends TestCase
 
         // 5. Honest Empty States (when database is fresh/empty)
         $res->assertSee('Belum Ada Arus Timbangan', false);
-        $res->assertSee('Belum Ada Distribusi Dana', false);
+        $res->assertSee('Belum Ada Data Setoran', false);
         $res->assertSee('Belum ada riwayat mutasi tabungan nasabah.', false);
         $res->assertSee('Belum ada catatan arus kas operasional.', false);
 
@@ -122,6 +123,20 @@ class DashboardReferenceTest extends TestCase
             'date' => now()->toDateString(),
         ]);
 
+        // Record a deposit detail so the per-material chart has real data
+        $deposit = Deposit::create([
+            'waste_customer_id' => $cust->id,
+            'date' => now()->toDateString(),
+            'total_amount' => 50000,
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $cat->id,
+            'weight' => 25,
+            'price_per_unit' => 2000,
+            'subtotal' => 50000,
+        ]);
+
         $res = $this->actingAs($admin)
             ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
             ->get(route('bank-sampah.dashboard'));
@@ -130,7 +145,10 @@ class DashboardReferenceTest extends TestCase
 
         // Chart container is rendered when data exists
         $res->assertSee('id="chart-bs-flow"', false);
-        $res->assertSee('id="chart-bs-composition"', false);
+        $res->assertSee('id="chart-bs-material"', false);
+        $res->assertSee('Setoran per Material', false);
+        $res->assertSee('Botol PET', false);
+        $res->assertSee('25,00 kg', false);
 
         // Recent activity item is rendered
         $res->assertSee('Pak Joko', false);

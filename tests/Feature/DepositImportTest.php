@@ -605,4 +605,188 @@ class DepositImportTest extends TestCase
         $this->assertEquals('VALID', $staging['rows'][0]['status']);
         $this->assertEquals('ERROR', $staging['rows'][1]['status']);
     }
+
+    /**
+     * Realistic 300-row scenario: repeated customer/material labels must be
+     * resolvable through UNIQUE entity actions only, never row by row.
+     *
+     * Layout: 50 rows exact-matched + 250 rows across 8 new unique customers
+     * and 3 new unique materials.
+     */
+    public function test_300_rows_resolve_through_unique_entity_actions_only(): void
+    {
+        $sheetRows = [['Nasabah', 'Material', 'Berat', 'Harga', 'Total']];
+
+        // 50 rows of exact matches (automatically VALID)
+        for ($i = 0; $i < 30; $i++) {
+            $sheetRows[] = ['Bu Sarti', 'Asoy', 5, 3000, 15000];
+        }
+        for ($i = 0; $i < 20; $i++) {
+            $sheetRows[] = ['Pak Budi', 'Emberan', 4, 2500, 10000];
+        }
+
+        // 8 new unique customers with repeated labels (250 rows total)
+        $newCustomers = [
+            'Warga Baru Alpha' => 45,
+            'Warga Baru Beta' => 40,
+            'Warga Baru Gamma' => 35,
+            'Warga Baru Delta' => 30,
+            'Warga Baru Epsilon' => 30,
+            'Warga Baru Zeta' => 25,
+            'Warga Baru Eta' => 25,
+            'Warga Baru Theta' => 20,
+        ];
+
+        // 3 new unique materials mapped to existing categories by price
+        $newMaterials = [
+            'Kardus Aqua Bekas' => ['category' => 'catAsoy', 'price' => 3000],
+            'Botol Kaca Hijau' => ['category' => 'catEmberan', 'price' => 2500],
+            'Koran Bekas Tebal' => ['category' => 'catGabrukan', 'price' => 4000],
+        ];
+        $newMaterialNames = array_keys($newMaterials);
+
+        $rowIdx = 0;
+        foreach ($newCustomers as $custName => $rowCount) {
+            for ($i = 0; $i < $rowCount; $i++) {
+                // First rows of each customer use a new material label (cycled),
+                // remaining rows use an existing master material.
+                if ($i < 10) {
+                    $matName = $newMaterialNames[$rowIdx % 3];
+                    $price = $newMaterials[$matName]['price'];
+                } else {
+                    $matName = 'Asoy';
+                    $price = 3000;
+                }
+                $sheetRows[] = [$custName, $matName, 2, $price, 2 * $price];
+                $rowIdx++;
+            }
+        }
+
+        $this->assertCount(301, $sheetRows); // header + 300 data rows
+
+        $file = $this->createExcelFile(['28-09-2026' => $sheetRows]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+        $this->assertNotEmpty($token);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertCount(300, $staging['rows']);
+
+        // 1. Unique grouping: 8 unresolved customers (not 250 actions), 3 unresolved materials
+        $previewRes = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $previewRes->assertStatus(200);
+
+        $unmatchedCustomers = [];
+        $unmatchedMaterials = [];
+        foreach ($staging['rows'] as $r) {
+            if (in_array($r['customer_status'], ['NEEDS MAPPING', 'AMBIGUOUS'], true)) {
+                $unmatchedCustomers[$r['raw_customer']] = true;
+            }
+            if ($r['material_status'] === 'NEEDS MAPPING') {
+                $unmatchedMaterials[$r['raw_material']] = true;
+            }
+        }
+        $this->assertCount(8, $unmatchedCustomers);
+        $this->assertCount(3, $unmatchedMaterials);
+
+        // Existing exact matches remain automatically VALID
+        $exactValid = array_filter($staging['rows'], fn($r) => in_array($r['raw_customer'], ['Bu Sarti', 'Pak Budi'], true));
+        $this->assertCount(50, $exactValid);
+        foreach ($exactValid as $r) {
+            $this->assertEquals('VALID', $r['status']);
+        }
+
+        // 2 & 3. ONE bulk operation creates all 8 customers and propagates to every repeated row
+        $bulkPayload = ['token' => $token, 'customers' => []];
+        foreach (array_keys($newCustomers) as $custName) {
+            $bulkPayload['customers'][] = ['raw_customer' => $custName, 'name' => $custName];
+        }
+
+        $this->actingAs($this->adminUser)
+            ->post(route('bank-sampah.deposits.import.bulk-add-customers'), $bulkPayload)
+            ->assertRedirect();
+
+        // 4. No duplicate customers for repeated raw names
+        foreach (array_keys($newCustomers) as $custName) {
+            $this->assertEquals(1, WasteCustomer::where('name', $custName)->count());
+        }
+
+        $staging = Cache::get("deposit_import_{$token}");
+        foreach ($staging['rows'] as $r) {
+            // Every row now references a customer (propagation to all repeated rows)
+            $this->assertNotNull($r['customer_id'], "Row {$r['excel_row_num']} still has no customer");
+        }
+
+        // 5 & 6. ONE explicit mapping per unique material resolves all its repeated rows
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.resolve'), [
+            'token' => $token,
+            'material_mappings' => [
+                'Kardus Aqua Bekas' => $this->catAsoy->id,
+                'Botol Kaca Hijau' => $this->catEmberan->id,
+                'Koran Bekas Tebal' => $this->catGabrukan->id,
+            ],
+        ])->assertRedirect();
+
+        $staging = Cache::get("deposit_import_{$token}");
+        foreach ($staging['rows'] as $r) {
+            $this->assertNotNull($r['category_id'], "Row {$r['excel_row_num']} still has no category");
+        }
+
+        // 7 & 8. canCommit becomes true: preview shows ready state with zero unresolved blockers
+        $readyRes = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token]));
+        $readyRes->assertStatus(200);
+        $readyRes->assertSee('Siap Diimpor', false);
+        $readyRes->assertDontSee('Belum Siap Diimpor', false);
+
+        // Final commit uses existing rules and creates one deposit per unique customer (10 total)
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ])->assertRedirect();
+
+        $this->assertEquals(10, Deposit::whereDate('date', '2026-09-28')->count());
+        $this->assertEquals(300, DepositDetail::count());
+    }
+
+    public function test_bulk_customer_creation_is_atomic_on_validation_failure(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Nasabah Atom A', 'Asoy', 2, 3000, 6000],
+                ['Nasabah Atom B', 'Asoy', 2, 3000, 6000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        // One entry violates validation (empty name) -> whole bulk operation must fail atomically
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.bulk-add-customers'), [
+            'token' => $token,
+            'customers' => [
+                ['raw_customer' => 'Nasabah Atom A', 'name' => 'Nasabah Atom A'],
+                ['raw_customer' => 'Nasabah Atom B', 'name' => ''],
+            ],
+        ]);
+
+        $this->assertDatabaseMissing('waste_customers', ['name' => 'Nasabah Atom A']);
+        $this->assertDatabaseMissing('waste_customers', ['name' => 'Nasabah Atom B']);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('NEEDS MAPPING', $staging['rows'][0]['status']);
+        $this->assertEquals('NEEDS MAPPING', $staging['rows'][1]['status']);
+    }
 }
