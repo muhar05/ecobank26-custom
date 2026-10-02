@@ -108,6 +108,7 @@ Route::middleware(['auth', 'permission:manage_deposits', 'track_admin_device'])-
     Route::post('deposits/import/resolve', [\App\Http\Controllers\DepositImportController::class, 'resolveMapping'])->name('deposits.import.resolve');
     Route::post('deposits/import/quick-add-customer', [\App\Http\Controllers\DepositImportController::class, 'quickAddCustomer'])->name('deposits.import.quick-add-customer');
     Route::post('deposits/import/bulk-add-customers', [\App\Http\Controllers\DepositImportController::class, 'bulkAddCustomers'])->name('deposits.import.bulk-add-customers');
+    Route::post('deposits/import/assign-material-category', [\App\Http\Controllers\DepositImportController::class, 'assignMaterialCategory'])->name('deposits.import.assign-material-category');
     Route::post('deposits/import/quick-add-category', [\App\Http\Controllers\DepositImportController::class, 'quickAddCategory'])->name('deposits.import.quick-add-category');
     Route::post('deposits/import/commit', [\App\Http\Controllers\DepositImportController::class, 'commitImport'])->name('deposits.import.commit');
     Route::post('deposits/import/reset', [\App\Http\Controllers\DepositImportController::class, 'resetImport'])->name('deposits.import.reset');

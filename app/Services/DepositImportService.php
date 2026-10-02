@@ -405,13 +405,19 @@ class DepositImportService
                 }
             }
 
-            // 4. Price & Total calculation
+            // 4. Price & Total calculation (source-of-truth rule)
             $masterPrice = $matchedCategory ? (float) $matchedCategory->member_price : null;
             $priceMode = $priceModes[$rawMat] ?? 'excel'; // 'excel' or 'master'
             $usedPrice = ($priceMode === 'master' && $masterPrice !== null) ? $masterPrice : ($excelPrice ?? $masterPrice ?? 0);
 
-            $systemTotal = ($weight !== null && $usedPrice !== null) ? round($weight * $usedPrice) : null;
-            $delta = ($excelTotal !== null && $systemTotal !== null) ? ($systemTotal - $excelTotal) : 0;
+            // Transaction total honors the Excel source total when present (e.g. Sirsak export
+            // with its own rounding). Only compute Weight x Price when the source has no Total.
+            if ($excelTotal !== null) {
+                $systemTotal = $excelTotal;
+            } else {
+                $systemTotal = ($weight !== null && $usedPrice !== null) ? round($weight * $usedPrice) : null;
+            }
+            $delta = 0;
 
             $hasPriceWarning = false;
             $hasTotalWarning = false;
@@ -420,13 +426,6 @@ class DepositImportService
                 if (abs($excelPrice - $masterPrice) > 0.01) {
                     $hasPriceWarning = true;
                     $reasons[] = "Harga Excel (Rp " . number_format($excelPrice, 0, ',', '.') . ") berbeda dari master (Rp " . number_format($masterPrice, 0, ',', '.') . ")";
-                }
-            }
-
-            if ($excelTotal !== null && $systemTotal !== null) {
-                if (abs($delta) > 2) {
-                    $hasTotalWarning = true;
-                    $reasons[] = "Total Excel (Rp " . number_format($excelTotal, 0, ',', '.') . ") selisih Rp " . number_format(abs($delta), 0, ',', '.') . " dari sistem (Rp " . number_format($systemTotal, 0, ',', '.') . ")";
                 }
             }
 
@@ -477,6 +476,87 @@ class DepositImportService
         }
 
         return $processedRows;
+    }
+
+    /**
+     * Build pre-commit recaps (Material + Nasabah) from the SAME staged dataset
+     * that commit() will persist. Only fully-resolved, non-skipped rows are
+     * included: rows with customer_id + category_id, minus rows skipped by the
+     * duplicate policy. Materials stay distinct by canonical category_id
+     * ("Kardus Bekas" !== "Kardus Remuk"); unit comes from the master material.
+     *
+     * @return array{materials: array, customers: array, grand_weight: float, grand_amount: float}
+     */
+    public function buildRecap(array $rows, array $duplicatePolicies = []): array
+    {
+        $materials = [];
+        $customers = [];
+        $grandWeight = 0.0;
+        $grandAmount = 0.0;
+
+        foreach ($rows as $r) {
+            if (empty($r['customer_id']) || empty($r['category_id'])) {
+                continue;
+            }
+            $policy = $duplicatePolicies[$r['customer_id']] ?? 'append';
+            if (!empty($r['has_existing_deposit']) && $policy === 'skip') {
+                continue;
+            }
+
+            $weight = (float) ($r['weight'] ?? 0);
+            $subtotal = (float) ($r['system_total'] ?? 0);
+
+            $catId = $r['category_id'];
+            if (!isset($materials[$catId])) {
+                $materials[$catId] = [
+                    'category_id' => $catId,
+                    'name' => $r['category_name'],
+                    'unit' => $r['category_unit'] ?? 'kg',
+                    'total_weight' => 0.0,
+                ];
+            }
+            $materials[$catId]['total_weight'] += $weight;
+
+            $custId = $r['customer_id'];
+            if (!isset($customers[$custId])) {
+                $customers[$custId] = [
+                    'customer_id' => $custId,
+                    'name' => $r['customer_name'],
+                    'code' => $r['customer_code'],
+                    'total_weight' => 0.0,
+                    'total_amount' => 0.0,
+                ];
+            }
+            $customers[$custId]['total_weight'] += $weight;
+            $customers[$custId]['total_amount'] += $subtotal;
+
+            $grandWeight += $weight;
+            $grandAmount += $subtotal;
+        }
+
+        // Attach category group (label) to each unique material
+        if (!empty($materials)) {
+            $categoriesWithGroups = WasteCategory::with('wasteCategoryGroup')
+                ->findMany(array_keys($materials))
+                ->keyBy('id');
+
+            foreach ($materials as $catId => &$m) {
+                $wc = $categoriesWithGroups->get($catId);
+                $m['group_id'] = $wc?->waste_category_group_id;
+                $m['group_name'] = $wc?->wasteCategoryGroup?->name ?? 'Belum dikategorikan';
+            }
+            unset($m);
+        }
+
+        usort($materials, fn($a, $b) => strcmp($a['name'], $b['name']));
+        usort($customers, fn($a, $b) => strcmp($a['name'], $b['name']));
+
+        return [
+            'materials' => array_values($materials),
+            'customers' => array_values($customers),
+            'grand_weight' => $grandWeight,
+            'grand_amount' => $grandAmount,
+        ];
     }
 
     /**
@@ -543,19 +623,19 @@ class DepositImportService
      */
     public function quickAddCategory(
         string $name,
-        int $groupId,
+        ?int $groupId = null,
         string $unit = 'kg',
         float $memberPrice = 0,
         ?string $rawMaterialToAlias = null
     ): WasteCategory {
         return DB::transaction(function () use ($name, $groupId, $unit, $memberPrice, $rawMaterialToAlias) {
-            $group = WasteCategoryGroup::findOrFail($groupId);
+            $group = $groupId ? WasteCategoryGroup::find($groupId) : null;
             $code = WasteCategory::generateCode($group);
 
             $category = WasteCategory::create([
                 'code'                    => $code,
                 'name'                    => trim($name),
-                'waste_category_group_id' => $group->id,
+                'waste_category_group_id' => $group ? $group->id : null,
                 'unit'                    => trim($unit),
                 'member_price'            => $memberPrice,
             ]);
@@ -647,6 +727,18 @@ class DepositImportService
 
         if (empty($grouped)) {
             throw new \RuntimeException("Tidak ada transaksi yang dapat diimpor (semua baris dilewati karena duplikasi atau tidak ada data).");
+        }
+
+        // Cross-check: material recap, customer recap, and grouped totals must agree.
+        // Never commit silently on internal mismatch.
+        $recap = $this->buildRecap($rows, $duplicatePolicies);
+        $recapMaterialWeight = array_sum(array_column($recap['materials'], 'total_weight'));
+        $recapCustomerWeight = array_sum(array_column($recap['customers'], 'total_weight'));
+        $recapCustomerAmount = array_sum(array_column($recap['customers'], 'total_amount'));
+        if (abs($recapMaterialWeight - $totalWeight) > 0.01
+            || abs($recapCustomerWeight - $totalWeight) > 0.01
+            || abs($recapCustomerAmount - $totalAmount) > 0.01) {
+            throw new \RuntimeException("Validasi rekap gagal: total rekap material/nasabah tidak konsisten dengan total transaksi. Impor dibatalkan.");
         }
 
         // Execute batch insertion via BankSampahService atomically

@@ -90,7 +90,9 @@ class DepositImportController extends Controller
             $duplicateCustomers = [];
 
             foreach ($rows as $r) {
-                $st = strtolower($r['status']);
+                // Row statuses use spaces ('NEEDS MAPPING') while count keys use
+                // underscores ('needs_mapping') — normalize so blockers are counted.
+                $st = strtolower(str_replace(' ', '_', $r['status']));
                 if (isset($counts[$st])) {
                     $counts[$st]++;
                 }
@@ -167,6 +169,16 @@ class DepositImportController extends Controller
                 }
             }
 
+            // Build pre-commit recaps from the same staged dataset commit() will persist
+            $recap = $this->importService->buildRecap($rows, $staging['duplicate_policies'] ?? []);
+
+            // Step 2 sub-workspace: entity resolution ('resolve') vs dedicated
+            // recap review ('recap'). Pure view switch, no business logic change.
+            $subView = $request->query('view', 'resolve');
+            if (!in_array($subView, ['resolve', 'recap'], true)) {
+                $subView = 'resolve';
+            }
+
             // Calculate unique entity metrics distinguishing row count from unique entity count
             $uniqueRawCustomers = collect($rows)->pluck('raw_customer')->map(fn($v) => trim($v))->filter()->unique();
             $uniqueRawMaterials = collect($rows)->pluck('raw_material')->map(fn($v) => trim($v))->filter()->unique();
@@ -181,18 +193,23 @@ class DepositImportController extends Controller
 
             return view('bank-sampah.deposits.import', [
                 'step' => 'preview',
+                'subView' => $subView,
                 'token' => $token,
                 'staging' => $staging,
                 'rows' => $rows,
                 'counts' => $counts,
                 'uniqueCounts' => $uniqueCounts,
+                'materialRecap' => $recap['materials'],
+                'customerRecap' => $recap['customers'],
+                'recapGrandWeight' => $recap['grand_weight'],
+                'recapGrandAmount' => $recap['grand_amount'],
                 'canCommit' => $canCommit,
                 'unmatchedCustomers' => $unmatchedCustomers,
                 'unmatchedMaterials' => $unmatchedMaterials,
                 'priceDiscrepancyMaterials' => $priceDiscrepancyMaterials,
                 'duplicateCustomers' => $duplicateCustomers,
                 'categories' => $categories,
-                'groups' => WasteCategoryGroup::active()->orderBy('name')->get(),
+                'availableGroups' => WasteCategoryGroup::active()->orderBy('name')->get(),
                 'customers' => $customers,
                 'summary' => [
                     'deposits_count' => count($groupedCustomers),
@@ -296,11 +313,11 @@ class DepositImportController extends Controller
                 ->withErrors(['file' => 'Berkas fisik impor tidak ditemukan di server. Silakan unggah ulang.']);
         }
 
-        // Re-import fingerprint check
+        // Re-import fingerprint check (protection stays active: no double credit)
         $fingerprint = $this->importService->calculateFingerprint($filePath, $sheetName, $confirmedDate);
         if ($this->importService->isFingerprintImported($fingerprint)) {
             return back()->withErrors([
-                'sheet_name' => "Sheet '{$sheetName}' pada file ini untuk tanggal {$confirmedDate} sudah pernah berhasil diimpor sebelumnya. Impor ulang file/sheet yang sama diblokir untuk mencegah duplikasi saldo.",
+                'sheet_name' => "⚠️ File ini sebelumnya sudah pernah dicoba diimpor. Silakan cek kembali hasil import sebelumnya sebelum melanjutkan. (Sheet '{$sheetName}', tanggal {$confirmedDate} — impor ulang diblokir untuk mencegah duplikasi saldo.)",
             ]);
         }
 
@@ -414,6 +431,15 @@ class DepositImportController extends Controller
 
         Cache::put("deposit_import_{$token}", $staging, now()->addHours(3));
 
+        $hasBlockers = collect($staging['rows'])->contains(function ($r) {
+            return in_array($r['status'], ['ERROR', 'NEEDS MAPPING', 'AMBIGUOUS'], true);
+        });
+
+        if (!$hasBlockers) {
+            return redirect()->route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap'])
+                ->with('success', 'Pemetaan material berhasil disimpan. Seluruh data siap diimpor.');
+        }
+
         return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
             ->with('success', 'Pemetaan berhasil diperbarui.');
     }
@@ -522,7 +548,7 @@ class DepositImportController extends Controller
             'token'                   => 'required|string',
             'raw_material'            => 'required|string',
             'name'                    => 'required|string|max:255',
-            'waste_category_group_id' => 'required|exists:waste_category_groups,id',
+            'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
             'unit'                    => 'required|string|max:20',
             'member_price'            => 'required|numeric|min:0',
             'save_alias'              => 'nullable|boolean',
@@ -537,9 +563,11 @@ class DepositImportController extends Controller
         $staging = Cache::get("deposit_import_{$token}");
         $rawMat = $request->input('raw_material');
 
+        $groupId = $request->filled('waste_category_group_id') ? (int) $request->input('waste_category_group_id') : null;
+
         $category = $this->importService->quickAddCategory(
             $request->input('name'),
-            (int) $request->input('waste_category_group_id'),
+            $groupId,
             $request->input('unit'),
             (float) $request->input('member_price'),
             $request->boolean('save_alias', true) ? $rawMat : null
@@ -560,6 +588,72 @@ class DepositImportController extends Controller
 
         return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
             ->with('success', "Kategori sampah baru '{$category->name}' ({$category->code}) berhasil ditambahkan dan seluruh baris terkait terpetakan otomatis.");
+    }
+
+    /**
+     * Batch assign administrative category (group) to selected Master Materials from Rekap Material view.
+     */
+    public function assignMaterialCategory(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'material_ids' => 'required|array|min:1',
+            'material_ids.*' => 'required|exists:waste_categories,id',
+            'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
+            'new_category_name' => 'nullable|string|max:100',
+        ]);
+
+        $token = $request->input('token');
+        if (!Cache::has("deposit_import_{$token}")) {
+            return redirect()->route('bank-sampah.deposits.import')
+                ->withErrors(['file' => 'Sesi impor telah kedaluwarsa.']);
+        }
+
+        $materialIds = $request->input('material_ids');
+
+        $group = null;
+        if ($request->filled('new_category_name')) {
+            $name = trim($request->input('new_category_name'));
+            $group = WasteCategoryGroup::where('name', $name)->first();
+            if (!$group) {
+                $baseCode = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $name), 0, 3));
+                if (strlen($baseCode) < 3) {
+                    $baseCode = 'KAT';
+                }
+                $code = $baseCode;
+                $idx = 1;
+                while (WasteCategoryGroup::where('code', $code)->exists()) {
+                    $code = $baseCode . $idx;
+                    $idx++;
+                }
+                $group = WasteCategoryGroup::create([
+                    'name' => $name,
+                    'code' => $code,
+                    'is_active' => true,
+                ]);
+            }
+        } elseif ($request->filled('waste_category_group_id')) {
+            $group = WasteCategoryGroup::findOrFail($request->input('waste_category_group_id'));
+        }
+
+        if ($group) {
+            WasteCategory::whereIn('id', $materialIds)->update([
+                'waste_category_group_id' => $group->id,
+                'category_group' => $group->name,
+            ]);
+            $count = count($materialIds);
+            $message = "Kategori '{$group->name}' berhasil diterapkan ke {$count} material.";
+        } else {
+            WasteCategory::whereIn('id', $materialIds)->update([
+                'waste_category_group_id' => null,
+                'category_group' => null,
+            ]);
+            $count = count($materialIds);
+            $message = "{$count} material diatur menjadi belum dikategorikan.";
+        }
+
+        return redirect()->route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap'])
+            ->with('success', $message);
     }
 
     /**

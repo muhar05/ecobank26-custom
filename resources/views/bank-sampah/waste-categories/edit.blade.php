@@ -17,8 +17,8 @@
                                     Kelola Grup &rarr;
                                 </a>
                             </div>
-                            <select name="waste_category_group_id" id="waste_category_group_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                                <option value="">-- Pilih Grup --</option>
+                            <select name="waste_category_group_id" id="waste_category_group_id" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                <option value="">-- Belum Dikategorikan --</option>
                                 @foreach($groups as $group)
                                     <option value="{{ $group->id }}" {{ old('waste_category_group_id', $category->waste_category_group_id) == $group->id ? 'selected' : '' }}>{{ $group->name }} ({{ $group->code }})</option>
                                 @endforeach
