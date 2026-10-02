@@ -546,11 +546,13 @@ class DepositImportController extends Controller
     {
         $request->validate([
             'token'                   => 'required|string',
-            'raw_material'            => 'required|string',
+            'raw_material'            => 'nullable|string',
+            'raw_materials'           => 'nullable|array',
             'name'                    => 'required|string|max:255',
             'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
-            'unit'                    => 'required|string|max:20',
-            'member_price'            => 'required|numeric|min:0',
+            'new_category_name'       => 'nullable|string|max:100',
+            'unit'                    => 'nullable|string|max:20',
+            'member_price'            => 'nullable|numeric|min:0',
             'save_alias'              => 'nullable|boolean',
         ]);
 
@@ -561,19 +563,39 @@ class DepositImportController extends Controller
         }
 
         $staging = Cache::get("deposit_import_{$token}");
-        $rawMat = $request->input('raw_material');
 
-        $groupId = $request->filled('waste_category_group_id') ? (int) $request->input('waste_category_group_id') : null;
+        // Support both single raw_material and bulk raw_materials array
+        $rawMaterials = array_filter(array_unique(array_merge(
+            (array) $request->input('raw_materials', []),
+            $request->filled('raw_material') ? [(string) $request->input('raw_material')] : []
+        )));
+
+        $firstRaw = !empty($rawMaterials) ? reset($rawMaterials) : null;
+
+        $group = $this->resolveCategoryGroup($request);
+        $groupId = $group ? $group->id : null;
 
         $category = $this->importService->quickAddCategory(
             $request->input('name'),
             $groupId,
-            $request->input('unit'),
-            (float) $request->input('member_price'),
-            $request->boolean('save_alias', true) ? $rawMat : null
+            $request->input('unit') ?: 'kg',
+            (float) ($request->input('member_price') ?: 0),
+            $request->boolean('save_alias', true) ? $firstRaw : null
         );
 
-        $staging['material_mappings'][$rawMat] = $category->id;
+        // Map every selected raw material and register alias
+        foreach ($rawMaterials as $raw) {
+            $staging['material_mappings'][$raw] = $category->id;
+            if ($request->boolean('save_alias', true)) {
+                $this->mappingService->registerAlias(
+                    $raw,
+                    $category->id,
+                    MaterialAlias::SOURCE_BANK_SAMPAH,
+                    null,
+                    true
+                );
+            }
+        }
 
         $staging['rows'] = $this->importService->processRows(
             $staging['raw_rows'],
@@ -586,8 +608,13 @@ class DepositImportController extends Controller
 
         Cache::put("deposit_import_{$token}", $staging, now()->addHours(3));
 
+        $count = count($rawMaterials);
+        $msg = $count > 1
+            ? "Master Material baru '{$category->name}' ({$category->code}) berhasil dibuat dan terhubung ke {$count} material Excel."
+            : "Master Material baru '{$category->name}' ({$category->code}) berhasil dibuat dan terhubung otomatis.";
+
         return redirect()->route('bank-sampah.deposits.import', ['token' => $token])
-            ->with('success', "Kategori sampah baru '{$category->name}' ({$category->code}) berhasil ditambahkan dan seluruh baris terkait terpetakan otomatis.");
+            ->with('success', $msg);
     }
 
     /**
@@ -610,8 +637,33 @@ class DepositImportController extends Controller
         }
 
         $materialIds = $request->input('material_ids');
+        $group = $this->resolveCategoryGroup($request);
 
-        $group = null;
+        if ($group) {
+            WasteCategory::whereIn('id', $materialIds)->update([
+                'waste_category_group_id' => $group->id,
+                'category_group' => $group->name,
+            ]);
+            $count = count($materialIds);
+            $message = "Kategori '{$group->name}' berhasil diterapkan ke {$count} material.";
+        } else {
+            WasteCategory::whereIn('id', $materialIds)->update([
+                'waste_category_group_id' => null,
+                'category_group' => null,
+            ]);
+            $count = count($materialIds);
+            $message = "{$count} material diatur menjadi belum dikategorikan.";
+        }
+
+        return redirect()->route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap'])
+            ->with('success', $message);
+    }
+
+    /**
+     * Resolve or dynamically create a WasteCategoryGroup from request.
+     */
+    protected function resolveCategoryGroup(Request $request): ?WasteCategoryGroup
+    {
         if ($request->filled('new_category_name')) {
             $name = trim($request->input('new_category_name'));
             $group = WasteCategoryGroup::where('name', $name)->first();
@@ -632,28 +684,14 @@ class DepositImportController extends Controller
                     'is_active' => true,
                 ]);
             }
-        } elseif ($request->filled('waste_category_group_id')) {
-            $group = WasteCategoryGroup::findOrFail($request->input('waste_category_group_id'));
+            return $group;
         }
 
-        if ($group) {
-            WasteCategory::whereIn('id', $materialIds)->update([
-                'waste_category_group_id' => $group->id,
-                'category_group' => $group->name,
-            ]);
-            $count = count($materialIds);
-            $message = "Kategori '{$group->name}' berhasil diterapkan ke {$count} material.";
-        } else {
-            WasteCategory::whereIn('id', $materialIds)->update([
-                'waste_category_group_id' => null,
-                'category_group' => null,
-            ]);
-            $count = count($materialIds);
-            $message = "{$count} material diatur menjadi belum dikategorikan.";
+        if ($request->filled('waste_category_group_id')) {
+            return WasteCategoryGroup::find($request->input('waste_category_group_id'));
         }
 
-        return redirect()->route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap'])
-            ->with('success', $message);
+        return null;
     }
 
     /**

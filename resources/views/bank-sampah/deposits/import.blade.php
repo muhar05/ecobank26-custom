@@ -38,6 +38,9 @@
             </div>
         @endif
 
+        {{-- Progress utama: Upload → Pemetaan → Rekap & Validasi → Selesai --}}
+        @include('bank-sampah.deposits.partials.import-progress')
+
         {{-- ========================================================= --}}
         {{-- STEP 1: UPLOAD FILE                                       --}}
         {{-- ========================================================= --}}
@@ -199,13 +202,42 @@
         {{-- STEP 2: PRATINJAU & RESOLUSI PEMETAAN                     --}}
         {{-- ========================================================= --}}
         @if($step === 'preview')
-            <div class="space-y-6" x-data="{
-                    bulkModalOpen: false,
-                    batchCatModalOpen: false,
-                    selectedMaterials: [],
-                    createNewCat: false,
-                    selectedGroup: '',
-                    newCategoryName: '',
+                <div class="space-y-6" x-data="{
+                        bulkModalOpen: false,
+                        batchCatModalOpen: false,
+                        createMasterOpen: false,
+                        createMasterName: '',
+                        selectedUnmatchedMaterials: [],
+                        toggleUnmatchedMaterial(raw) {
+                            const idx = this.selectedUnmatchedMaterials.indexOf(raw);
+                            if (idx > -1) {
+                                this.selectedUnmatchedMaterials.splice(idx, 1);
+                            } else {
+                                this.selectedUnmatchedMaterials.push(raw);
+                            }
+                        },
+                        isUnmatchedMaterialSelected(raw) {
+                            return this.selectedUnmatchedMaterials.includes(raw);
+                        },
+                        toggleAllUnmatched(checked, allRaws) {
+                            this.selectedUnmatchedMaterials = checked ? [...allRaws] : [];
+                        },
+                        clearSelectedUnmatched() {
+                            this.selectedUnmatchedMaterials = [];
+                        },
+                        openBulkCreateMaster() {
+                            if (this.selectedUnmatchedMaterials.length === 0) return;
+                            if (this.selectedUnmatchedMaterials.length === 1) {
+                                this.createMasterName = this.selectedUnmatchedMaterials[0];
+                            } else {
+                                this.createMasterName = '';
+                            }
+                            this.createMasterOpen = true;
+                        },
+                        selectedMaterials: [],
+                        createNewCat: false,
+                        selectedGroup: '',
+                        newCategoryName: '',
                     toggleAllMaterials(checked, allIds) {
                         this.selectedMaterials = checked ? [...allIds] : [];
                     },
@@ -461,57 +493,85 @@
                 @endphp
 
                 @if($subViewActive === 'resolve')
-                {{-- Resolution progress + primary CTA --}}
+                {{-- Status pemetaan + CTA langkah berikutnya --}}
                 <div class="bg-surface rounded-radius-lg shadow-subtle border border-border p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-subtle">
-                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-sm">
-                        <span class="inline-flex items-center gap-2 font-semibold {{ $unmatchedCustCount === 0 ? 'text-success-text' : 'text-text' }}">
-                            <span>{{ $unmatchedCustCount === 0 ? '✓' : '⚠' }}</span>
+                    <div class="min-w-0 space-y-1.5 text-body-sm">
+                        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 {{ $unmatchedCustCount === 0 ? 'text-success-text font-semibold' : 'text-text' }}">
+                            <span aria-hidden="true">{{ $unmatchedCustCount === 0 ? '✓' : '●' }}</span>
                             <span>{{ $resolvedCustCount }}/{{ $totalCustUnique }} Nasabah selesai</span>
-                        </span>
-                        <span class="inline-flex items-center gap-2 font-semibold {{ $unmatchedMatCount === 0 ? 'text-success-text' : 'text-text' }}">
-                            <span>{{ $unmatchedMatCount === 0 ? '✓' : '⚠' }}</span>
-                            <span>{{ $resolvedMatCount }}/{{ $totalMatUnique }} Material selesai</span>
-                        </span>
+                            @if($unmatchedCustCount > 0)
+                                <span class="text-text-muted font-normal">{{ $unmatchedCustCount }} nama belum dipetakan</span>
+                            @endif
+                        </p>
+
+                        @if($unmatchedMatCount === 0)
+                            <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-success-text font-semibold">
+                                <span aria-hidden="true">✓</span>
+                                <span>Semua material sudah terhubung ke Master Material</span>
+                            </p>
+                        @else
+                            <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-text font-semibold">
+                                <span aria-hidden="true">●</span>
+                                <span>{{ $resolvedMatCount }} / {{ $totalMatUnique }} material sudah terhubung</span>
+                            </p>
+                            <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-danger-text font-semibold">
+                                <span aria-hidden="true">!</span>
+                                <span>{{ $unmatchedMatCount }} material belum memiliki Master Material</span>
+                            </p>
+                        @endif
                     </div>
-                    @if($canCommit)
-                        <a href="{{ route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']) }}"
-                           class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-semibold shadow-subtle transition-subtle cursor-pointer select-none shrink-0">
-                            <span>Lanjut ke Rekap &rarr;</span>
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                        </a>
-                    @elseif($unmatchedCustCount === 0 && $unmatchedMatCount > 0)
-                        <div class="shrink-0 text-right">
+
+                    <div class="shrink-0">
+                        @if($canCommit)
+                            <a href="{{ route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']) }}"
+                               class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-semibold shadow-subtle transition-subtle cursor-pointer select-none">
+                                <span>Lanjut ke Rekap &rarr;</span>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </a>
+                        @elseif($unmatchedCustCount === 0 && $unmatchedMatCount > 0)
                             <button type="button"
                                     id="cta-goto-material-bar"
                                     @click="setResolveTab('material'); document.getElementById('tab-btn-material')?.click()"
                                     class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-bold shadow-subtle transition-subtle cursor-pointer select-none">
-                                <span>Lanjut ke Pemetaan Material ({{ $unmatchedMatCount }}) &rarr;</span>
+                                <span>Lanjutkan Pemetaan Material</span>
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                             </button>
-                        </div>
-                    @else
-                        <div class="shrink-0 text-right">
-                            <span class="inline-flex items-center justify-center gap-2 bg-surface-muted text-text-muted border border-border px-5 py-2.5 rounded-radius-md text-body-sm font-semibold cursor-not-allowed select-none">
-                                Lanjut ke Rekap
-                            </span>
-                            @if($blockReasonText !== '')
-                                <p class="text-caption text-danger-text font-medium mt-1.5">{{ $blockReasonText }}</p>
-                            @endif
-                        </div>
-                    @endif
+                        @elseif($unmatchedCustCount > 0)
+                            <button type="button"
+                                    id="cta-goto-nasabah-bar"
+                                    @click="setResolveTab('nasabah'); document.getElementById('tab-btn-nasabah')?.click()"
+                                    class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-bold shadow-subtle transition-subtle cursor-pointer select-none">
+                                <span>Lanjutkan Pemetaan Nasabah</span>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        @else
+                            <div class="text-right">
+                                <span class="inline-flex items-center justify-center gap-2 bg-surface-muted text-text-muted border border-border px-5 py-2.5 rounded-radius-md text-body-sm font-semibold cursor-not-allowed select-none">
+                                    Lanjut ke Rekap
+                                </span>
+                                @if($blockReasonText !== '')
+                                    <p class="text-caption text-danger-text font-medium mt-1.5">{{ $blockReasonText }}</p>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
                 </div>
 
                 {{-- Entity resolution tabs --}}
                 <div class="border-b border-border flex gap-1 overflow-x-auto" role="tablist" aria-label="Resolusi entitas impor">
                     <button type="button" role="tab" id="tab-btn-nasabah" @click="setResolveTab('nasabah')" :aria-selected="resolveTab === 'nasabah'"
                         :class="resolveTab === 'nasabah' ? 'border-primary text-text font-bold' : 'border-transparent text-text-muted font-medium'"
-                        class="px-4 py-2.5 text-body-sm border-b-2 -mb-px whitespace-nowrap transition-subtle cursor-pointer">
-                        Nasabah ({{ $unmatchedCustCount }})
+                        class="px-4 py-2.5 text-body-sm border-b-2 -mb-px whitespace-nowrap transition-subtle cursor-pointer inline-flex items-center gap-2">
+                        <span aria-hidden="true" class="{{ $unmatchedCustCount === 0 ? 'text-success-text' : 'text-danger' }}">{{ $unmatchedCustCount === 0 ? '✓' : '●' }}</span>
+                        <span>Nasabah ({{ $unmatchedCustCount }})</span>
+                        <span class="font-mono text-caption font-bold {{ $unmatchedCustCount === 0 ? 'text-success-text' : 'text-text-muted' }}">{{ $resolvedCustCount }}/{{ $totalCustUnique }}</span>
                     </button>
                     <button type="button" role="tab" id="tab-btn-material" @click="setResolveTab('material')" :aria-selected="resolveTab === 'material'"
                         :class="resolveTab === 'material' ? 'border-primary text-text font-bold' : 'border-transparent text-text-muted font-medium'"
                         class="px-4 py-2.5 text-body-sm border-b-2 -mb-px whitespace-nowrap transition-subtle cursor-pointer inline-flex items-center gap-2">
+                        <span aria-hidden="true" class="{{ $unmatchedMatCount === 0 ? 'text-success-text' : 'text-danger' }}">{{ $unmatchedMatCount === 0 ? '✓' : '●' }}</span>
                         <span>Material ({{ $unmatchedMatCount }})</span>
+                        <span class="font-mono text-caption font-bold {{ $unmatchedMatCount === 0 ? 'text-success-text' : 'text-text-muted' }}">{{ $resolvedMatCount }}/{{ $totalMatUnique }}</span>
                         @if($unmatchedCustCount === 0 && $unmatchedMatCount > 0)
                             <span class="px-1.5 py-0.5 rounded-radius-sm bg-danger text-white text-[10px] font-bold uppercase tracking-wider">
                                 Tindakan Berikutnya
@@ -707,14 +767,14 @@
                                 <div class="border-b border-border-subtle pb-3">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm bg-danger-light text-danger-text text-caption font-bold">
-                                            {{ count($unmatchedMaterials) }} Material Unik
+                                            {{ count($unmatchedMaterials) }} Material Belum Terhubung
                                         </span>
                                         <h4 class="text-heading-sm font-bold text-text">
-                                            Material Belum Terdaftar di Master
+                                            Material
                                         </h4>
                                     </div>
                                     <p class="text-body-sm text-text-muted mt-0.5">
-                                        Hubungkan label material Excel ke master material sekali saja; otomatis berlaku untuk seluruh baris terkait.
+                                        {{ $totalMatUnique }} material &bull; {{ $resolvedMatCount }} sudah terhubung
                                     </p>
                                 </div>
 
@@ -748,34 +808,99 @@
                                             <span class="text-caption text-text-muted whitespace-nowrap">Menampilkan <span class="font-mono font-bold" x-text="from"></span>&ndash;<span class="font-mono font-bold" x-text="to"></span> dari <span class="font-mono font-bold" x-text="total"></span> material unik</span>
                                         </div>
 
-                                    <div class="divide-y divide-border-subtle space-y-3 mt-3">
-                                        @foreach($unmatchedMaterials as $rawMat => $info)
-                                            <div class="ent-row pt-3 first:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-3 text-body-sm" data-search="{{ mb_strtolower($rawMat, 'UTF-8') }}">
-                                                <div class="min-w-[220px]">
-                                                    <span class="font-bold text-text text-body-sm">"{{ $rawMat }}"</span>
-                                                    <span class="text-text-muted ml-1.5 font-mono text-caption">&bull; muncul di {{ $info['count'] }} baris</span>
-                                                    @if(!empty($info['candidates']) && $info['candidates']->isNotEmpty())
-                                                        <div class="text-caption text-secondary font-medium mt-0.5">
-                                                            Saran kandidat: {{ $info['candidates']->pluck('name')->join(', ') }}
-                                                        </div>
-                                                    @endif
-                                                </div>
-
-                                                <div class="flex-1 max-w-lg space-y-1">
-                                                    <select name="material_mappings[{{ $rawMat }}]" aria-label="Pilih Material Master untuk {{ $rawMat }}" class="w-full text-body-sm rounded-radius-md border-border bg-surface text-text py-2">
-                                                        <option value="">-- Pilih Material Master --</option>
-                                                        @foreach($categories as $cat)
-                                                            <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->unit }}) - Rp {{ number_format($cat->member_price, 0, ',', '.') }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label class="inline-flex items-center gap-1.5 text-caption text-text-muted cursor-pointer font-medium select-none">
-                                                        <input type="checkbox" name="save_permanent_aliases[{{ $rawMat }}]" value="1" checked class="rounded border-border text-primary focus:ring-primary">
-                                                        <span>Simpan pemetaan ini permanen (alias untuk impor berikutnya)</span>
-                                                    </label>
-                                                </div>
+                                        {{-- Contextual Bulk Action Bar: Muncul saat baris material dipilih --}}
+                                        <div x-show="selectedUnmatchedMaterials.length > 0" x-cloak
+                                             class="mt-3 p-3 bg-primary-light/70 border border-primary/30 rounded-radius-md flex items-center justify-between gap-3 shadow-subtle transition-subtle">
+                                            <div class="flex items-center gap-2.5 text-body-sm font-semibold text-primary">
+                                                <span class="w-2 h-2 rounded-full bg-primary" aria-hidden="true"></span>
+                                                <span>
+                                                    <strong class="font-mono" x-text="selectedUnmatchedMaterials.length"></strong> material dipilih
+                                                </span>
                                             </div>
-                                        @endforeach
-                                    </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button"
+                                                        @click="clearSelectedUnmatched()"
+                                                        class="px-3 py-1.5 text-caption font-semibold text-text-muted hover:text-text cursor-pointer transition-subtle">
+                                                    Batal Pilih
+                                                </button>
+                                                <button type="button"
+                                                        @click="openBulkCreateMaster()"
+                                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-bold shadow-subtle transition-subtle cursor-pointer select-none">
+                                                    <span>Buat Master Material</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- Table Header / Selection Bar --}}
+                                        <div class="mt-3 flex items-center justify-between px-3.5 py-2.5 bg-surface-muted/60 rounded-radius-md text-caption font-semibold text-text-muted border border-border select-none">
+                                            <div class="flex items-center gap-2.5 cursor-pointer"
+                                                 @click="toggleAllUnmatched(selectedUnmatchedMaterials.length !== {{ count($unmatchedMaterials) }}, [{{ collect(array_keys($unmatchedMaterials))->map(fn($m) => json_encode($m))->join(',') }}])">
+                                                <div class="w-4 h-4 rounded border flex items-center justify-center transition-subtle"
+                                                     :class="selectedUnmatchedMaterials.length === {{ count($unmatchedMaterials) }} && {{ count($unmatchedMaterials) }} > 0 ? 'bg-primary border-primary text-white' : 'border-border bg-surface'">
+                                                    <svg x-show="selectedUnmatchedMaterials.length === {{ count($unmatchedMaterials) }} && {{ count($unmatchedMaterials) }} > 0" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                </div>
+                                                <span>Material Excel ({{ count($unmatchedMaterials) }})</span>
+                                            </div>
+                                            <div class="hidden sm:flex items-center justify-between w-56 text-text-muted">
+                                                <span>Status</span>
+                                                <span class="pr-2">Master Material</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="divide-y divide-border-subtle space-y-1.5 mt-2">
+                                            @foreach($unmatchedMaterials as $rawMat => $info)
+                                                <div class="ent-row px-3.5 py-2.5 rounded-radius-md border transition-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-body-sm cursor-pointer select-none"
+                                                     :class="isUnmatchedMaterialSelected(@js($rawMat)) ? 'bg-primary-light/25 border-primary/50 shadow-subtle' : 'border-border-subtle bg-surface hover:bg-surface-muted hover:border-border'"
+                                                     @click="toggleUnmatchedMaterial(@js($rawMat))"
+                                                     data-search="{{ mb_strtolower($rawMat, 'UTF-8') }}"
+                                                     role="checkbox"
+                                                     :aria-checked="isUnmatchedMaterialSelected(@js($rawMat))"
+                                                     tabindex="0"
+                                                     @keydown.space.prevent="toggleUnmatchedMaterial(@js($rawMat))"
+                                                     @keydown.enter.prevent="toggleUnmatchedMaterial(@js($rawMat))">
+                                                    
+                                                    {{-- Checkbox Indicator + Material Info --}}
+                                                    <div class="flex items-center gap-3 min-w-[220px]">
+                                                        <div class="shrink-0 flex items-center justify-center">
+                                                            <div class="w-4 h-4 rounded border flex items-center justify-center transition-subtle"
+                                                                 :class="isUnmatchedMaterialSelected(@js($rawMat)) ? 'bg-primary border-primary text-white' : 'border-border bg-surface'">
+                                                                <svg x-show="isUnmatchedMaterialSelected(@js($rawMat))" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                                <span class="font-bold text-text text-body-sm">"{{ $rawMat }}"</span>
+                                                                <span class="text-text-muted font-mono text-caption">&bull; {{ $info['count'] }} baris</span>
+                                                            </div>
+                                                            @if(!empty($info['candidates']) && $info['candidates']->isNotEmpty())
+                                                                <div class="text-caption text-secondary font-medium mt-0.5">
+                                                                    Saran kandidat: {{ $info['candidates']->pluck('name')->join(', ') }}
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Status --}}
+                                                    <div class="shrink-0 flex items-center">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-radius-sm bg-danger-light text-danger-text text-caption font-bold border border-danger/25">
+                                                            <span aria-hidden="true">!</span>
+                                                            <span>Belum terhubung</span>
+                                                        </span>
+                                                    </div>
+
+                                                    {{-- Master Material Column --}}
+                                                    <div class="sm:w-28 text-left sm:text-right text-caption text-text-muted font-mono pr-2">
+                                                        <span>&mdash;</span>
+                                                    </div>
+
+                                                    <input type="hidden" name="material_mappings[{{ $rawMat }}]" value="">
+                                                </div>
+                                            @endforeach
+                                        </div>
 
                                         <div class="flex items-center justify-between gap-3 pt-1">
                                             <span class="text-caption text-text-muted">Halaman <span class="font-mono font-bold" x-text="page"></span> / <span class="font-mono font-bold" x-text="pages"></span></span>
@@ -792,13 +917,8 @@
                                         </div>
                                     </div>
 
-                                    <div class="pt-3 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <span class="text-caption text-text-muted">
-                                            Pilih material master untuk data di atas, lalu klik Simpan:
-                                        </span>
-                                        <button type="submit" class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-semibold shadow-subtle transition-subtle cursor-pointer self-start sm:self-center">
-                                            Simpan Pemetaan Material
-                                        </button>
+                                    <div class="hidden">
+                                        <button type="submit">Simpan Pemetaan Material</button>
                                     </div>
                                 </form>
                             </div>
@@ -1335,7 +1455,20 @@
                     $checkAmountOk = abs($recapGrandAmount - ($summary['total_amount'] ?? 0)) < 0.01;
                 @endphp
                 <div class="bg-surface rounded-radius-lg shadow-subtle border border-border p-4 sm:p-5">
-                    <span class="text-body-sm font-bold text-text uppercase tracking-wider">Validasi Akhir</span>
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-body-sm font-bold text-text uppercase tracking-wider">Validasi Akhir</span>
+                        @if($canCommit)
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-radius-sm bg-success-light text-success-text text-caption font-bold border border-success/30">
+                                <span>✓</span>
+                                <span>Data siap diimpor</span>
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-radius-sm bg-danger-light text-danger-text text-caption font-bold border border-danger/30">
+                                <span>!</span>
+                                <span>Perlu tindakan sebelum impor</span>
+                            </span>
+                        @endif
+                    </div>
                     <ul class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-body-sm">
                         <li class="flex items-center gap-2 {{ $checkCustOk ? 'text-success-text font-semibold' : 'text-danger-text font-semibold' }}">
                             <span>{{ $checkCustOk ? '✓' : '✗' }}</span><span>Semua nasabah resolved</span>
@@ -1578,6 +1711,61 @@
                                         :disabled="selectedMaterials.length === 0"
                                         class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-semibold shadow-subtle transition-subtle cursor-pointer select-none">
                                     Terapkan Kategori
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- ========================================================= --}}
+                {{-- MODAL BUAT MASTER MATERIAL (SIMPLIFIED / BULK)            --}}
+                {{-- ========================================================= --}}
+                <div x-show="createMasterOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="createMasterOpen = false">
+                    <div class="absolute inset-0 bg-black/50 backdrop-blur-xs" @click="createMasterOpen = false"></div>
+                    <div class="relative bg-surface rounded-radius-lg shadow-popover border border-border w-full max-w-md overflow-hidden z-10">
+                        <div class="p-4 sm:p-5 border-b border-border flex items-center justify-between">
+                            <h3 class="text-heading-sm font-bold text-text">
+                                Buat Master Material
+                            </h3>
+                            <button type="button" @click="createMasterOpen = false" class="text-text-muted hover:text-text p-1 cursor-pointer">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+
+                        <form method="POST" action="{{ route('bank-sampah.deposits.import.quick-add-category') }}" class="p-5 space-y-4 text-body-sm">
+                            @csrf
+                            <input type="hidden" name="token" value="{{ $token }}">
+                            <template x-for="mat in selectedUnmatchedMaterials" :key="mat">
+                                <input type="hidden" name="raw_materials[]" :value="mat">
+                            </template>
+                            <input type="hidden" name="raw_material" :value="selectedUnmatchedMaterials[0] || ''">
+
+                            {{-- Info material terpilih --}}
+                            <div class="p-3 bg-surface-muted/60 border border-border rounded-radius-md text-caption">
+                                <span class="text-text-muted block">Material Excel terpilih (<span class="font-bold font-mono text-text" x-text="selectedUnmatchedMaterials.length"></span>):</span>
+                                <span class="font-mono font-bold text-text mt-1 block max-h-20 overflow-y-auto" x-text="selectedUnmatchedMaterials.join(', ')"></span>
+                            </div>
+
+                            {{-- Input Nama Master Material --}}
+                            <div class="space-y-1">
+                                <label for="modal_new_cat_name" class="block font-semibold text-text">
+                                    Nama Master Material
+                                </label>
+                                <input type="text"
+                                       name="name"
+                                       id="modal_new_cat_name"
+                                       x-model="createMasterName"
+                                       required
+                                       placeholder="Masukkan nama material"
+                                       class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text p-2.5 focus:border-primary focus:ring-primary">
+                            </div>
+
+                            <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
+                                <button type="button" @click="createMasterOpen = false" class="px-4 py-2 text-body-sm font-semibold text-text-muted hover:text-text transition-subtle cursor-pointer">
+                                    Batal
+                                </button>
+                                <button type="submit" class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-radius-md text-body-sm font-semibold shadow-subtle transition-subtle cursor-pointer select-none">
+                                    Simpan & Hubungkan
                                 </button>
                             </div>
                         </form>
