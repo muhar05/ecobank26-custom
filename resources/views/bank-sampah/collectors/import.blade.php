@@ -147,9 +147,17 @@
                 })->values()->all();
 
                 $pricesMapData = $existingPrices->map(fn($p) => (float)$p->collector_price)->all();
+
+                $groupsData = $groups->map(function ($g) {
+                    return [
+                        'id'   => $g->id,
+                        'name' => $g->name,
+                        'code' => $g->code,
+                    ];
+                })->values()->all();
             @endphp
 
-            <div x-data="importReviewWorkflow(@js($initialRowsData), @js($categoriesData), @js($pricesMapData))" class="space-y-6">
+            <div x-data="importReviewWorkflow(@js($initialRowsData), @js($categoriesData), @js($pricesMapData), @js($groupsData), '{{ route('bank-sampah.collectors.import.quick-add-category', $collector) }}', '{{ $token }}')" class="space-y-6" @keydown.escape.window="closeQuickAdd()">
                 {{-- Review Summary Cards --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle">
@@ -180,7 +188,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         <div class="text-body-sm leading-relaxed">
-                            <span class="font-bold">Perhatian:</span> Terdapat <strong x-text="countStatus('NEEDS_MAPPING') + ' material'"></strong> yang belum terhubung dengan Master Material. Anda harus memilih Master Material pada baris bertanda <span class="font-semibold text-danger">Perlu Mapping</span> sebelum dapat menyimpan harga ke database.
+                            <span class="font-bold">Perhatian:</span> Terdapat <strong x-text="countStatus('NEEDS_MAPPING') + ' material'"></strong> yang belum terhubung dengan Master Material. Pilih Master Material existing pada baris bertanda <span class="font-semibold text-danger">Perlu Mapping</span>, atau buat <span class="font-semibold">Material Baru</span> lewat tombol di baris tersebut, sebelum dapat menyimpan harga ke database.
                         </div>
                     </div>
                 </template>
@@ -256,6 +264,16 @@
                                                 <template x-if="row.category_unit">
                                                     <span class="text-caption text-text-muted mt-0.5 block font-mono" x-text="'Satuan: ' + row.category_unit"></span>
                                                 </template>
+                                                <template x-if="row.status === 'NEEDS_MAPPING'">
+                                                    <button type="button"
+                                                            @click="openQuickAdd(row)"
+                                                            class="mt-1.5 inline-flex items-center gap-1 px-2.5 py-2 rounded-radius-md border border-dashed border-primary/50 text-primary text-caption font-bold hover:bg-primary-light transition-subtle cursor-pointer">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                        Tambah Material Baru
+                                                    </button>
+                                                </template>
                                             </td>
 
                                             {{-- Harga Saat Ini --}}
@@ -326,17 +344,112 @@
                         </div>
                     </form>
                 </x-ui.card>
+
+            {{-- Modal Quick-Add Material Baru (di dalam scope x-data agar x-show terikat state) --}}
+            <div x-show="quickAdd.open"
+                 x-cloak
+                 class="fixed inset-0 z-50 overflow-y-auto"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="Tambah material baru">
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+                     @click="quickAdd.saving ? null : closeQuickAdd()"></div>
+
+                <div class="flex min-h-full items-end sm:items-center justify-center p-3 sm:p-4">
+                    <div class="relative transform overflow-hidden rounded-radius-lg bg-surface border border-border text-left shadow-popover transition-all sm:my-8 sm:w-full sm:max-w-lg p-5 sm:p-6 space-y-4">
+                        <div class="flex items-start justify-between border-b border-border-subtle pb-3">
+                            <div>
+                                <h3 class="text-heading-sm font-bold text-text">Tambah Material Baru</h3>
+                                <p class="text-caption text-text-muted mt-0.5">
+                                    Untuk "<span class="font-semibold text-text" x-text="quickAdd.rawName"></span>"
+                                    (Rp <span class="font-mono" x-text="Number(quickAdd.importPrice || 0).toLocaleString('id-ID')"></span> di Excel)
+                                </p>
+                            </div>
+                            <button type="button" @click="closeQuickAdd()" aria-label="Tutup dialog tambah material" class="min-w-[44px] min-h-[44px] p-2.5 -m-1 rounded-radius-sm text-text-muted hover:text-text hover:bg-surface-muted transition-subtle flex items-center justify-center cursor-pointer">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <template x-if="quickAdd.error">
+                            <div class="p-3.5 rounded-radius-md bg-danger-light border border-danger/30 text-danger-text text-body-sm font-medium" x-text="quickAdd.error"></div>
+                        </template>
+
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <x-input-label for="qa_name" value="Nama Material" :required="true" />
+                                <x-text-input type="text" id="qa_name" x-model="quickAdd.name" placeholder="Contoh: Kardus Bagus Sekali" />
+                            </div>
+
+                            <div class="space-y-1">
+                                <x-input-label for="qa_group" value="Grup Material" />
+                                <select id="qa_group"
+                                        x-model="quickAdd.group_id"
+                                        class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text px-3 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle min-h-[44px]">
+                                    <option value="">-- Tanpa grup --</option>
+                                    <template x-for="g in groups" :key="g.id">
+                                        <option :value="g.id" x-text="g.name + (g.code ? ' (' + g.code + ')' : '')"></option>
+                                    </template>
+                                </select>
+                                <template x-if="groups.length === 0">
+                                    <p class="text-caption text-text-muted">Belum ada grup material. Material akan dibuat tanpa grup.</p>
+                                </template>
+                            </div>
+
+                            <div class="space-y-1">
+                                <x-input-label for="qa_unit" value="Satuan" :required="true" />
+                                <x-text-input type="text" id="qa_unit" x-model="quickAdd.unit" placeholder="kg" />
+                            </div>
+
+                            <p class="text-caption text-text-muted">
+                                Harga Beli Nasabah tidak diatur di sini. Kelola lewat Master Material. Harga Excel akan masuk sebagai Harga Lapak agregator saat commit.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
+                            <button type="button" @click="closeQuickAdd()" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text hover:bg-surface-muted text-body-sm font-semibold transition-subtle cursor-pointer min-h-[44px]">
+                                Batal
+                            </button>
+                            <button type="button"
+                                    @click="submitQuickAdd()"
+                                    :disabled="quickAdd.saving"
+                                    :class="quickAdd.saving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-primary-hover cursor-pointer'"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-radius-md bg-primary text-white text-body-sm font-bold shadow-subtle transition-subtle min-h-[44px]">
+                                <template x-if="quickAdd.saving">
+                                    <x-ui.spinner size="sm" />
+                                </template>
+                                <span x-text="quickAdd.saving ? 'Menyimpan...' : 'Simpan Material'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             </div>
 
             {{-- Script Logika Alpine Step 2 --}}
             <script>
-                function importReviewWorkflow(initialRows, categories, existingPrices) {
+                function importReviewWorkflow(initialRows, categories, existingPrices, groups, quickAddUrl, importToken) {
                     return {
                         rows: initialRows || [],
                         categories: categories || [],
                         existingPrices: existingPrices || {},
+                        groups: groups || [],
+                        quickAddUrl: quickAddUrl || '',
+                        importToken: importToken || '',
                         search: '',
                         filterStatus: 'ALL',
+                        quickAdd: {
+                            open: false,
+                            rowIndex: null,
+                            rawName: '',
+                            importPrice: 0,
+                            name: '',
+                            group_id: '',
+                            unit: 'kg',
+                            saving: false,
+                            error: '',
+                        },
 
                         filteredRows() {
                             return this.rows.filter(r => {
@@ -380,6 +493,107 @@
                             } else {
                                 row.current_price = null;
                                 row.status = 'NEW';
+                            }
+                        },
+
+                        openQuickAdd(row) {
+                            this.quickAdd.open = true;
+                            this.quickAdd.rowIndex = row.index;
+                            this.quickAdd.rawName = row.raw_name;
+                            this.quickAdd.importPrice = row.import_price;
+                            this.quickAdd.name = row.raw_name;
+                            this.quickAdd.group_id = '';
+                            this.quickAdd.unit = row.category_unit || 'kg';
+                            this.quickAdd.saving = false;
+                            this.quickAdd.error = '';
+                        },
+
+                        closeQuickAdd() {
+                            if (this.quickAdd.saving) return;
+                            this.quickAdd.open = false;
+                            this.quickAdd.error = '';
+                        },
+
+                        async submitQuickAdd() {
+                            this.quickAdd.error = '';
+
+                            if (!this.quickAdd.name || !String(this.quickAdd.name).trim()) {
+                                this.quickAdd.error = 'Nama Material wajib diisi.';
+                                return;
+                            }
+                            if (!this.quickAdd.unit || !String(this.quickAdd.unit).trim()) {
+                                this.quickAdd.error = 'Satuan wajib diisi.';
+                                return;
+                            }
+
+                            this.quickAdd.saving = true;
+
+                            try {
+                                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                                const res = await fetch(this.quickAddUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': csrf,
+                                    },
+                                    body: JSON.stringify({
+                                        token: this.importToken,
+                                        raw_name: this.quickAdd.rawName,
+                                        name: String(this.quickAdd.name).trim(),
+                                        waste_category_group_id: this.quickAdd.group_id || null,
+                                        unit: String(this.quickAdd.unit).trim(),
+                                    }),
+                                });
+
+                                const data = await res.json().catch(() => ({}));
+
+                                if (!res.ok) {
+                                    this.quickAdd.error = data.message || 'Gagal menyimpan material baru. Coba lagi.';
+                                    return;
+                                }
+
+                                const cat = data.category;
+                                if (!this.categories.some(c => c.id === cat.id)) {
+                                    this.categories.push(cat);
+                                }
+
+                                const row = this.rows.find(r => r.index === this.quickAdd.rowIndex);
+                                if (row) {
+                                    row.category_id = cat.id;
+                                    row.category_name = cat.name;
+                                    row.category_unit = cat.unit;
+                                    row.current_price = null;
+                                    row.status = 'NEW';
+                                }
+
+                                const createdName = cat.name;
+                                const aliasSaved = this.quickAdd.rawName
+                                    && createdName
+                                    && String(this.quickAdd.rawName).trim().toLowerCase() !== String(createdName).trim().toLowerCase();
+
+                                this.quickAdd.saving = false;
+                                this.closeQuickAdd();
+
+                                window.dispatchEvent(new CustomEvent('toast', {
+                                    detail: {
+                                        type: 'success',
+                                        message: 'Material berhasil ditambahkan. ' + createdName + ' telah ditambahkan ke Master Material dan langsung dipetakan.',
+                                    },
+                                }));
+
+                                if (aliasSaved) {
+                                    window.dispatchEvent(new CustomEvent('toast', {
+                                        detail: {
+                                            type: 'success',
+                                            message: 'Alias Excel juga disimpan untuk Agregator ini.',
+                                        },
+                                    }));
+                                }
+                            } catch (e) {
+                                this.quickAdd.error = 'Gagal menyimpan material baru. Periksa koneksi lalu coba lagi.';
+                            } finally {
+                                this.quickAdd.saving = false;
                             }
                         },
 

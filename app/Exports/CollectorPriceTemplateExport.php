@@ -3,8 +3,8 @@
 namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -12,11 +12,11 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CollectorPriceTemplateExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithColumnFormatting
+class CollectorPriceTemplateExport implements FromArray, WithHeadings, WithTitle, WithStyles, WithColumnWidths, WithColumnFormatting
 {
     public function title(): string
     {
-        return 'Harga Lapak';
+        return 'Data Harga';
     }
 
     public function headings(): array
@@ -29,11 +29,14 @@ class CollectorPriceTemplateExport implements FromArray, WithHeadings, WithTitle
 
     public function array(): array
     {
+        return [];
+    }
+
+    public function columnWidths(): array
+    {
         return [
-            ['Kardus Bekas', 2500],
-            ['Botol PET Bening', 4000],
-            ['Besi Tua', 5000],
-            ['Aluminium Kaleng', 12000],
+            'A' => 32,
+            'B' => 18,
         ];
     }
 
@@ -65,7 +68,7 @@ class CollectorPriceTemplateExport implements FromArray, WithHeadings, WithTitle
         ]);
 
         $sheet->getRowDimension(1)->setRowHeight(26);
-        $sheet->getStyle('B2:B10')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('B2:B500')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         return [];
     }

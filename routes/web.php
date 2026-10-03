@@ -87,6 +87,7 @@ Route::middleware(['auth', 'permission:manage_waste_prices', 'track_admin_device
     Route::get('collectors/{collector}/import/template', [\App\Http\Controllers\CollectorPriceImportController::class, 'downloadTemplate'])->name('collectors.import.template');
     Route::post('collectors/{collector}/import/parse', [\App\Http\Controllers\CollectorPriceImportController::class, 'parse'])->name('collectors.import.parse');
     Route::post('collectors/{collector}/import/commit', [\App\Http\Controllers\CollectorPriceImportController::class, 'commit'])->name('collectors.import.commit');
+    Route::post('collectors/{collector}/import/quick-add-category', [\App\Http\Controllers\CollectorPriceImportController::class, 'quickAddCategory'])->name('collectors.import.quick-add-category');
     Route::post('collectors/{collector}/prices', [CollectorController::class, 'storePrice'])->name('collectors.prices.store');
     Route::put('collectors/{collector}/prices/{wastePrice}', [CollectorController::class, 'updatePrice'])->name('collectors.prices.update');
     Route::delete('collectors/{collector}/prices/{wastePrice}', [CollectorController::class, 'destroyPrice'])->name('collectors.prices.destroy');

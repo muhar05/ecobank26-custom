@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\AdminDevice;
 use App\Models\Collector;
+use App\Models\MaterialAlias;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\User;
 use App\Models\WasteCategory;
+use App\Models\WasteCategoryGroup;
 use App\Models\WastePrice;
 use App\Models\WastePriceHistory;
 use App\Services\DeviceTrackingService;
@@ -397,5 +399,160 @@ class CollectorPriceImportTest extends TestCase
         $this->assertEquals(2000, $detailFresh->member_price);
         $this->assertEquals(125000, $detailFresh->subtotal);
         $this->assertEquals(25000, $detailFresh->margin);
+    }
+
+    public function test_quick_add_creates_master_material_without_member_price(): void
+    {
+        $group = WasteCategoryGroup::create(['name' => 'Kertas', 'code' => 'KRT', 'is_active' => true]);
+
+        $file = $this->createPriceExcel([
+            ['Jenis Barang', 'Harga Lapak'],
+            ['Kardus Super Premium', 9000],
+        ]);
+
+        $this->actingAdmin()->post(route('bank-sampah.collectors.import.parse', $this->collectorA), [
+            'file' => $file,
+        ]);
+
+        $sessionKey = collect(session()->all())->keys()->first(fn($k) => str_starts_with($k, 'collector_price_import_'));
+        $token = str_replace('collector_price_import_', '', $sessionKey);
+
+        // Even if a manipulated client sends member_price, it must be ignored
+        $res = $this->actingAdmin()->postJson(route('bank-sampah.collectors.import.quick-add-category', $this->collectorA), [
+            'token' => $token,
+            'raw_name' => 'Kardus Super Premium',
+            'name' => 'Kardus Premium',
+            'waste_category_group_id' => $group->id,
+            'unit' => 'kg',
+            'member_price' => 9999,
+        ]);
+
+        $res->assertOk()->assertJsonPath('success', true);
+
+        $catId = $res->json('category.id');
+        $this->assertNotNull($catId);
+
+        // Created in the SAME master used by Deposit & Sale, WITHOUT member_price input
+        $this->assertDatabaseHas('waste_categories', [
+            'id' => $catId,
+            'name' => 'Kardus Premium',
+            'unit' => 'kg',
+            'waste_category_group_id' => $group->id,
+        ]);
+
+        // member_price stays at database default (0) — Excel price must NEVER leak into it
+        $this->assertEquals(0, (float) WasteCategory::find($catId)->member_price);
+        $this->assertNotEquals(9000, (float) WasteCategory::find($catId)->member_price);
+
+        // Code auto-generated, alias scoped to this aggregator
+        $this->assertNotEmpty(WasteCategory::find($catId)->code);
+        $this->assertDatabaseHas('material_aliases', [
+            'source_type' => MaterialAlias::SOURCE_AGGREGATOR,
+            'source_id' => $this->collectorA->id,
+            'waste_category_id' => $catId,
+        ]);
+    }
+
+    public function test_quick_add_rejects_duplicate_existing_material(): void
+    {
+        $file = $this->createPriceExcel([
+            ['Jenis Barang', 'Harga Lapak'],
+            ['Kardus Bekas', 9000],
+        ]);
+
+        $this->actingAdmin()->post(route('bank-sampah.collectors.import.parse', $this->collectorA), [
+            'file' => $file,
+        ]);
+
+        $sessionKey = collect(session()->all())->keys()->first(fn($k) => str_starts_with($k, 'collector_price_import_'));
+        $token = str_replace('collector_price_import_', '', $sessionKey);
+
+        $countBefore = WasteCategory::count();
+
+        $res = $this->actingAdmin()->postJson(route('bank-sampah.collectors.import.quick-add-category', $this->collectorA), [
+            'token' => $token,
+            'raw_name' => 'kardus bekas',
+            'name' => 'Kardus Bekas',
+            'waste_category_group_id' => null,
+            'unit' => 'kg',
+        ]);
+
+        $res->assertStatus(422);
+        $this->assertEquals($countBefore, WasteCategory::count());
+    }
+
+    public function test_quick_add_ignores_member_price_and_requires_valid_session(): void
+    {
+        $file = $this->createPriceExcel([
+            ['Jenis Barang', 'Harga Lapak'],
+            ['Material Aneh Sekali', 5000],
+        ]);
+
+        $this->actingAdmin()->post(route('bank-sampah.collectors.import.parse', $this->collectorA), [
+            'file' => $file,
+        ]);
+
+        // Invalid session token -> rejected, nothing created
+        $res = $this->actingAdmin()->postJson(route('bank-sampah.collectors.import.quick-add-category', $this->collectorA), [
+            'token' => 'bogus-token',
+            'raw_name' => 'Material Aneh Sekali',
+            'name' => 'Material Aneh Sekali',
+            'unit' => 'kg',
+        ]);
+
+        $res->assertStatus(419);
+        $this->assertDatabaseMissing('waste_categories', ['name' => 'Material Aneh Sekali']);
+    }
+
+    public function test_full_flow_unknown_material_quick_add_then_commit(): void
+    {
+        $group = WasteCategoryGroup::create(['name' => 'Plastik', 'code' => 'PLS', 'is_active' => true]);
+
+        $file = $this->createPriceExcel([
+            ['Jenis Barang', 'Harga Lapak'],
+            ['Botol Unik Langka', 7500],
+        ]);
+
+        $this->actingAdmin()->post(route('bank-sampah.collectors.import.parse', $this->collectorA), [
+            'file' => $file,
+        ]);
+
+        $sessionKey = collect(session()->all())->keys()->first(fn($k) => str_starts_with($k, 'collector_price_import_'));
+        $token = str_replace('collector_price_import_', '', $sessionKey);
+
+        $quickAdd = $this->actingAdmin()->postJson(route('bank-sampah.collectors.import.quick-add-category', $this->collectorA), [
+            'token' => $token,
+            'raw_name' => 'Botol Unik Langka',
+            'name' => 'Botol Unik Langka',
+            'waste_category_group_id' => $group->id,
+            'unit' => 'pcs',
+        ]);
+
+        $quickAdd->assertOk();
+        $catId = $quickAdd->json('category.id');
+
+        $commit = $this->actingAdmin()->post(route('bank-sampah.collectors.import.commit', $this->collectorA), [
+            'token' => $token,
+            'mappings' => [0 => $catId],
+        ]);
+
+        $commit->assertRedirect(route('bank-sampah.collectors.show', $this->collectorA));
+
+        // Excel price lands ONLY in collector_price; member_price stays at default 0
+        $this->assertDatabaseHas('waste_prices', [
+            'collector_id' => $this->collectorA->id,
+            'waste_category_id' => $catId,
+            'collector_price' => 7500,
+        ]);
+        $this->assertEquals(0, (float) WasteCategory::find($catId)->member_price);
+        $this->assertEquals('pcs', WasteCategory::find($catId)->unit);
+
+        // History created: NULL -> new, per existing flow
+        $price = WastePrice::where('collector_id', $this->collectorA->id)->where('waste_category_id', $catId)->first();
+        $this->assertNotNull($price);
+        $history = WastePriceHistory::where('waste_price_id', $price->id)->latest('id')->first();
+        $this->assertNotNull($history);
+        $this->assertNull($history->old_price);
+        $this->assertEquals(7500, (float) $history->new_price);
     }
 }

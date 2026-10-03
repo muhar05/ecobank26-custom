@@ -26,8 +26,7 @@ class CollectorPriceImportController extends Controller
 
     public function downloadTemplate(Collector $collector)
     {
-        $filename = 'template-harga-lapak-' . \Illuminate\Support\Str::slug($collector->name) . '.xlsx';
-        return Excel::download(new CollectorPriceTemplateExport(), $filename);
+        return Excel::download(new CollectorPriceTemplateExport(), 'template_import_harga_agregator.xlsx');
     }
 
     public function parse(Request $request, Collector $collector)
@@ -178,8 +177,94 @@ class CollectorPriceImportController extends Controller
         ]]);
 
         $step = 'review';
+        $groups = \App\Models\WasteCategoryGroup::active()->orderBy('name')->get();
 
-        return view('bank-sampah.collectors.import', compact('collector', 'step', 'items', 'categories', 'token', 'existingPrices'));
+        return view('bank-sampah.collectors.import', compact('collector', 'step', 'items', 'categories', 'token', 'existingPrices', 'groups'));
+    }
+
+    /**
+     * Quick-add a brand-new master material (waste_categories) straight from
+     * a NEEDS_MAPPING import row. member_price is NEVER requested, filled, or
+     * inferred here (not even from the Excel price); Harga Beli Nasabah is
+     * managed separately through Master Material. The database default (0)
+     * applies until an operator sets it there.
+     */
+    public function quickAddCategory(Request $request, Collector $collector)
+    {
+        $validated = $request->validate([
+            'token'                 => 'required|string',
+            'raw_name'              => 'required|string|max:255',
+            'name'                  => 'required|string|max:255',
+            'waste_category_group_id' => 'nullable|exists:waste_category_groups,id',
+            'unit'                  => 'required|string|max:20',
+        ]);
+
+        $sessionData = session("collector_price_import_{$validated['token']}");
+        if (!$sessionData || $sessionData['collector_id'] !== $collector->id) {
+            return response()->json(['message' => 'Sesi import telah kedaluwarsa. Silakan unggah berkas kembali.'], 419);
+        }
+
+        // Duplicate guard: never create a new master when an existing one matches.
+        $existing = $this->mappingService->findCanonical($validated['name']);
+        if ($existing) {
+            return response()->json([
+                'message'  => "Material '{$existing->name}' sudah ada di Master Material. Pilih material existing tersebut, tidak perlu membuat baru.",
+                'category' => [
+                    'id'           => $existing->id,
+                    'name'         => $existing->name,
+                    'code'         => $existing->code,
+                    'unit'         => $existing->unit,
+                    'member_price' => (float) $existing->member_price,
+                ],
+            ], 422);
+        }
+
+        $category = DB::transaction(function () use ($collector, $validated) {
+            $group = $validated['waste_category_group_id']
+                ? \App\Models\WasteCategoryGroup::find($validated['waste_category_group_id'])
+                : null;
+
+            $category = WasteCategory::create([
+                'code'                    => WasteCategory::generateCode($group),
+                'name'                    => trim($validated['name']),
+                'waste_category_group_id' => $group ? $group->id : null,
+                'unit'                    => trim($validated['unit']),
+            ]);
+
+            // Register the Excel label as an aggregator-scoped alias so the
+            // next import of the same label resolves automatically.
+            $normRaw = $this->mappingService->normalizeLabel($validated['raw_name']);
+            $normCat = $this->mappingService->normalizeLabel($category->name);
+            if ($normRaw !== $normCat) {
+                $this->mappingService->registerAlias(
+                    $validated['raw_name'],
+                    $category->id,
+                    MaterialAlias::SOURCE_AGGREGATOR,
+                    $collector->id,
+                    true
+                );
+            }
+
+            app(\App\Services\ActivityLogService::class)->logInfo(
+                'waste_category.create',
+                "Membuat kategori sampah baru {$category->name} ({$category->code}) via Import Harga Agregator.",
+                ['after' => $category->toArray()]
+            );
+
+            return $category;
+        });
+
+        return response()->json([
+            'success'  => true,
+            'message'  => "Material '{$category->name}' berhasil dibuat.",
+            'category' => [
+                'id'           => $category->id,
+                'name'         => $category->name,
+                'code'         => $category->code,
+                'unit'         => $category->unit,
+                'member_price' => (float) $category->member_price,
+            ],
+        ]);
     }
 
     public function commit(Request $request, Collector $collector)

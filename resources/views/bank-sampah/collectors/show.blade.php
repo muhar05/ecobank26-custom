@@ -39,19 +39,6 @@
             </div>
         @endif
 
-        {{-- Navigasi Section Detail Agregator --}}
-        <nav aria-label="Navigasi detail agregator" class="flex flex-wrap items-center gap-2">
-            <a href="#informasi" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
-                Informasi
-            </a>
-            <a href="#harga-lapak" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
-                Harga Lapak ({{ $collector->wastePrices->count() }})
-            </a>
-            <a href="#riwayat-harga" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
-                Riwayat Harga
-            </a>
-        </nav>
-
         {{-- ========================================================= --}}
         {{-- PROFIL MITRA AGREGATOR                                    --}}
         {{-- ========================================================= --}}
