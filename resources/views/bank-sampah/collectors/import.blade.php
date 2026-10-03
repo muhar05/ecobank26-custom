@@ -254,7 +254,7 @@
                                                     </template>
                                                 </select>
                                                 <template x-if="row.category_unit">
-                                                    <span class="text-[11px] text-text-muted mt-0.5 block font-mono" x-text="'Satuan: ' + row.category_unit"></span>
+                                                    <span class="text-caption text-text-muted mt-0.5 block font-mono" x-text="'Satuan: ' + row.category_unit"></span>
                                                 </template>
                                             </td>
 
@@ -272,22 +272,22 @@
                                             {{-- Status Badge --}}
                                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
                                                 <template x-if="row.status === 'NEW'">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-caption font-bold bg-primary-light text-primary border border-primary/20">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm text-caption font-bold bg-primary-light text-primary border border-primary/20">
                                                         Harga Baru
                                                     </span>
                                                 </template>
                                                 <template x-if="row.status === 'CHANGED'">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-caption font-bold bg-warning-light text-warning-text border border-warning/30">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm text-caption font-bold bg-warning-light text-warning-text border border-warning/30">
                                                         Harga Berubah
                                                     </span>
                                                 </template>
                                                 <template x-if="row.status === 'UNCHANGED'">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-caption font-semibold bg-surface-muted text-text-muted border border-border">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm text-caption font-semibold bg-surface-muted text-text-muted border border-border">
                                                         Tidak Berubah
                                                     </span>
                                                 </template>
                                                 <template x-if="row.status === 'NEEDS_MAPPING'">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-caption font-bold bg-danger-light text-danger-text border border-danger/30 animate-pulse">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm text-caption font-bold bg-danger-light text-danger-text border border-danger/30 animate-pulse">
                                                         Perlu Mapping
                                                     </span>
                                                 </template>

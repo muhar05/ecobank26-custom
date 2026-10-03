@@ -9,7 +9,7 @@
                 {{ \Carbon\Carbon::parse($selectedDate ?? date('Y-m-d'))->translatedFormat('l, d F Y') }}
             </p>
         </div>
-        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-body-sm font-semibold bg-success-light text-success-text border border-success/30">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-body-sm font-semibold bg-success-light text-success-text border border-success/30">
             {{ $todayDeposits->count() }} Transaksi
         </span>
     </div>

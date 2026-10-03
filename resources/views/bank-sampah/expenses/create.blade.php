@@ -2,8 +2,8 @@
     <x-form-card title="Catat Pengeluaran" description="Data ini akan langsung mengurangi saldo Kas Operasional Bank Sampah.">
         
         @if(session('error'))
-            <div class="p-4 mb-6 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-3">
-                <svg class="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div class="p-4 mb-6 bg-danger-light border border-danger/30 text-danger-text rounded-radius-lg flex items-center gap-3">
+                <svg class="w-5 h-5 text-danger shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <span class="text-sm font-medium">{{ session('error') }}</span>
             </div>
         @endif
@@ -15,11 +15,11 @@
                 <div class="space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <x-field-group label="Tanggal Pengeluaran" name="expense_date" required>
-                            <input type="date" name="expense_date" id="expense_date" value="{{ old('expense_date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <input type="date" name="expense_date" id="expense_date" value="{{ old('expense_date', date('Y-m-d')) }}" max="{{ date('Y-m-d') }}" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                         </x-field-group>
 
                         <x-field-group label="Kode Pengeluaran" name="expense_code" required helper="Bisa diubah jika memiliki standar penomoran nota internal.">
-                            <input type="text" name="expense_code" id="expense_code" value="{{ old('expense_code', $nextCode) }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500 font-mono">
+                            <input type="text" name="expense_code" id="expense_code" value="{{ old('expense_code', $nextCode) }}" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary font-mono">
                         </x-field-group>
                     </div>
 
@@ -43,24 +43,24 @@
                             }
                         }">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span class="text-slate-500 dark:text-slate-400 sm:text-sm">Rp</span>
+                                <span class="text-text-muted sm:text-sm">Rp</span>
                             </div>
                             <input type="hidden" name="amount" x-model="rawAmount">
-                            <input type="text" x-model="formattedAmount" @input="formatAmount" required class="block w-full pl-10 rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="0">
+                            <input type="text" x-model="formattedAmount" @input="formatAmount" required class="block w-full pl-10 rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary" placeholder="0">
                         </div>
                     </x-field-group>
 
                     <x-field-group label="Keterangan" name="description" required helper="Deskripsikan dengan detail untuk keperluan audit (misal: Beli 100pcs Karung dari Toko A).">
-                        <textarea name="description" id="description" rows="3" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">{{ old('description') }}</textarea>
+                        <textarea name="description" id="description" rows="3" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">{{ old('description') }}</textarea>
                     </x-field-group>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <x-field-group label="Upload Bukti Nota/Struk" name="proof" helper="Format: JPG, PNG, PDF. Maks 2MB. Wajib diisi jika keterangan hilang kosong.">
-                            <input type="file" name="proof" id="proof" accept=".jpg,.jpeg,.png,.pdf" class="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-900/30 dark:file:text-emerald-400 dark:hover:file:bg-emerald-900/50 transition">
+                            <input type="file" name="proof" id="proof" accept=".jpg,.jpeg,.png,.pdf" class="block w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-radius-md file:border-0 file:text-sm file:font-semibold file:bg-primary-light file:text-primary hover:file:bg-primary-light dark:file:bg-primary-light dark:file:text-primary dark:hover:file:bg-primary-light transition">
                         </x-field-group>
 
                         <x-field-group label="Keterangan Nota Hilang" name="proof_explanation" helper="Isi field ini jika nota fisik hilang (misal: 'Nota rusak basah').">
-                            <input type="text" name="proof_explanation" id="proof_explanation" value="{{ old('proof_explanation') }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            <input type="text" name="proof_explanation" id="proof_explanation" value="{{ old('proof_explanation') }}" class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                         </x-field-group>
                     </div>
                 </div>

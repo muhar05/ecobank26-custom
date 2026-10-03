@@ -5,15 +5,15 @@
             <x-form-section title="Data Agregator">
                 <div class="space-y-5">
                     <x-field-group label="Nama Agregator" name="name" required>
-                        <input type="text" name="name" id="name" value="{{ old('name', $collector->name) }}" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" name="name" id="name" value="{{ old('name', $collector->name) }}" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                     </x-field-group>
 
                     <x-field-group label="Telepon" name="phone">
-                        <input type="text" name="phone" id="phone" value="{{ old('phone', $collector->phone) }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" name="phone" id="phone" value="{{ old('phone', $collector->phone) }}" class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                     </x-field-group>
 
                     <x-field-group label="Alamat" name="address">
-                        <input type="text" name="address" id="address" value="{{ old('address', $collector->address) }}" class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <input type="text" name="address" id="address" value="{{ old('address', $collector->address) }}" class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                     </x-field-group>
                 </div>
             </x-form-section>

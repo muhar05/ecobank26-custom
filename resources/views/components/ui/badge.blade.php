@@ -19,7 +19,7 @@ $variantClasses = [
     'info'    => 'bg-info-light text-info-text border border-info/30',
     'neutral' => 'bg-surface-muted text-text-muted border border-border',
     'alias'   => 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
-    'pending' => 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+    'pending' => 'bg-warning-light text-warning-text border border-warning/30',
 ][$variant] ?? 'bg-surface-muted text-text-muted border border-border';
 
 $classes = "{$baseClasses} {$sizeClasses} {$variantClasses}";

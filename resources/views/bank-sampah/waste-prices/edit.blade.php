@@ -5,7 +5,7 @@
             <x-form-section title="Agregator & Kategori">
                 <div class="space-y-5">
                     <x-field-group label="Kategori Sampah" name="waste_category_id" required>
-                        <select name="waste_category_id" id="waste_category_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <select name="waste_category_id" id="waste_category_id" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                             <option value="">-- Pilih Kategori --</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->id }}" {{ old('waste_category_id', $wastePrice->waste_category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }} ({{ $cat->unit }})</option>
@@ -14,7 +14,7 @@
                     </x-field-group>
 
                     <x-field-group label="Agregator" name="collector_id" required>
-                        <select name="collector_id" id="collector_id" required class="block w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 shadow-sm text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <select name="collector_id" id="collector_id" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                             <option value="">-- Pilih Agregator --</option>
                             @foreach($collectors as $c)
                                 <option value="{{ $c->id }}" {{ old('collector_id', $wastePrice->collector_id) == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>

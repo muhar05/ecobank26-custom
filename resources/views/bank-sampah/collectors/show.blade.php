@@ -56,7 +56,7 @@
 
                 <div class="flex items-center gap-3 text-caption font-semibold">
                     <div class="px-3 py-1.5 rounded-radius-md bg-surface-muted border border-border text-text">
-                        <span class="text-text-muted uppercase text-[10px] block">Material Aktif:</span>
+                        <span class="text-text-muted uppercase text-caption block">Material Aktif:</span>
                         <span class="font-mono text-body-sm font-bold text-primary">{{ $collector->wastePrices->count() }} Jenis</span>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                         @endphp
                         <div class="mt-1 flex items-center gap-2">
                             <span class="font-mono font-medium text-text">{{ $collector->phone }}</span>
-                            <a href="https://wa.me/{{ $waPhone }}" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 bg-success-light text-success-text border border-success/30 rounded text-[11px] font-semibold hover:bg-success/20 transition-subtle">
+                            <a href="https://wa.me/{{ $waPhone }}" target="_blank" class="inline-flex items-center gap-1 px-2 py-0.5 bg-success-light text-success-text border border-success/30 rounded text-caption font-semibold hover:bg-success/20 transition-subtle">
                                 WhatsApp
                             </a>
                         </div>
@@ -277,7 +277,7 @@
                  x-transition:leave="ease-in duration-150"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+                 class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
                  @click="showAddModal = false"></div>
 
             <div class="flex min-h-full items-end sm:items-center justify-center p-3 sm:p-4 text-center sm:p-0">
@@ -329,7 +329,7 @@
                             <div class="space-y-1">
                                 <span class="text-caption font-bold uppercase tracking-wider text-text-muted block">Satuan Ukuran</span>
                                 <div class="px-3 py-2 rounded-radius-md bg-surface-muted border border-border font-mono text-body-sm font-semibold text-text" x-text="categoryUnit || '-'"></div>
-                                <span class="text-[11px] text-text-muted">Mengikuti master kategori</span>
+                                <span class="text-caption text-text-muted">Mengikuti master kategori</span>
                             </div>
 
                             {{-- Input Harga Lapak --}}
@@ -373,7 +373,7 @@
                  x-transition:leave="ease-in duration-150"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+                 class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
                  @click="showEditModal = false"></div>
 
             <div class="flex min-h-full items-end sm:items-center justify-center p-3 sm:p-4 text-center sm:p-0">
@@ -417,7 +417,7 @@
                                           min="0"
                                           x-model="editPrice"
                                           required />
-                            <p class="text-[11px] text-text-muted">Perubahan harga akan otomatis dicatat ke riwayat harga (Price History).</p>
+                            <p class="text-caption text-text-muted">Perubahan harga akan otomatis dicatat ke riwayat harga (Price History).</p>
                         </div>
 
                         <div class="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
