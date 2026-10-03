@@ -310,6 +310,9 @@
                                                     <template x-if="row.price !== row.defaultPrice && row.defaultPrice > 0">
                                                         <span class="block text-body-sm text-warning font-semibold" x-text="'Manual · Master ' + formatRp(row.defaultPrice)"></span>
                                                     </template>
+                                                    <template x-if="row.catId && row.defaultPrice <= 0">
+                                                        <span class="block mt-1"><x-ui.badge variant="warning" size="sm">Harga Beli belum diatur</x-ui.badge></span>
+                                                    </template>
                                                 </div>
                                                 <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline min-h-[44px] inline-flex items-center">
                                                     Ubah
@@ -435,6 +438,9 @@
                                                     <button type="button" @click="row.editingPrice = true" class="text-body-sm font-semibold text-text-muted hover:text-primary underline min-h-[44px] inline-flex items-center">Ubah</button>
                                                 </template>
                                             </div>
+                                            <template x-if="row.catId && row.defaultPrice <= 0">
+                                                <div class="mt-1.5"><x-ui.badge variant="warning" size="sm">Harga Beli belum diatur</x-ui.badge></div>
+                                            </template>
                                         </div>
                                     </template>
                                     <template x-if="row.editingPrice">

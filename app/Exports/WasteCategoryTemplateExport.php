@@ -36,7 +36,8 @@ class WasteCategoryDataImportSheet implements FromArray, WithHeadings, WithTitle
             'Nama Grup',
             'Kode Kategori',
             '* Nama Kategori Sampah',
-            '* Satuan'
+            '* Satuan',
+            'Harga Beli'
         ];
     }
 
@@ -77,17 +78,18 @@ class WasteCategoryExampleSheet implements FromArray, WithHeadings, WithTitle, W
             'Nama Grup',
             'Kode Kategori',
             '* Nama Kategori Sampah',
-            '* Satuan'
+            '* Satuan',
+            'Harga Beli'
         ];
     }
 
     public function array(): array
     {
         return [
-            ['PLS', 'Plastik', 'PLS.01', 'Botol Plastik Bersih', 'kg'],
-            ['KRT', 'Kertas', 'KRT.01', 'Arsip', 'kg'],
-            ['KRT', 'Kertas', 'KRT.02', 'HVS/Putihan', 'kg'],
-            ['LOG', 'Logam', 'LOG.01', 'Aluminium', 'kg'],
+            ['PLS', 'Plastik', 'PLS.01', 'Botol Plastik Bersih', 'kg', 2500],
+            ['KRT', 'Kertas', 'KRT.01', 'Arsip', 'kg', 1500],
+            ['KRT', 'Kertas', 'KRT.02', 'HVS/Putihan', 'kg', 2000],
+            ['LOG', 'Logam', 'LOG.01', 'Aluminium', 'kg', 8000],
         ];
     }
 
@@ -133,6 +135,7 @@ class WasteCategoryInstructionsSheet implements FromArray, WithTitle, WithStyles
             ['- Kode Kategori: Opsional. Kode unik untuk kategori sampah (contoh: PLS.01). Jika dikosongkan, sistem akan meng-generate kode secara otomatis berdasarkan grup.'],
             ['- Nama Kategori Sampah: Wajib diisi. Contoh: Botol Plastik Bersih, HVS/Putihan.'],
             ['- Satuan: Wajib diisi. Contoh: kg, pcs, liter.'],
+            ['- Harga Beli: Opsional. Harga Bank Sampah membayar Nasabah saat Setoran (contoh: 2500). Jika dikosongkan, harga lama dipertahankan (atau 0 untuk kategori baru).'],
             [''],
             ['PILIHAN PILIHAN IMPORT MODE:'],
             ['- Insert Only: Hanya memasukkan kategori baru. Jika kode kategori sudah ada di sistem, baris akan ditolak.'],

@@ -202,19 +202,31 @@
                         createNewCat: false,
                         selectedGroup: '',
                         newCategoryName: '',
-                    toggleAllMaterials(checked, allIds) {
-                        this.selectedMaterials = checked ? [...allIds] : [];
+                    toggleAllMaterials(checked, ids) {
+                        if (!Array.isArray(ids) || ids.length === 0) return;
+                        if (checked) {
+                            const merged = new Set(this.selectedMaterials);
+                            ids.forEach(id => merged.add(Number(id)));
+                            this.selectedMaterials = [...merged];
+                        } else {
+                            const toRemove = new Set(ids.map(Number));
+                            this.selectedMaterials = this.selectedMaterials.filter(id => !toRemove.has(Number(id)));
+                        }
+                    },
+                    isAllVisibleSelected(ids) {
+                        return Array.isArray(ids) && ids.length > 0 && ids.every(id => this.selectedMaterials.includes(Number(id)));
                     },
                     toggleMaterial(id) {
-                        const idx = this.selectedMaterials.indexOf(id);
+                        const numId = Number(id);
+                        const idx = this.selectedMaterials.indexOf(numId);
                         if (idx > -1) {
                             this.selectedMaterials.splice(idx, 1);
                         } else {
-                            this.selectedMaterials.push(id);
+                            this.selectedMaterials.push(numId);
                         }
                     },
                     isMaterialSelected(id) {
-                        return this.selectedMaterials.includes(id);
+                        return this.selectedMaterials.includes(Number(id));
                     },
                     resolveTab: (function () {
                         try {
@@ -807,7 +819,7 @@
                                         <span>Pilihan Harga Transaksi (Snapshot)</span>
                                     </h4>
                                     <p class="text-body-sm text-text-muted mt-0.5">
-                                        Harga Excel digunakan sebagai snapshot transaksi saat ini dan <span class="font-semibold text-text">TIDAK MENGUBAH</span> harga master material.
+                                        Harga Excel menjadi Harga Beli Nasabah (master material) saat impor diselesaikan. Pilihan di bawah hanya menentukan harga snapshot transaksi kali ini.
                                     </p>
                                 </div>
 
@@ -1162,7 +1174,7 @@
                         </div>
 
                         @if(!empty($materialRecap))
-                            <div id="mat-recap-pager" x-data="{ q: '', page: 1, per: 20, total: 0, pages: 1, from: 0, to: 0,
+                            <div id="mat-recap-pager" x-data="{ q: '', page: 1, per: 20, total: 0, pages: 1, from: 0, to: 0, visibleIds: [],
                                     apply() {
                                         const root = document.getElementById('mat-recap-pager');
                                         const rows = root ? [...root.querySelectorAll('.ent-row')] : [];
@@ -1172,7 +1184,9 @@
                                         this.pages = Math.max(1, Math.ceil(this.total / this.per));
                                         if (this.page > this.pages) this.page = this.pages;
                                         rows.forEach(r => { r.style.display = 'none'; });
-                                        matched.slice((this.page - 1) * this.per, this.page * this.per).forEach(r => { r.style.display = ''; });
+                                        const visibleRows = matched.slice((this.page - 1) * this.per, this.page * this.per);
+                                        visibleRows.forEach(r => { r.style.display = ''; });
+                                        this.visibleIds = visibleRows.map(r => Number(r.dataset.categoryId)).filter(id => Number.isFinite(id));
                                         const s = (this.page - 1) * this.per;
                                         this.from = this.total ? s + 1 : 0;
                                         this.to = Math.min(s + this.per, this.total);
@@ -1193,8 +1207,8 @@
                                         <tr>
                                             <th class="py-2.5 px-3 w-10 text-center">
                                                 <input type="checkbox"
-                                                       @change="toggleAllMaterials($event.target.checked, [{{ collect($materialRecap)->pluck('category_id')->join(',') }}])"
-                                                       :checked="selectedMaterials.length === {{ count($materialRecap) }} && {{ count($materialRecap) }} > 0"
+                                                       @change="toggleAllMaterials($event.target.checked, visibleIds)"
+                                                       :checked="isAllVisibleSelected(visibleIds)"
                                                        class="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                                                        aria-label="Pilih semua material">
                                             </th>
@@ -1206,11 +1220,15 @@
                                     </thead>
                                     <tbody class="divide-y divide-border-subtle">
                                         @foreach($materialRecap as $m)
-                                            <tr class="ent-row hover:bg-surface-muted/50 transition-subtle" data-search="{{ mb_strtolower($m['name'] . ' ' . ($m['group_name'] ?? ''), 'UTF-8') }}" :class="isMaterialSelected({{ $m['category_id'] }}) ? 'bg-primary-light/20' : ''">
+                                            <tr class="ent-row hover:bg-surface-muted/50 transition-subtle cursor-pointer select-none"
+                                                data-category-id="{{ $m['category_id'] }}"
+                                                data-search="{{ mb_strtolower($m['name'] . ' ' . ($m['group_name'] ?? ''), 'UTF-8') }}"
+                                                :class="isMaterialSelected({{ $m['category_id'] }}) ? 'bg-primary-light/20' : ''"
+                                                @click="toggleMaterial({{ $m['category_id'] }})">
                                                 <td class="py-2.5 px-3 text-center">
                                                     <input type="checkbox"
                                                            :checked="isMaterialSelected({{ $m['category_id'] }})"
-                                                           @click="toggleMaterial({{ $m['category_id'] }})"
+                                                           @click.stop="toggleMaterial({{ $m['category_id'] }})"
                                                            class="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                                                            aria-label="Pilih {{ $m['name'] }}">
                                                 </td>

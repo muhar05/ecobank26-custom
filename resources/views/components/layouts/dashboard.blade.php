@@ -3,7 +3,11 @@
 @if(request()->header('X-Eco-Nav'))
     <div id="eco-spa-fragment"
          data-title="{{ $title ?? 'Dashboard' }}"
-         data-document-title="{{ ($title ?? 'Dashboard') . ' · ' . config('app.name', 'EcoBank026') }}">
+         data-document-title="{{ ($title ?? 'Dashboard') . ' · ' . config('app.name', 'EcoBank026') }}"
+         @if(session('success')) data-toast-success="{{ session('success') }}" @endif
+         @if(session('error')) data-toast-danger="{{ session('error') }}" @endif
+         @if(session('warning')) data-toast-warning="{{ session('warning') }}" @endif
+         @if(session('info') || session('status')) data-toast-info="{{ session('info') ?? session('status') }}" @endif>
         <div id="app-content-slot" x-data>
             {{ $slot }}
         </div>

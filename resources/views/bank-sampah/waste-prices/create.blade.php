@@ -8,7 +8,7 @@
                         <select name="waste_category_id" id="waste_category_id" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
                             <option value="">-- Pilih Kategori --</option>
                             @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ old('waste_category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }} ({{ $cat->unit }})</option>
+                                <option value="{{ $cat->id }}" {{ old('waste_category_id', request('waste_category_id')) == $cat->id ? 'selected' : '' }}>{{ $cat->name }} ({{ $cat->unit }})</option>
                             @endforeach
                         </select>
                     </x-field-group>

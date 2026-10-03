@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Deposit;
 use App\Models\DepositDetail;
+use App\Models\Collector;
+use App\Models\WastePrice;
 use App\Models\MaterialAlias;
 use App\Models\SavingsLedger;
 use App\Models\User;
@@ -348,9 +350,10 @@ class DepositImportTest extends TestCase
         $this->assertEquals($this->catAsoy->id, $staging['rows'][1]['category_id']);
     }
 
-    public function test_excel_price_used_as_snapshot_does_not_modify_master_member_price(): void
+    public function test_excel_price_updates_master_member_price_on_commit(): void
     {
-        // Category Asoy has member_price = 3000 in DB, but Excel has 3500
+        // Category Asoy has member_price = 3000 in DB, but Excel has 3500.
+        // Business rule: Excel price becomes the master member_price.
         $file = $this->createExcelFile([
             '28-09-2026' => [
                 ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
@@ -372,14 +375,220 @@ class DepositImportTest extends TestCase
             'token' => $token,
         ]);
 
-        // Master category member_price must remain 3000!
+        // Master category member_price must now be 3500 (synced from Excel)
         $this->catAsoy->refresh();
-        $this->assertEquals(3000, (float) $this->catAsoy->member_price);
+        $this->assertEquals(3500, (float) $this->catAsoy->member_price);
 
-        // Transaction detail must store 3500 as snapshot
+        // Transaction detail stores 3500 as snapshot from the synced master
         $detail = DepositDetail::latest('id')->first();
         $this->assertEquals(3500, (float) $detail->price_per_unit);
         $this->assertEquals(35000, (float) $detail->subtotal);
+    }
+
+    public function test_import_creates_new_material_with_excel_member_price(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Kardus Unik Baru', 2, 1800, 3600],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+
+        // New master material created with member_price from Excel
+        $category = WasteCategory::where('name', 'Kardus Unik Baru')->first();
+        $this->assertNotNull($category);
+        $this->assertEquals(1800, (float) $category->member_price);
+        $this->assertEquals('kg', $category->unit);
+
+        // Deposit snapshot uses the synced master price
+        $detail = DepositDetail::where('waste_category_id', $category->id)->first();
+        $this->assertNotNull($detail);
+        $this->assertEquals(1800, (float) $detail->price_per_unit);
+        $this->assertEquals(3600, (float) $detail->subtotal);
+    }
+
+    public function test_empty_excel_price_keeps_master_and_uses_master_snapshot(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 10, null, null],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('VALID', $staging['rows'][0]['status']);
+        $this->assertEquals(3000, (float) $staging['rows'][0]['used_price']);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+
+        // Master is not overwritten by the empty price
+        $this->catAsoy->refresh();
+        $this->assertEquals(3000, (float) $this->catAsoy->member_price);
+
+        $detail = DepositDetail::latest('id')->first();
+        $this->assertEquals(3000, (float) $detail->price_per_unit);
+        $this->assertEquals(30000, (float) $detail->subtotal);
+    }
+
+    public function test_zero_excel_price_is_valid_and_updates_master(): void
+    {
+        // NOTE: the shared createExcelFile() helper uses loose null comparison,
+        // which drops literal 0 cells before they reach the file. A real Excel
+        // file with 0 keeps the value, so this test writes strict mode instead.
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('28-09-2026');
+        $sheet->fromArray([
+            ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+            ['Bu Sarti', 'Emberan', 2, 0, 0],
+        ], null, 'A1', true);
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_ecobank_') . '.xlsx';
+        (new Xlsx($spreadsheet))->save($tempPath);
+        $file = new UploadedFile($tempPath, 'catatan_timbangan.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        // Price differs from master (0 vs 2500) so preview marks WARNING, which still commits
+        $this->assertEquals('WARNING', $staging['rows'][0]['status']);
+        $this->assertTrue($staging['rows'][0]['has_price_warning']);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+
+        $this->catEmberan->refresh();
+        $this->assertEquals(0, (float) $this->catEmberan->member_price);
+
+        $detail = DepositDetail::latest('id')->first();
+        $this->assertEquals(0, (float) $detail->price_per_unit);
+    }
+
+    public function test_negative_excel_price_rejects_row_and_blocks_commit(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 5, -100, -500],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('ERROR', $staging['rows'][0]['status']);
+
+        $commitRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+        $commitRes->assertSessionHasErrors('commit');
+
+        $this->assertEquals(0, Deposit::whereDate('date', '2026-09-28')->count());
+        $this->catAsoy->refresh();
+        $this->assertEquals(3000, (float) $this->catAsoy->member_price);
+    }
+
+    public function test_non_numeric_excel_price_rejects_row(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 5, 'tiga ribu', 15000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $staging = Cache::get("deposit_import_{$token}");
+        $this->assertEquals('ERROR', $staging['rows'][0]['status']);
+
+        $commitRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+        $commitRes->assertSessionHasErrors('commit');
+
+        $this->assertEquals(0, Deposit::whereDate('date', '2026-09-28')->count());
+    }
+
+    public function test_deposit_import_does_not_change_aggregator_price(): void
+    {
+        $collector = Collector::create(['name' => 'Pengepul Uji']);
+        WastePrice::create([
+            'waste_category_id' => $this->catAsoy->id,
+            'collector_id' => $collector->id,
+            'collector_price' => 5000,
+        ]);
+
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 10, 3500, 35000],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.commit'), [
+            'token' => $token,
+        ]);
+
+        // member_price synced, aggregator price untouched
+        $this->assertEquals(3500, (float) $this->catAsoy->fresh()->member_price);
+        $this->assertEquals(5000, (float) WastePrice::where('waste_category_id', $this->catAsoy->id)
+            ->where('collector_id', $collector->id)->value('collector_price'));
     }
 
     public function test_deposit_grouping_multiple_materials_same_customer_creates_one_deposit_and_one_savings_ledger(): void
@@ -1622,6 +1831,46 @@ class DepositImportTest extends TestCase
         $afterRecap = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']));
         $afterRecap->assertStatus(200);
         $afterRecap->assertSee('Plastik Daur Ulang', false);
+    }
+
+    public function test_recap_material_search_and_bulk_selection_markup_and_behavior(): void
+    {
+        $file = $this->createExcelFile([
+            '28-09-2026' => [
+                ['Nasabah', 'Material', 'Berat', 'Harga', 'Total'],
+                ['Bu Sarti', 'Asoy', 5, 3000, 15000],
+                ['Pak Budi', 'Emberan', 3, 2500, 7500],
+            ],
+        ]);
+
+        $uploadRes = $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.parse'), ['file' => $file]);
+        $token = $this->extractTokenFromRedirect($uploadRes);
+
+        $this->actingAs($this->adminUser)->post(route('bank-sampah.deposits.import.preview'), [
+            'token' => $token,
+            'sheet_name' => '28-09-2026',
+            'confirmed_date' => '2026-09-28',
+        ]);
+
+        $recapView = $this->actingAs($this->adminUser)->get(route('bank-sampah.deposits.import', ['token' => $token, 'view' => 'recap']));
+        $recapView->assertStatus(200);
+
+        // 1. Search pager exists with visibleIds tracking
+        $recapView->assertSee('id="mat-recap-pager"', false);
+        $recapView->assertSee('visibleIds: []', false);
+        $recapView->assertSee('placeholder="Cari material..."', false);
+        $recapView->assertDontSee('@mat-recap-filter-changed', false);
+
+        // 2. Bulk select header uses scoped visibleIds
+        $recapView->assertSee('@change="toggleAllMaterials($event.target.checked, visibleIds)"', false);
+        $recapView->assertSee(':checked="isAllVisibleSelected(visibleIds)"', false);
+
+        // 3. Row selection: clickable row and stop-propagation checkbox
+        $recapView->assertSee('cursor-pointer select-none', false);
+        $recapView->assertSee('@click="toggleMaterial(' . $this->catAsoy->id . ')"', false);
+        $recapView->assertSee('@click.stop="toggleMaterial(' . $this->catAsoy->id . ')"', false);
+        $recapView->assertSee('data-category-id="' . $this->catAsoy->id . '"', false);
+        $recapView->assertSee('data-category-id="' . $this->catEmberan->id . '"', false);
     }
 
     public function test_batch_assign_new_category_created_and_applied_from_recap(): void

@@ -188,10 +188,13 @@ class DepositController extends Controller
         foreach ($request->input('details', []) as $row) {
             if (!empty($row['waste_category_id']) && !empty($row['weight']) && $row['weight'] > 0) {
                 $weight = (float) $row['weight'];
-                $category = WasteCategory::find($row['waste_category_id']);
-                $price = (float) ($row['price_per_unit'] ?? ($category->member_price ?? 0));
+                // Harga final SELALU dari master WasteCategory.member_price.
+                // Field price_per_unit dari browser sengaja diabaikan (backward
+                // compatible: tetap boleh dikirim UI lama, tapi tidak dipakai).
+                $category = WasteCategory::findOrFail($row['waste_category_id']);
+                $price = (float) ($category->member_price ?? 0);
                 $details[] = [
-                    'waste_category_id' => $row['waste_category_id'],
+                    'waste_category_id' => $category->id,
                     'weight' => $weight,
                     'price_per_unit' => $price,
                     'subtotal' => (float) round($weight * $price, 0),

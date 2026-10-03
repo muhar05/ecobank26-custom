@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Kategori Sampah">
-    <div class="space-y-6">
+    <div class="space-y-6 max-w-7xl mx-auto pb-10">
         <!-- Page Header & CTAs -->
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>

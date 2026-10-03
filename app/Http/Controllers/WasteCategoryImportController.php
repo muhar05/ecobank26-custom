@@ -82,6 +82,16 @@ class WasteCategoryImportController extends Controller
                 $categoryCode = isset($row[2]) ? strtoupper(trim($row[2])) : '';
                 $categoryName = isset($row[3]) ? trim($row[3]) : '';
                 $unit = isset($row[4]) ? trim($row[4]) : '';
+                $rawMemberPrice = isset($row[5]) ? trim((string) $row[5]) : '';
+
+                // Harga Beli (member_price): opsional. String kosong = tidak diubah
+                // (atau default 0 untuk kategori baru). Nilai 0 yang valid tetap dipakai.
+                $memberPrice = null;
+                if ($rawMemberPrice !== '' && (!is_numeric($rawMemberPrice) || (float) $rawMemberPrice < 0)) {
+                    $memberPrice = false; // penanda harga tidak valid
+                } elseif ($rawMemberPrice !== '') {
+                    $memberPrice = (float) $rawMemberPrice;
+                }
 
                 $reason = null;
 
@@ -92,12 +102,14 @@ class WasteCategoryImportController extends Controller
                     $reason = 'Nama Kategori Sampah wajib diisi.';
                 } elseif ($unit === '') {
                     $reason = 'Satuan wajib diisi.';
+                } elseif ($memberPrice === false) {
+                    $reason = 'Harga Beli harus berupa angka 0 atau lebih.';
                 }
 
                 if ($reason) {
                     $failed++;
                     $rowWithReason = $row;
-                    $rowWithReason[5] = $reason;
+                    $rowWithReason[6] = $reason;
                     $failedRows[] = $rowWithReason;
                     $errors[] = "Baris {$rowNumber}: {$reason}";
                     continue;
@@ -116,7 +128,7 @@ class WasteCategoryImportController extends Controller
                 if (!$group) {
                     $failed++;
                     $rowWithReason = $row;
-                    $rowWithReason[5] = 'Grup kategori belum terdaftar. Tambahkan dulu di menu Kelola Grup.';
+                    $rowWithReason[6] = 'Grup kategori belum terdaftar. Tambahkan dulu di menu Kelola Grup.';
                     $failedRows[] = $rowWithReason;
                     $errors[] = "Baris {$rowNumber}: Grup kategori '{$groupName}' belum terdaftar.";
                     continue;
@@ -125,7 +137,7 @@ class WasteCategoryImportController extends Controller
                 if (!$group->is_active) {
                     $failed++;
                     $rowWithReason = $row;
-                    $rowWithReason[5] = 'Grup kategori status nonaktif.';
+                    $rowWithReason[6] = 'Grup kategori status nonaktif.';
                     $failedRows[] = $rowWithReason;
                     $errors[] = "Baris {$rowNumber}: Grup kategori '{$group->name}' sedang dinonaktifkan.";
                     continue;
@@ -143,7 +155,7 @@ class WasteCategoryImportController extends Controller
                     if ($mode === 'insert_only') {
                         $failed++;
                         $rowWithReason = $row;
-                        $rowWithReason[5] = "Kode kategori '{$categoryCode}' sudah terdaftar (Insert Only).";
+                        $rowWithReason[6] = "Kode kategori '{$categoryCode}' sudah terdaftar (Insert Only).";
                         $failedRows[] = $rowWithReason;
                         $errors[] = "Baris {$rowNumber}: Kode kategori '{$categoryCode}' sudah terdaftar.";
                         continue;
@@ -151,12 +163,16 @@ class WasteCategoryImportController extends Controller
                         $skipped++;
                         continue;
                     } elseif ($mode === 'insert_or_update') {
-                        $existingCategory->update([
+                        $updateData = [
                             'name' => $categoryName,
                             'unit' => $unit,
                             'waste_category_group_id' => $group->id,
                             'category_group' => $group->name,
-                        ]);
+                        ];
+                        if ($memberPrice !== null) {
+                            $updateData['member_price'] = $memberPrice;
+                        }
+                        $existingCategory->update($updateData);
                         $updated++;
                     }
                 } else {
@@ -182,7 +198,7 @@ class WasteCategoryImportController extends Controller
                         if ($mode === 'insert_only') {
                             $failed++;
                             $rowWithReason = $row;
-                            $rowWithReason[5] = "Kode kategori auto-generate '{$finalCode}' sudah terdaftar.";
+                            $rowWithReason[6] = "Kode kategori auto-generate '{$finalCode}' sudah terdaftar.";
                             $failedRows[] = $rowWithReason;
                             $errors[] = "Baris {$rowNumber}: Kode kategori '{$finalCode}' sudah terdaftar.";
                             continue;
@@ -190,24 +206,32 @@ class WasteCategoryImportController extends Controller
                             $skipped++;
                             continue;
                         } elseif ($mode === 'insert_or_update') {
-                            $duplicateCheck->update([
+                            $updateData = [
                                 'name' => $categoryName,
                                 'unit' => $unit,
                                 'waste_category_group_id' => $group->id,
                                 'category_group' => $group->name,
-                            ]);
+                            ];
+                            if ($memberPrice !== null) {
+                                $updateData['member_price'] = $memberPrice;
+                            }
+                            $duplicateCheck->update($updateData);
                             $updated++;
                             continue;
                         }
                     }
 
-                    WasteCategory::create([
+                    $createData = [
                         'code' => $finalCode,
                         'name' => $categoryName,
                         'unit' => $unit,
                         'waste_category_group_id' => $group->id,
                         'category_group' => $group->name,
-                    ]);
+                    ];
+                    if ($memberPrice !== null) {
+                        $createData['member_price'] = $memberPrice;
+                    }
+                    WasteCategory::create($createData);
                     $created++;
                 }
             }

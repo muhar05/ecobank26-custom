@@ -231,163 +231,89 @@
             </div>
 
             @if($sales->isNotEmpty())
-                {{-- DESKTOP SALES TABLE WITH ACCORDION DRAWER --}}
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-border bg-surface-muted/40 text-caption font-bold text-text-muted uppercase tracking-wider">
-                                <th class="py-3 px-5">Tanggal</th>
-                                <th class="py-3 px-5">Agregator</th>
-                                <th class="py-3 px-5 text-right">Nilai Penjualan</th>
-                                <th class="py-3 px-5 text-right">Margin Bank Sampah</th>
-                                <th class="py-3 px-5">Catatan</th>
-                                <th class="py-3 px-5 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-border-subtle">
-                            @foreach($sales as $sale)
-                                <tr x-data="{ expanded: false }" class="hover:bg-surface-muted/40 transition-subtle group">
-                                    <td class="py-3.5 px-5 whitespace-nowrap">
-                                        <div class="text-body-sm font-semibold text-text">{{ $sale->date->format('d/m/Y') }}</div>
-                                        <div class="text-caption text-text-muted mt-0.5">{{ $sale->date->diffForHumans() }}</div>
-                                    </td>
+                @php
+                    $salesByDate = $sales->getCollection()->groupBy(fn($s) => $s->date ? $s->date->format('Y-m-d') : '');
+                @endphp
 
-                                    <td class="py-3.5 px-5 whitespace-nowrap">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-9 h-9 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-body-sm shrink-0 shadow-subtle">
-                                                {{ strtoupper(substr($sale->collector->name ?? 'A', 0, 1)) }}
-                                            </div>
-                                            <div>
-                                                <span class="text-body font-bold text-text block">{{ $sale->collector->name ?? '-' }}</span>
-                                                <span class="text-caption text-text-muted">{{ $sale->details->count() }} jenis material</span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td class="py-3.5 px-5 text-right whitespace-nowrap">
-                                        <span class="font-mono text-body font-bold text-text block">
-                                            Rp {{ number_format($sale->total_amount, 0, ',', '.') }}
+                <div class="p-4 sm:p-6 space-y-6">
+                    @foreach($salesByDate as $dateKey => $salesOnDate)
+                        @php
+                            $carbonDate = $dateKey ? \Carbon\Carbon::parse($dateKey) : null;
+                            $dayTotalWeight = $salesOnDate->sum(fn($s) => $s->details->sum('weight'));
+                        @endphp
+                        <div class="space-y-3">
+                            {{-- Date Group Header --}}
+                            <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></div>
+                                    <h3 class="text-body font-bold text-text">
+                                        {{ $carbonDate ? $carbonDate->translatedFormat('d F Y') : 'Tanpa Tanggal' }}
+                                    </h3>
+                                    @if($carbonDate)
+                                        <span class="text-caption text-text-muted font-medium">
+                                            ({{ $carbonDate->translatedFormat('l') }})
                                         </span>
-                                    </td>
+                                    @endif
+                                </div>
+                                <span class="text-caption font-mono text-text-muted">
+                                    {{ $salesOnDate->count() }} transaksi &bull; {{ number_format($dayTotalWeight, 2, ',', '.') }} kg
+                                </span>
+                            </div>
 
-                                    <td class="py-3.5 px-5 text-right whitespace-nowrap">
-                                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-radius-sm bg-success-light text-success-text border border-success/30 font-mono font-bold text-body-sm">
-                                            +Rp {{ number_format($sale->details->sum('margin'), 0, ',', '.') }}
+                            {{-- Transaction Cards for this Date --}}
+                            <div class="space-y-3 pl-0 sm:pl-3">
+                                @foreach($salesOnDate as $sale)
+                                    @php
+                                        $materialCount = $sale->details->count();
+                                        $totalWeight = $sale->details->sum('weight');
+                                        $totalMargin = $sale->details->sum('margin');
+                                    @endphp
+                                    <div class="p-4 sm:p-5 rounded-radius-lg border border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/30 transition-subtle shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="space-y-1.5 flex-1 min-w-0">
+                                            <div class="flex items-center gap-2.5 flex-wrap">
+                                                <div class="w-8 h-8 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-body-sm shrink-0 shadow-subtle">
+                                                    {{ strtoupper(substr($sale->collector->name ?? 'A', 0, 1)) }}
+                                                </div>
+                                                <h4 class="text-body font-bold text-text truncate">
+                                                    {{ $sale->collector->name ?? 'Mitra Agregator' }}
+                                                </h4>
+                                                <span class="text-caption text-text-muted font-mono">SAL-{{ str_pad($sale->id, 5, '0', STR_PAD_LEFT) }}</span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2 text-body-sm text-text-muted flex-wrap">
+                                                <span class="font-semibold text-text">{{ $materialCount }} material</span>
+                                                <span>&bull;</span>
+                                                <span class="font-mono font-semibold text-text">{{ number_format($totalWeight, 2, ',', '.') }} kg</span>
+                                                <span>&bull;</span>
+                                                <span class="font-mono font-bold text-text">Rp {{ number_format($sale->total_amount, 0, ',', '.') }}</span>
+                                                <span>&bull;</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm bg-success-light text-success-text border border-success/30 font-mono font-bold text-caption">
+                                                    Margin +Rp {{ number_format($totalMargin, 0, ',', '.') }}
+                                                </span>
+                                            </div>
+
+                                            @if($sale->notes)
+                                                <p class="text-caption text-text-muted italic truncate max-w-xl">{{ $sale->notes }}</p>
+                                            @endif
                                         </div>
-                                    </td>
 
-                                    <td class="py-3.5 px-5">
-                                        <div class="text-body-sm text-text-muted max-w-xs truncate" title="{{ $sale->notes }}">
-                                            {{ $sale->notes ?: '-' }}
-                                        </div>
-                                    </td>
-
-                                    <td class="py-3.5 px-5 text-right whitespace-nowrap">
-                                        <div class="inline-flex items-center justify-end gap-3 text-body-sm font-semibold">
+                                        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
                                             <a href="{{ route('bank-sampah.sales.show', $sale) }}"
-                                               class="inline-flex items-center gap-1 text-caption font-bold text-primary hover:underline transition-subtle">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                                </svg>
-                                                Print Timbangan
+                                               class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-semibold shadow-subtle transition-subtle">
+                                                Detail &rarr;
                                             </a>
-                                            <button type="button"
-                                                    @click="expanded = !expanded"
-                                                    class="text-caption font-semibold text-text-muted hover:text-text transition-subtle">
-                                                <span x-text="expanded ? 'Tutup Rincian' : 'Lihat Rincian'"></span>
-                                            </button>
                                             <a href="{{ route('bank-sampah.sales.edit', $sale) }}"
-                                               class="text-caption font-semibold text-text-muted hover:text-text transition-subtle">
-                                                Edit
+                                               class="p-2 text-text-muted hover:text-text rounded-radius-md hover:bg-surface-muted transition-subtle" title="Edit Transaksi">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                             </a>
                                             <button type="button"
                                                     @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.sales.destroy', $sale) }}'})"
-                                                    class="text-caption font-semibold text-danger hover:underline transition-subtle cursor-pointer">
-                                                Hapus
+                                                    class="p-2 text-danger hover:text-danger-text rounded-radius-md hover:bg-danger-light transition-subtle cursor-pointer" title="Hapus Transaksi">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                             </button>
-                                        </div>
-
-                                        {{-- Expandable Accordion Drawer for Material Details --}}
-                                        <div x-show="expanded" x-cloak class="mt-3 p-4 rounded-radius-md bg-surface-muted/60 border border-border text-left">
-                                            <div class="text-caption font-bold uppercase tracking-wider text-text-muted mb-2">
-                                                Rincian Muatan Penjualan:
-                                            </div>
-                                            <div class="divide-y divide-border-subtle">
-                                                @foreach($sale->details as $d)
-                                                    <div class="py-2 flex items-center justify-between text-body-sm">
-                                                        <div>
-                                                            <span class="font-bold text-text">{{ $d->wasteCategory->name ?? 'Material' }}</span>
-                                                            <span class="font-mono text-caption text-text-muted ml-1">({{ number_format($d->weight, 2, ',', '.') }} {{ $d->wasteCategory->unit ?? 'kg' }})</span>
-                                                            <span class="text-caption text-text-muted block mt-0.5">
-                                                                Harga Beli Nasabah: Rp {{ number_format($d->member_price, 0, ',', '.') }} &bull; Harga Agregator: Rp {{ number_format($d->price_per_unit, 0, ',', '.') }}
-                                                            </span>
-                                                        </div>
-                                                        <div class="text-right">
-                                                            <span class="font-mono font-bold text-text block">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</span>
-                                                            <span class="font-mono text-caption text-success font-semibold">Margin: +Rp {{ number_format($d->margin, 0, ',', '.') }}</span>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                {{-- MOBILE ADAPTIVE CARDS (< md) --}}
-                <div class="block md:hidden divide-y divide-border-subtle p-3 space-y-3">
-                    @foreach($sales as $sale)
-                        <div x-data="{ expanded: false }" class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <span class="text-body font-bold text-text block">{{ $sale->collector->name ?? 'Agregator' }}</span>
-                                    <span class="text-caption text-text-muted font-medium">{{ $sale->date->format('d/m/Y') }}</span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="font-mono text-body font-bold text-text block">
-                                        Rp {{ number_format($sale->total_amount, 0, ',', '.') }}
-                                    </span>
-                                    <span class="font-mono text-caption text-success font-bold">
-                                        +Rp {{ number_format($sale->details->sum('margin'), 0, ',', '.') }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            @if($sale->notes)
-                                <p class="text-caption text-text-muted italic">{{ $sale->notes }}</p>
-                            @endif
-
-                            {{-- Mobile Drawer --}}
-                            <div x-show="expanded" x-cloak class="pt-2 border-t border-border-subtle space-y-2">
-                                <span class="text-caption font-bold text-text-muted uppercase block">Rincian Material:</span>
-                                @foreach($sale->details as $d)
-                                    <div class="flex items-center justify-between text-caption py-1 border-b border-border-subtle last:border-b-0">
-                                        <div>
-                                            <span class="font-bold text-text">{{ $d->wasteCategory->name ?? 'Material' }}</span>
-                                            <span class="font-mono text-text-muted block">{{ number_format($d->weight, 2, ',', '.') }} kg @ Rp {{ number_format($d->price_per_unit, 0, ',', '.') }}</span>
-                                        </div>
-                                        <div class="text-right font-mono">
-                                            <span class="font-bold text-text block">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</span>
-                                            <span class="text-success font-semibold">+Rp {{ number_format($d->margin, 0, ',', '.') }}</span>
                                         </div>
                                     </div>
                                 @endforeach
-                            </div>
-
-                            <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm">
-                                <a href="{{ route('bank-sampah.sales.show', $sale) }}" class="text-caption font-bold text-primary hover:underline">
-                                    Print Timbangan
-                                </a>
-                                <div class="flex items-center gap-3">
-                                    <button type="button" @click="expanded = !expanded" class="text-caption font-semibold text-text-muted hover:text-text">
-                                        <span x-text="expanded ? 'Tutup' : 'Rincian (' + {{ $sale->details->count() }} + ')'"></span>
-                                    </button>
-                                    <a href="{{ route('bank-sampah.sales.edit', $sale) }}" class="text-text-muted hover:text-text font-semibold text-caption">Edit</a>
-                                    <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.sales.destroy', $sale) }}'})" class="text-danger font-semibold text-caption">Hapus</button>
-                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -401,6 +327,11 @@
                 @endif
             @else
                 <div class="p-10 text-center flex flex-col items-center justify-center space-y-2">
+                    <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                    </div>
                     <p class="text-body-sm font-semibold text-text">Belum ada riwayat transaksi penjualan ke agregator.</p>
                     <p class="text-caption text-text-muted">Gunakan tombol Catat Penjualan di atas untuk memuat timbangan ke truk agregator.</p>
                 </div>

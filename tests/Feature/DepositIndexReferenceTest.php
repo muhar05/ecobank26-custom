@@ -257,4 +257,51 @@ class DepositIndexReferenceTest extends TestCase
         $res->assertDontSee('text-[11px]', false);
         $res->assertDontSee('text-xs', false);
     }
+
+    public function test_deposit_forms_warn_when_member_price_is_zero(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+
+        $asAdmin = fn () => $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token);
+
+        // Create form carries the zero-price warning, gated on master price only.
+        $create = $asAdmin()->get(route('bank-sampah.deposits.create'));
+        $create->assertStatus(200);
+        $create->assertSee('Harga Beli belum diatur', false);
+        $create->assertSee('row.defaultPrice <= 0', false);
+        // Save actions stay enabled (warning only, no blocking).
+        $create->assertSee('Simpan & Selesai', false);
+
+        // Edit form carries the same warning for existing rows.
+        $customer = \App\Models\WasteCustomer::create([
+            'customer_code' => \App\Models\WasteCustomer::generateNextCustomerCode(),
+            'name' => 'Ibu Sari',
+            'status' => 'active',
+        ]);
+        $category = \App\Models\WasteCategory::create([
+            'name' => 'Kardus Bekas',
+            'unit' => 'kg',
+            'member_price' => 0,
+        ]);
+        $deposit = \App\Models\Deposit::create([
+            'waste_customer_id' => $customer->id,
+            'date' => now()->toDateString(),
+            'total_amount' => 0,
+        ]);
+        \App\Models\DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $category->id,
+            'weight' => 2,
+            'price_per_unit' => 0,
+            'subtotal' => 0,
+        ]);
+
+        $edit = $asAdmin()->get(route('bank-sampah.deposits.edit', $deposit));
+        $edit->assertStatus(200);
+        $edit->assertSee('Harga Beli belum diatur', false);
+        $edit->assertSee('row.defaultPrice <= 0', false);
+        // Save action stays enabled on edit as well.
+        $edit->assertSee('Simpan Perubahan', false);
+    }
 }

@@ -1,20 +1,14 @@
 /**
- * EcoBank026 - SPA Navigation POC
+ * EcoBank026 - SPA Navigation
  *
  * Lightweight, dependency-free page navigation for Laravel + Blade + Alpine.js
- * Keeps sidebar and header mounted while swapping the main content area.
+ * Keeps sidebar and header mounted while swapping the main content area with View Transitions.
  */
-
-const POC_ELIGIBLE_PATHS = [
-    '/bank-sampah/dashboard',
-    '/bank-sampah/deposits',
-    '/bank-sampah/deposits/create',
-    '/bank-sampah/customers',
-];
 
 // Sidebar paths grouped under the "Master Data" submenu parent.
 const MASTER_CHILD_PREFIXES = [
     '/bank-sampah/waste-categories',
+    '/bank-sampah/waste-category-groups',
     '/bank-sampah/collectors',
     '/bank-sampah/waste-prices',
 ];
@@ -32,17 +26,65 @@ function normalizePath(pathname) {
 }
 
 export function isEligibleUrl(url) {
-    if (url.origin !== window.location.origin) return false;
+    if (!url || url.origin !== window.location.origin) return false;
+
     const path = normalizePath(url.pathname);
-    // Eligible modules: Dashboard, Deposits, Customers, and Sales
-    if (path === '/bank-sampah/dashboard') return true;
-    if (path.startsWith('/bank-sampah/customers')) return true;
-    if (path.startsWith('/bank-sampah/deposits')) return true;
-    if (path.startsWith('/bank-sampah/sales')) return true;
-    return POC_ELIGIBLE_PATHS.some(p => normalizePath(p) === path);
+
+    // 1. Exclude static assets and binary file downloads
+    if (path.match(/\.(xlsx|xls|pdf|csv|png|jpg|jpeg|gif|svg|ico)$/i)) {
+        return false;
+    }
+
+    // 2. Exclude export, template, download, and print endpoints
+    if (
+        path.includes('/export') ||
+        path.includes('/print') ||
+        path.includes('/template') ||
+        path.includes('/failed-rows') ||
+        path.includes('/pdf')
+    ) {
+        return false;
+    }
+
+    // 3. Exclude public and auth routes (they use standalone/guest layouts)
+    if (
+        path === '/' ||
+        path.startsWith('/cek-saldo') ||
+        path === '/login' ||
+        path === '/logout' ||
+        path === '/register' ||
+        path.startsWith('/forgot-password') ||
+        path.startsWith('/reset-password') ||
+        path.startsWith('/verify-email') ||
+        path === '/confirm-password' ||
+        path.startsWith('/storage') ||
+        path === '/up'
+    ) {
+        return false;
+    }
+
+    // 4. Eligible internal dashboard routes using the persistent shell:
+    // Dashboard, all Bank Sampah operational/master/report modules, Warga savings, Admin RW, Profile
+    if (
+        path === '/dashboard' ||
+        path.startsWith('/bank-sampah') ||
+        path.startsWith('/warga') ||
+        path.startsWith('/admin') ||
+        path === '/profile' ||
+        path.startsWith('/profile')
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 function isEligibleLink(anchor, event) {
+    // 0. Only intercept if current document is mounted inside the SPA shell
+    if (!document.getElementById('app-content-slot')) {
+        return false;
+    }
+
     // 1. Mouse & modifier key guards (Rule 7)
     if (
         event.defaultPrevented ||
@@ -81,14 +123,7 @@ function isEligibleLink(anchor, event) {
 
     if (url.origin !== window.location.origin) return false;
 
-    if (
-        url.pathname.match(/\.(xlsx|pdf|csv|png|jpg|jpeg|gif|svg|ico)$/i) ||
-        url.pathname.includes('/template')
-    ) {
-        return false;
-    }
-
-    // 4. Scope: explicit data-spa-link or in POC whitelist (Rule 9)
+    // 4. Scope: explicit data-spa-link or eligible internal URL
     if (anchor.hasAttribute('data-spa-link')) return true;
     return isEligibleUrl(url);
 }
@@ -154,7 +189,14 @@ function parseResponseHtml(html) {
             type: s.getAttribute('type'),
         }));
 
-        return { slotHtml, scripts, title, docTitle };
+        const toasts = {
+            success: frag.getAttribute('data-toast-success'),
+            danger: frag.getAttribute('data-toast-danger'),
+            warning: frag.getAttribute('data-toast-warning'),
+            info: frag.getAttribute('data-toast-info'),
+        };
+
+        return { slotHtml, scripts, title, docTitle, toasts };
     }
 
     // Case B: Full document response fallback
@@ -171,10 +213,10 @@ function parseResponseHtml(html) {
             type: s.getAttribute('type'),
         }));
 
-        return { slotHtml, scripts, title, docTitle };
+        return { slotHtml, scripts, title, docTitle, toasts: {} };
     }
 
-    return { slotHtml: null, scripts: [], title: '', docTitle: '' };
+    return { slotHtml: null, scripts: [], title: '', docTitle: '', toasts: {} };
 }
 
 function executeScripts(container, scriptDescriptors = []) {
@@ -222,7 +264,16 @@ function updateSidebarActive(currentPath) {
         }
 
         // Generic rule: exact match or any sub-path (covers index/create/edit/history/import)
-        const isActive = normCurrent === linkPath || normCurrent.startsWith(linkPath + '/');
+        let isActive = false;
+        if (linkPath === '/warga/savings') {
+            isActive = normCurrent === '/warga/savings';
+        } else if (linkPath === '/bank-sampah/dashboard') {
+            isActive = normCurrent === '/bank-sampah/dashboard';
+        } else if (linkPath === '/bank-sampah/savings') {
+            isActive = normCurrent === '/bank-sampah/savings';
+        } else {
+            isActive = normCurrent === linkPath || normCurrent.startsWith(linkPath + '/');
+        }
         setActiveVisual(a, isActive);
     });
 
@@ -345,7 +396,23 @@ export async function navigate(targetUrl, { pushHistory = true } = {}) {
                 }
             }
 
-            // 8. Scroll container to top
+            // 8. Dispatch toast if fragment has toast flash message
+            if (toasts) {
+                if (toasts.success) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: toasts.success } }));
+                }
+                if (toasts.danger) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'danger', message: toasts.danger } }));
+                }
+                if (toasts.warning) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'warning', message: toasts.warning } }));
+                }
+                if (toasts.info) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: toasts.info } }));
+                }
+            }
+
+            // 9. Scroll container to top
             const mainContent = document.getElementById('app-content');
             if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'instant' });
         };

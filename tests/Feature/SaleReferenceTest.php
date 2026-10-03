@@ -146,13 +146,97 @@ class SaleReferenceTest extends TestCase
         $res->assertSee('Siap Dijual', false);
         $res->assertSee('Catat Penjualan ke Agregator &rarr;', false);
 
-        // Section 2: Riwayat Penjualan
+        // Section 2: Riwayat Penjualan (Grouped by Date & Agregator)
+        $res->assertSee(\Carbon\Carbon::parse($date)->translatedFormat('d F Y'), false);
         $res->assertSee('PT Mitra Daur Ulang', false);
-        $res->assertSee('Truk 1 Muatan Pagi', false);
+        $res->assertSee('1 material', false);
+        $res->assertSee('60,00 kg', false);
         $res->assertSee('Rp 150.000', false);
-        $res->assertSee('+Rp 30.000', false); // Margin Bank Sampah
-        $res->assertSee('Print Timbangan', false);
-        $res->assertSee('Lihat Rincian', false);
+        $res->assertSee('Margin +Rp 30.000', false);
+        $res->assertSee('Truk 1 Muatan Pagi', false);
+        $res->assertSee('Detail &rarr;', false);
+        $res->assertSee(route('bank-sampah.sales.show', $sale), false);
+        // Material details are NOT expanded on index (no collapse accordion)
+        $res->assertDontSee('Lihat Rincian', false);
+        $res->assertDontSee('Rincian Muatan Penjualan:', false);
+    }
+
+    public function test_sales_index_groups_multiple_transactions_by_date_and_agregator(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+
+        $col1 = Collector::create(['name' => 'Lapak Jaya', 'phone' => '081111']);
+        $col2 = Collector::create(['name' => 'Berkah Jaya', 'phone' => '082222']);
+        $cat1 = WasteCategory::create(['name' => 'Kardus', 'code' => 'KRD.01', 'unit' => 'kg', 'member_price' => 1000]);
+        $cat2 = WasteCategory::create(['name' => 'Botol PET', 'code' => 'PET.01', 'unit' => 'kg', 'member_price' => 2000]);
+
+        $date1 = '2026-09-12';
+        $date2 = '2026-09-11';
+
+        // Date 1: 2 sales with different collectors
+        $sale1 = Sale::create(['collector_id' => $col1->id, 'date' => $date1, 'total_amount' => 1250000]);
+        SaleDetail::create([
+            'sale_id' => $sale1->id,
+            'waste_category_id' => $cat1->id,
+            'weight' => 125,
+            'price_per_unit' => 10000,
+            'member_price' => 7440,
+            'subtotal' => 1250000,
+            'margin' => 320000,
+        ]);
+
+        $sale2 = Sale::create(['collector_id' => $col2->id, 'date' => $date1, 'total_amount' => 540000]);
+        SaleDetail::create([
+            'sale_id' => $sale2->id,
+            'waste_category_id' => $cat2->id,
+            'weight' => 60,
+            'price_per_unit' => 9000,
+            'member_price' => 7000,
+            'subtotal' => 540000,
+            'margin' => 120000,
+        ]);
+
+        // Date 2: 1 sale
+        $sale3 = Sale::create(['collector_id' => $col1->id, 'date' => $date2, 'total_amount' => 300000]);
+        SaleDetail::create([
+            'sale_id' => $sale3->id,
+            'waste_category_id' => $cat1->id,
+            'weight' => 30,
+            'price_per_unit' => 10000,
+            'member_price' => 8000,
+            'subtotal' => 300000,
+            'margin' => 60000,
+        ]);
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->get(route('bank-sampah.sales.index'));
+
+        $res->assertStatus(200);
+
+        // Date 1 group header
+        $res->assertSee(\Carbon\Carbon::parse($date1)->translatedFormat('d F Y'), false);
+        // Date 2 group header
+        $res->assertSee(\Carbon\Carbon::parse($date2)->translatedFormat('d F Y'), false);
+
+        // Agregators on Date 1
+        $res->assertSee('Lapak Jaya', false);
+        $res->assertSee('125,00 kg', false);
+        $res->assertSee('Rp 1.250.000', false);
+        $res->assertSee('Margin +Rp 320.000', false);
+        $res->assertSee(route('bank-sampah.sales.show', $sale1), false);
+
+        $res->assertSee('Berkah Jaya', false);
+        $res->assertSee('60,00 kg', false);
+        $res->assertSee('Rp 540.000', false);
+        $res->assertSee('Margin +Rp 120.000', false);
+        $res->assertSee(route('bank-sampah.sales.show', $sale2), false);
+
+        // Agregator on Date 2
+        $res->assertSee('30,00 kg', false);
+        $res->assertSee('Rp 300.000', false);
+        $res->assertSee('Margin +Rp 60.000', false);
+        $res->assertSee(route('bank-sampah.sales.show', $sale3), false);
     }
 
     public function test_sale_create_view_and_zero_modal_architecture(): void
@@ -314,19 +398,32 @@ class SaleReferenceTest extends TestCase
 
         $res->assertStatus(200);
 
-        // Format checks
-        $res->assertSee('Timbangan Kami Box', false);
+        // Header & Breadcrumb
+        $res->assertSee('Detail Penjualan', false);
+        $res->assertSee('SAL-00001', false);
+        $res->assertSee('✓ Selesai', false);
         $res->assertSee('PT Mitra Daur Ulang', false);
         $res->assertSee('Truk 1 Muatan Pagi', false);
+        $res->assertSee('&larr; Kembali ke Penjualan', false);
 
-        // Table headers
+        // Summary 4 Metrics
+        $res->assertSee('Total Material', false);
+        $res->assertSee('2', false); // 2 jenis material
+        $res->assertSee('Total Berat', false);
+        $res->assertSee('80,00', false); // 60 + 20 kg
+        $res->assertSee('Total Penjualan', false);
+        $res->assertSee('Rp 250.000', false);
+        $res->assertSee('Margin Bank Sampah', false);
+        $res->assertSee('+Rp 50.000', false); // 30.000 + 20.000
+
+        // Table headers (Harga Lapak, not generic Harga)
         $res->assertSee('No', false);
         $res->assertSee('Jenis Sampah', false);
-        $res->assertSee('Harga', false);
+        $res->assertSee('Harga Lapak', false);
         $res->assertSee('Berat', false);
         $res->assertSee('Total Harga', false);
 
-        // Material rows
+        // Material rows (Historical snapshot)
         $res->assertSee('Kardus Box', false);
         $res->assertSee('Rp 2.500', false);
         $res->assertSee('60,00 kg', false);
@@ -337,14 +434,8 @@ class SaleReferenceTest extends TestCase
         $res->assertSee('20,00 kg', false);
         $res->assertSee('Rp 100.000', false);
 
-        // Below table totals
-        $res->assertSee('Total Berat', false);
-        $res->assertSee('80,00', false); // 60 + 20
-        $res->assertSee('Total Harga', false);
-        $res->assertSee('Rp 250.000', false);
-
         // Print button
         $res->assertSee('window.print()', false);
-        $res->assertSee('Print', false);
+        $res->assertSee('Cetak / Print', false);
     }
 }

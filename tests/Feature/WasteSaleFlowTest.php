@@ -752,4 +752,110 @@ class WasteSaleFlowTest extends TestCase
         $ledger = WasteBankCashLedger::where('reference_type', Sale::class)->first();
         $this->assertEquals($expectedMargin, $ledger->amount);
     }
+
+    public function test_deposit_ignores_forged_browser_price_uses_master_member_price(): void
+    {
+        // CASE A: browser sends wildly inflated price_per_unit, backend must overwrite with master.
+        $this->catKardus->update(['member_price' => 5000]);
+
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.deposits.store'), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-27',
+            'details' => [
+                [
+                    'waste_category_id' => $this->catKardus->id,
+                    'weight' => 10,
+                    'price_per_unit' => 999999, // forged
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect(route('bank-sampah.deposits.index'));
+
+        $detail = DepositDetail::first();
+        $this->assertEquals(5000, $detail->price_per_unit);
+        $this->assertEquals(50000, $detail->subtotal);
+        $this->assertEquals(50000, Deposit::first()->total_amount);
+        $this->assertDatabaseHas('savings_ledgers', [
+            'waste_customer_id' => $this->customer->id,
+            'type' => 'credit',
+            'amount' => 50000,
+        ]);
+    }
+
+    public function test_deposit_ignores_deflated_browser_price(): void
+    {
+        // CASE B: browser sends deflated price_per_unit, backend must still use master.
+        $this->catKardus->update(['member_price' => 5000]);
+
+        $this->actingAs($this->admin)->post(route('bank-sampah.deposits.store'), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-27',
+            'details' => [
+                [
+                    'waste_category_id' => $this->catKardus->id,
+                    'weight' => 10,
+                    'price_per_unit' => 1000, // deflated
+                ],
+            ],
+        ])->assertRedirect(route('bank-sampah.deposits.index'));
+
+        $this->assertEquals(5000, DepositDetail::first()->price_per_unit);
+    }
+
+    public function test_old_deposit_snapshot_survives_master_price_change(): void
+    {
+        // CASE C: changing master price later must not rewrite historical snapshot.
+        $this->actingAs($this->admin)->post(route('bank-sampah.deposits.store'), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-27',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 10],
+            ],
+        ])->assertRedirect(route('bank-sampah.deposits.index'));
+
+        $this->assertEquals(2000, DepositDetail::first()->price_per_unit);
+
+        $this->catKardus->update(['member_price' => 7777]);
+
+        $detail = DepositDetail::first()->fresh();
+        $this->assertEquals(2000, $detail->price_per_unit);
+        $this->assertEquals(20000, $detail->subtotal);
+    }
+
+    public function test_collector_price_never_sources_deposit_price(): void
+    {
+        // CASE D: collector_price (2500/2800) must never leak into deposit pricing.
+        // Kardus master member_price is 2000; both aggregators price it higher.
+        $this->actingAs($this->admin)->post(route('bank-sampah.deposits.store'), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-27',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 10],
+            ],
+        ])->assertRedirect(route('bank-sampah.deposits.index'));
+
+        $detail = DepositDetail::first();
+        $this->assertEquals(2000, $detail->price_per_unit);
+        $this->assertNotEquals(2500, $detail->price_per_unit);
+        $this->assertNotEquals(2800, $detail->price_per_unit);
+    }
+
+    public function test_zero_member_price_preserved_without_blocking(): void
+    {
+        // member_price = 0 (e.g. Quick Add material) must not be blocked in Phase 2.
+        $this->catKardus->update(['member_price' => 0]);
+
+        $this->actingAs($this->admin)->post(route('bank-sampah.deposits.store'), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-27',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 10],
+            ],
+        ])->assertRedirect(route('bank-sampah.deposits.index'));
+
+        $detail = DepositDetail::first();
+        $this->assertEquals(0, $detail->price_per_unit);
+        $this->assertEquals(0, $detail->subtotal);
+    }
 }

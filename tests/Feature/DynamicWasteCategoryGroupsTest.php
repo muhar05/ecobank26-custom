@@ -231,4 +231,129 @@ class DynamicWasteCategoryGroupsTest extends TestCase
         $result3 = session('import_result');
         $this->assertEquals(1, $result3['skipped']); 
     }
+
+    public function test_import_updates_member_price_for_existing_material()
+    {
+        $groupPlastik = WasteCategoryGroup::where('code', 'PLS')->first();
+        $category = WasteCategory::create([
+            'name' => 'Botol Bekas',
+            'unit' => 'kg',
+            'code' => 'PLS.77',
+            'member_price' => 1000,
+            'waste_category_group_id' => $groupPlastik->id,
+            'category_group' => $groupPlastik->name,
+        ]);
+
+        $importData = [
+            ['Kode Grup', 'Nama Grup', 'Kode Kategori', 'Nama Kategori Sampah', 'Satuan', 'Harga Beli'],
+            ['PLS', 'Plastik', 'PLS.77', 'Botol Bekas', 'kg', 5000],
+        ];
+
+        \Excel::fake();
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('test-import-cat.xlsx');
+
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'insert_or_update',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertEquals(5000, (float) $category->fresh()->member_price);
+    }
+
+    public function test_import_creates_new_material_with_member_price()
+    {
+        $importData = [
+            ['Kode Grup', 'Nama Grup', 'Kode Kategori', 'Nama Kategori Sampah', 'Satuan', 'Harga Beli'],
+            ['KRT', 'Kertas', '', 'Kardus Tebal', 'kg', 5000],
+        ];
+
+        \Excel::fake();
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('test-import-cat.xlsx');
+
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'insert_or_update',
+        ]);
+
+        $response->assertRedirect();
+        $created = WasteCategory::where('name', 'Kardus Tebal')->first();
+        $this->assertNotNull($created);
+        $this->assertEquals(5000, (float) $created->member_price);
+        $this->assertEquals('kg', $created->unit);
+    }
+
+    public function test_import_member_price_regression_and_validation()
+    {
+        $groupPlastik = WasteCategoryGroup::where('code', 'PLS')->first();
+        $existing = WasteCategory::create([
+            'name' => 'Existing Tutup',
+            'unit' => 'pcs',
+            'code' => 'PLS.78',
+            'member_price' => 2500,
+            'waste_category_group_id' => $groupPlastik->id,
+            'category_group' => $groupPlastik->name,
+        ]);
+
+        $importData = [
+            ['Kode Grup', 'Nama Grup', 'Kode Kategori', 'Nama Kategori Sampah', 'Satuan', 'Harga Beli'],
+            // legacy 5-col shape: price untouched, other fields still update
+            ['PLS', 'Plastik', 'PLS.78', 'Existing Tutup Baru', 'buah'],
+            // explicit valid 0 price is honored, not ignored
+            ['PLS', 'Plastik', 'PLS.78', 'Existing Tutup Baru', 'buah', 0],
+            // invalid price fails the row
+            ['PLS', 'Plastik', '', 'Barang Rusak', 'kg', 'bukan-angka'],
+        ];
+
+        \Excel::fake();
+        \Excel::shouldReceive('toArray')
+            ->andReturn([$importData]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('test-import-cat.xlsx');
+
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.waste-categories.import.store'), [
+            'file' => $file,
+            'mode' => 'insert_or_update',
+        ]);
+
+        $response->assertRedirect();
+        $existing->refresh();
+
+        // regression: name/unit/group/code behavior preserved
+        $this->assertEquals('Existing Tutup Baru', $existing->name);
+        $this->assertEquals('buah', $existing->unit);
+        // valid 0 honored
+        $this->assertEquals(0, (float) $existing->member_price);
+
+        $result = session('import_result');
+        $this->assertEquals(1, $result['failed']);
+    }
+
+    public function test_category_template_headers_include_harga_beli()
+    {
+        $response = $this->actingAs($this->admin)->get(route('bank-sampah.waste-categories.import.template'));
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'tpl_cat_') . '.xlsx';
+        file_put_contents($tempPath, $response->streamedContent());
+
+        $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($tempPath);
+        $sheet = $reader->load($tempPath)->getSheetByName('DATA IMPORT');
+        $headers = $sheet->rangeToArray('A1:F1')[0];
+
+        $this->assertEquals(
+            ['Kode Grup', 'Nama Grup', 'Kode Kategori', '* Nama Kategori Sampah', '* Satuan', 'Harga Beli'],
+            array_values(array_filter($headers, fn ($h) => $h !== null && $h !== ''))
+        );
+
+        @unlink($tempPath);
+    }
 }

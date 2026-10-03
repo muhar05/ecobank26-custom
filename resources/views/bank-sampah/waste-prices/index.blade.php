@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Harga Sampah">
-    <div class="space-y-6">
+    <div class="space-y-6 max-w-7xl mx-auto pb-10">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
                 <h2 class="text-xl font-bold text-text">Harga Sampah</h2>
@@ -86,68 +86,116 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
-                        @forelse($prices as $price)
-                            <tr class="hover:bg-surface-muted/50 transition duration-150">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary">
-                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        @forelse($categories as $category)
+                            @if($category->wastePrices->isNotEmpty())
+                                @foreach($category->wastePrices as $price)
+                                    <tr class="hover:bg-surface-muted/50 transition duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary">
+                                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-semibold text-text">{{ $category->name ?? '-' }}</div>
+                                                    <div class="text-xs font-mono text-text-muted mt-0.5">{{ $category->code ?? '-' }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            @if($category->wasteCategoryGroup)
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-info-light text-info-text border border-info/30">
+                                                    {{ $category->wasteCategoryGroup->name }}
+                                                </span>
+                                            @elseif($category->category_group)
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-warning-light text-warning-text border border-danger/30">
+                                                    {{ $category->category_group }} (Legacy)
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-caption font-medium bg-surface-muted text-text-muted border border-border">
+                                                    Belum Dikategorikan
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-text dark:text-text flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                                {{ $price->collector->name ?? '-' }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <div class="text-sm font-medium text-text">Rp {{ number_format($category->member_price ?? 0, 0, ',', '.') }} <span class="text-xs text-text-muted font-normal">/ {{ $category->unit ?? 'kg' }}</span></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <div class="text-sm font-semibold text-primary">Rp {{ number_format($price->collector_price, 0, ',', '.') }} <span class="text-xs text-text-muted font-normal">/ {{ $category->unit ?? 'kg' }}</span></div>
+                                            @php
+                                                $latestHistory = $price->histories->first();
+                                            @endphp
+                                            @if($latestHistory)
+                                                <div class="text-caption text-text-muted mt-0.5" title="Diubah oleh {{ $latestHistory->changedBy->name ?? 'Admin' }} ({{ $latestHistory->adminDevice->device_name ?? 'Device' }})">
+                                                    {{ $latestHistory->changed_at ? $latestHistory->changed_at->format('d/m/y H:i') : '' }} &bull; {{ $latestHistory->source }}
+                                                </div>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            @php
+                                                $margin = $price->collector_price - ($category->member_price ?? 0);
+                                            @endphp
+                                            <div class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium {{ $margin > 0 ? 'bg-primary-light text-primary' : 'bg-surface-muted text-text' }}">
+                                                Rp {{ number_format($margin, 0, ',', '.') }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                            <a href="{{ route('bank-sampah.waste-prices.history', ['collector_id' => $price->collector_id, 'waste_category_id' => $price->waste_category_id]) }}" class="text-info-text hover:underline transition-subtle">Riwayat</a>
+                                            <a href="{{ route('bank-sampah.waste-prices.edit', $price) }}" class="text-primary hover:underline transition-subtle">Edit</a>
+                                            <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-prices.destroy', $price) }}'})" class="text-danger hover:underline transition-subtle">Hapus</button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @else
+                                <tr class="hover:bg-surface-muted/50 transition duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-primary">
+                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-semibold text-text">{{ $category->name ?? '-' }}</div>
+                                                <div class="text-xs font-mono text-text-muted mt-0.5">{{ $category->code ?? '-' }}</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div class="text-sm font-semibold text-text">{{ $price->wasteCategory->name ?? '-' }}</div>
-                                            <div class="text-xs font-mono text-text-muted mt-0.5">{{ $price->wasteCategory->code ?? '-' }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    @if($price->wasteCategory && $price->wasteCategory->wasteCategoryGroup)
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-info-light text-info-text border border-info/30">
-                                            {{ $price->wasteCategory->wasteCategoryGroup->name }}
-                                        </span>
-                                    @elseif($price->wasteCategory && $price->wasteCategory->category_group)
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-warning-light text-warning-text border border-danger/30">
-                                            {{ $price->wasteCategory->category_group }} (Legacy)
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-caption font-medium bg-surface-muted text-text-muted border border-border">
-                                            Belum Dikategorikan
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-text dark:text-text flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                                        {{ $price->collector->name ?? '-' }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <div class="text-sm font-medium text-text">Rp {{ number_format($price->wasteCategory->member_price ?? 0, 0, ',', '.') }} <span class="text-xs text-text-muted font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    <div class="text-sm font-semibold text-primary">Rp {{ number_format($price->collector_price, 0, ',', '.') }} <span class="text-xs text-text-muted font-normal">/ {{ $price->wasteCategory->unit ?? 'kg' }}</span></div>
-                                    @php
-                                        $latestHistory = $price->histories->first();
-                                    @endphp
-                                    @if($latestHistory)
-                                        <div class="text-caption text-text-muted mt-0.5" title="Diubah oleh {{ $latestHistory->changedBy->name ?? 'Admin' }} ({{ $latestHistory->adminDevice->device_name ?? 'Device' }})">
-                                            {{ $latestHistory->changed_at ? $latestHistory->changed_at->format('d/m/y H:i') : '' }} &bull; {{ $latestHistory->source }}
-                                        </div>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right">
-                                    @php
-                                        $margin = $price->collector_price - ($price->wasteCategory->member_price ?? 0);
-                                    @endphp
-                                    <div class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium {{ $margin > 0 ? 'bg-primary-light text-primary' : 'bg-surface-muted text-text' }}">
-                                        Rp {{ number_format($margin, 0, ',', '.') }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                    <a href="{{ route('bank-sampah.waste-prices.history', ['collector_id' => $price->collector_id, 'waste_category_id' => $price->waste_category_id]) }}" class="text-info-text hover:underline transition-subtle">Riwayat</a>
-                                    <a href="{{ route('bank-sampah.waste-prices.edit', $price) }}" class="text-primary hover:underline transition-subtle">Edit</a>
-                                    <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.waste-prices.destroy', $price) }}'})" class="text-danger hover:underline transition-subtle">Hapus</button>
-                                </td>
-                            </tr>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if($category->wasteCategoryGroup)
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-info-light text-info-text border border-info/30">
+                                                {{ $category->wasteCategoryGroup->name }}
+                                            </span>
+                                        @elseif($category->category_group)
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-xs font-medium bg-warning-light text-warning-text border border-danger/30">
+                                                {{ $category->category_group }} (Legacy)
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-radius-sm text-caption font-medium bg-surface-muted text-text-muted border border-border">
+                                                Belum Dikategorikan
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-text-muted">—</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                        <div class="text-sm font-medium text-text">Rp {{ number_format($category->member_price ?? 0, 0, ',', '.') }} <span class="text-xs text-text-muted font-normal">/ {{ $category->unit ?? 'kg' }}</span></div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                        <div class="text-sm text-text-muted">—</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                        <div class="text-sm text-text-muted">—</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <a href="{{ route('bank-sampah.waste-prices.create', ['waste_category_id' => $category->id]) }}" class="text-primary hover:underline transition-subtle">Tambah Harga</a>
+                                    </td>
+                                </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-12 text-center">
@@ -163,9 +211,9 @@
                     </tbody>
                 </table>
             </div>
-            @if($prices->hasPages())
+            @if($categories->hasPages())
                 <div class="px-6 py-4 border-t border-border bg-surface-muted/50">
-                    {{ $prices->links() }}
+                    {{ $categories->links() }}
                 </div>
             @endif
         </div>

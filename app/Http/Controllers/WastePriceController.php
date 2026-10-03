@@ -18,35 +18,34 @@ class WastePriceController extends Controller
         $search = $request->input('search');
         $groupId = $request->input('waste_category_group_id');
 
-        $pricesQuery = WastePrice::with([
-            'wasteCategory.wasteCategoryGroup', 
-            'collector',
-            'histories.adminDevice',
-            'histories.changedBy',
+        // Primary dataset is WasteCategory so every material stays visible
+        // even when it has no aggregator price (WastePrice) yet.
+        // No WastePrice rows are created here; missing prices render as dashes.
+        $categoriesQuery = WasteCategory::with([
+            'wasteCategoryGroup',
+            'wastePrices' => function ($q) {
+                $q->with(['collector', 'histories.adminDevice', 'histories.changedBy'])
+                    ->orderBy('id');
+            },
         ])
         ->when($search, function($q) use ($search) {
             $q->where(function($q2) use ($search) {
-                $q2->whereHas('wasteCategory', function($q3) use ($search) {
-                    $q3->where('name', 'like', "%{$search}%")
-                       ->orWhere('code', 'like', "%{$search}%");
-                })->orWhereHas('collector', function($q3) use ($search) {
-                    $q3->where('name', 'like', "%{$search}%");
-                });
+                $q2->where('name', 'like', "%{$search}%")
+                   ->orWhere('code', 'like', "%{$search}%")
+                   ->orWhereHas('wastePrices.collector', function($q3) use ($search) {
+                       $q3->where('name', 'like', "%{$search}%");
+                   });
             });
         })
         ->when($groupId, function($q) use ($groupId) {
             if ($groupId === 'uncategorized') {
-                $q->whereHas('wasteCategory', function($q2) {
-                    $q2->whereNull('waste_category_group_id');
-                });
+                $q->whereNull('waste_category_group_id');
             } else {
-                $q->whereHas('wasteCategory', function($q2) use ($groupId) {
-                    $q2->where('waste_category_group_id', $groupId);
-                });
+                $q->where('waste_category_group_id', $groupId);
             }
         });
 
-        $prices = $pricesQuery->latest()->paginate(20)->withQueryString();
+        $categories = $categoriesQuery->orderBy('name')->paginate(20)->withQueryString();
 
         // Fetch dynamic groups with category counts and price counts
         $groups = WasteCategoryGroup::withCount(['wasteCategories', 'wasteCategories as active_prices_count' => function($q) {
@@ -58,7 +57,7 @@ class WastePriceController extends Controller
         $uncategorizedCount = WasteCategory::whereNull('waste_category_group_id')->count();
 
         return view('bank-sampah.waste-prices.index', compact(
-            'prices', 'search', 'groupId', 'groups', 'totalCategories', 'totalActivePrices', 'uncategorizedCount'
+            'categories', 'search', 'groupId', 'groups', 'totalCategories', 'totalActivePrices', 'uncategorizedCount'
         ));
     }
 

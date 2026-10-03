@@ -31,6 +31,7 @@ class WasteCategoryFailedRowsExport implements FromArray, WithHeadings, WithTitl
             'Kode Kategori',
             'Nama Kategori Sampah',
             'Satuan',
+            'Harga Beli',
             'Alasan Gagal (Error Reason)'
         ];
     }

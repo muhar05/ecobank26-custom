@@ -17,14 +17,26 @@ class SpaNavigationTest extends TestCase
 
     private function createAdminWithDevice(): array
     {
-        $perm1 = Permission::firstOrCreate(['name' => 'view_waste_bank', 'guard_name' => 'web']);
-        $perm2 = Permission::firstOrCreate(['name' => 'manage_waste_customers', 'guard_name' => 'web']);
-        $perm3 = Permission::firstOrCreate(['name' => 'manage_deposits', 'guard_name' => 'web']);
+        $perms = [
+            'view_waste_bank',
+            'manage_waste_customers',
+            'manage_deposits',
+            'manage_sales',
+            'manage_waste_prices',
+            'manage_withdrawals',
+            'view_waste_reports',
+        ];
+        foreach ($perms as $p) {
+            $permission = Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
+        }
         $role = Role::firstOrCreate(['name' => 'admin_bank_sampah', 'guard_name' => 'web']);
-        $role->givePermissionTo([$perm1, $perm2, $perm3]);
+        $role->syncPermissions($perms);
+
+        $roleRw = Role::firstOrCreate(['name' => 'admin_rw', 'guard_name' => 'web']);
+        $roleRw->syncPermissions(['view_waste_bank', 'view_waste_reports']);
 
         $admin = User::factory()->create();
-        $admin->assignRole($role);
+        $admin->assignRole([$role, $roleRw]);
 
         $device = AdminDevice::create([
             'user_id' => $admin->id,
@@ -98,6 +110,94 @@ class SpaNavigationTest extends TestCase
         $res->assertSee('Budi Santoso', false);
         $res->assertSee('NSB-000099', false);
         $res->assertDontSee('<!DOCTYPE html>', false);
+    }
+
+    public function test_spa_navigation_to_deposits_returns_fragment(): void
+    {
+        [$admin, $device] = $this->createAdminWithDevice();
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->withHeaders(['X-Eco-Nav' => '1'])
+            ->get(route('bank-sampah.deposits.index'));
+
+        $res->assertStatus(200);
+        $res->assertSee('id="eco-spa-fragment"', false);
+        $res->assertSee('id="app-content-slot"', false);
+        $res->assertDontSee('<!DOCTYPE html>', false);
+        $res->assertDontSee('id="eco-nav-progress"', false);
+    }
+
+    public function test_spa_navigation_to_sales_returns_fragment(): void
+    {
+        [$admin, $device] = $this->createAdminWithDevice();
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->withHeaders(['X-Eco-Nav' => '1'])
+            ->get(route('bank-sampah.sales.index'));
+
+        $res->assertStatus(200);
+        $res->assertSee('id="eco-spa-fragment"', false);
+        $res->assertSee('id="app-content-slot"', false);
+        $res->assertDontSee('<!DOCTYPE html>', false);
+    }
+
+    public function test_spa_navigation_across_other_modules_returns_fragment(): void
+    {
+        [$admin, $device] = $this->createAdminWithDevice();
+
+        $routesToTest = [
+            route('bank-sampah.waste-prices.index'),
+            route('bank-sampah.waste-categories.index'),
+            route('bank-sampah.collectors.index'),
+            route('bank-sampah.withdrawals.index'),
+            route('bank-sampah.expenses.index'),
+            route('bank-sampah.savings'),
+            route('bank-sampah.cash-report'),
+            route('bank-sampah.devices.index'),
+            route('admin.audit-logs'),
+            route('profile.edit'),
+        ];
+
+        foreach ($routesToTest as $url) {
+            $res = $this->actingAs($admin)
+                ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+                ->withHeaders(['X-Eco-Nav' => '1'])
+                ->get($url);
+
+            $res->assertStatus(200);
+            $res->assertSee('id="eco-spa-fragment"', false);
+            $res->assertSee('id="app-content-slot"', false);
+            $res->assertDontSee('<!DOCTYPE html>', false);
+            $res->assertDontSee('id="eco-nav-progress"', false);
+        }
+    }
+
+    public function test_spa_request_includes_session_toasts_when_present(): void
+    {
+        [$admin, $device] = $this->createAdminWithDevice();
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->withSession(['success' => 'Data setoran berhasil disimpan'])
+            ->withHeaders(['X-Eco-Nav' => '1'])
+            ->get(route('bank-sampah.dashboard'));
+
+        $res->assertStatus(200);
+        $res->assertSee('id="eco-spa-fragment"', false);
+        $res->assertSee('data-toast-success="Data setoran berhasil disimpan"', false);
+    }
+
+    public function test_public_and_guest_routes_do_not_return_spa_fragment(): void
+    {
+        $resHome = $this->withHeaders(['X-Eco-Nav' => '1'])->get('/');
+        $resHome->assertStatus(200);
+        $resHome->assertDontSee('id="eco-spa-fragment"', false);
+
+        $resCekSaldo = $this->withHeaders(['X-Eco-Nav' => '1'])->get(route('cek-saldo.index'));
+        $resCekSaldo->assertStatus(200);
+        $resCekSaldo->assertDontSee('id="eco-spa-fragment"', false);
     }
 
     public function test_unauthenticated_spa_request_still_redirects_to_login(): void

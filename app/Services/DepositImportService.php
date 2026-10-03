@@ -180,7 +180,8 @@ class DepositImportService
             $rawMaterial = isset($row[$colMaterial]) ? trim((string)$row[$colMaterial]) : '';
             
             $weightVal = $colWeight !== null && isset($row[$colWeight]) ? $this->parseNumber($row[$colWeight]) : null;
-            $priceVal = $colPrice !== null && isset($row[$colPrice]) ? $this->parseNumber($row[$colPrice]) : null;
+            $priceCell = $colPrice !== null && isset($row[$colPrice]) ? $row[$colPrice] : null;
+            $priceVal = $this->parseNumber($priceCell);
             $totalVal = $colTotal !== null && isset($row[$colTotal]) ? $this->parseNumber($row[$colTotal]) : null;
 
             $rawRows[] = [
@@ -189,6 +190,9 @@ class DepositImportService
                 'raw_material'  => $rawMaterial,
                 'weight'        => $weightVal,
                 'excel_price'   => $priceVal,
+                // Distinguish an empty price cell (falls back to master price,
+                // master is not overwritten) from a non-numeric value (rejected).
+                'excel_price_empty' => $priceCell === null || trim((string) $priceCell) === '',
                 'excel_total'   => $totalVal,
             ];
         }
@@ -320,7 +324,14 @@ class DepositImportService
                 $reasons[] = 'Berat harus berupa angka > 0';
             }
 
-            if ($excelPrice === null || $excelPrice < 0) {
+            if ($excelPrice === null) {
+                if (!($raw['excel_price_empty'] ?? true)) {
+                    $status = 'ERROR';
+                    $reasons[] = 'Harga tidak valid (bukan angka)';
+                }
+                // Empty price cell: not an error. The transaction falls back
+                // to the master price and the master is left untouched.
+            } elseif ($excelPrice < 0) {
                 $status = 'ERROR';
                 $reasons[] = 'Harga tidak valid';
             }
@@ -794,11 +805,32 @@ class DepositImportService
             throw new \RuntimeException("Validasi rekap gagal: total rekap material/nasabah tidak konsisten dengan total transaksi. Impor dibatalkan.");
         }
 
+        // Master sync: Excel prices are the operational truth for Harga Beli
+        // Nasabah. Collect per-material prices from committed rows only
+        // (skip-policy rows are excluded; empty prices never overwrite).
+        $masterPrices = [];
+        foreach ($rows as $row) {
+            if (empty($row['category_id'])) {
+                continue;
+            }
+            $policy = $duplicatePolicies[$row['customer_id'] ?? ''] ?? 'append';
+            if (!empty($row['has_existing_deposit']) && $policy === 'skip') {
+                continue;
+            }
+            $excelPrice = $row['excel_price'] ?? null;
+            if ($excelPrice === null || $excelPrice < 0) {
+                continue;
+            }
+            $masterPrices[$row['category_id']] = (float) $excelPrice;
+        }
+
         // Execute batch insertion via BankSampahService atomically
         $bankSampahService = app(BankSampahService::class);
         $createdDeposits = [];
 
-        DB::transaction(function () use ($grouped, $bankSampahService, &$createdDeposits) {
+        DB::transaction(function () use ($grouped, $bankSampahService, &$createdDeposits, $masterPrices) {
+            $this->syncMasterMemberPrices($masterPrices);
+
             foreach ($grouped as $group) {
                 $createdDeposits[] = $bankSampahService->recordDeposit($group);
             }
@@ -820,6 +852,33 @@ class DepositImportService
             'total_weight'    => $totalWeight,
             'total_amount'    => $totalAmount,
         ];
+    }
+
+    /**
+     * Sync Harga Beli Nasabah (waste_categories.member_price) from validated
+     * Excel prices. Runs inside the commit transaction so master updates roll
+     * back together with the deposits. Only touches WasteCategory; aggregator
+     * prices (WastePrice.collector_price) are never modified here.
+     *
+     * @param array<int, float> $masterPrices category_id => excel price
+     */
+    protected function syncMasterMemberPrices(array $masterPrices): void
+    {
+        if (empty($masterPrices)) {
+            return;
+        }
+
+        $categories = WasteCategory::whereIn('id', array_keys($masterPrices))->get()->keyBy('id');
+
+        foreach ($masterPrices as $categoryId => $price) {
+            $category = $categories->get($categoryId);
+            if (!$category) {
+                continue;
+            }
+            if (abs((float) $category->member_price - $price) > 0.009) {
+                $category->update(['member_price' => $price]);
+            }
+        }
     }
 
     /**
