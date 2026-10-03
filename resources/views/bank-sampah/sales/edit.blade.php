@@ -217,12 +217,12 @@
                                                x-model.number="row.weight"
                                                placeholder="0.00"
                                                class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
-                                               :class="row.remainingWeight !== undefined && row.weight > row.remainingWeight ? 'border-danger text-danger' : ''">
+                                                :class="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight ? 'border-danger text-danger' : ''">
 
                                         {{-- Validation warning --}}
-                                        <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
+                                        <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
                                             <span class="text-caption font-semibold text-danger block mt-1">
-                                                Maks sisa: <span x-text="row.remainingWeight"></span> kg!
+                                                Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)!
                                             </span>
                                         </template>
                                     </td>
@@ -314,8 +314,8 @@
                                        x-model.number="row.weight"
                                        placeholder="0.00"
                                        class="w-full text-body font-mono font-bold rounded-radius-md border border-border p-2">
-                                <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
-                                    <span class="text-caption text-danger font-semibold block mt-1">Melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
+                                <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
+                                    <span class="text-caption text-danger font-semibold block mt-1">Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
                                 </template>
                             </div>
 
@@ -419,6 +419,7 @@
                                     memberPrice: Math.round(d.member_price || cat.member_price),
                                     remainingWeight: undefined,
                                     hasPrice: true,
+                                    isExisting: true,
                                 });
                             }
                         });
@@ -501,6 +502,7 @@
                 },
 
                 onCategoryChange(row) {
+                    row.isExisting = false;
                     const cat = this.allCategories.find(c => c.id == row.catId);
                     if (cat) {
                         row.name = cat.name;
@@ -512,6 +514,7 @@
                 },
 
                 fillRowPrice(row) {
+                    if (row.isExisting) return; // Do not overwrite historical snapshot
                     if (!this.collectorId || !row.catId) {
                         row.hasPrice = false;
                         row.price = 0;
@@ -539,7 +542,7 @@
                         const found = this.availableRecap.find(item => item.waste_category_id == r.catId);
                         if (found) {
                             r.remainingWeight = Number(found.remaining_weight);
-                            if (r.price === 0) r.price = Math.round(found.collector_price);
+                            if (!r.isExisting && r.price === 0) r.price = Math.round(found.collector_price);
                             r.hasPrice = true;
                         }
                     });
@@ -549,13 +552,19 @@
                     const w = parseFloat(row.weight) || 0;
                     const p = parseFloat(row.price) || 0;
                     const mp = parseFloat(row.memberPrice) || 0;
-                    return (p - mp) * w;
+                    return Math.round((p - mp) * w);
                 },
 
                 rowSubtotal(row) {
                     const w = parseFloat(row.weight) || 0;
                     const p = parseFloat(row.price) || 0;
-                    return w * p;
+                    return Math.round(w * p);
+                },
+
+                categoryTotalWeight(catId) {
+                    return this.rows
+                        .filter(r => r.catId == catId)
+                        .reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
                 },
 
                 grandTotalAmount() {
@@ -579,7 +588,8 @@
                     return this.rows.some(r => {
                         const w = parseFloat(r.weight) || 0;
                         if (w <= 0) return true;
-                        if (r.remainingWeight !== undefined && w > r.remainingWeight) return true;
+                        const catTotal = this.categoryTotalWeight(r.catId);
+                        if (r.remainingWeight !== undefined && catTotal > r.remainingWeight) return true;
                         if (!r.hasPrice) return true;
                         if (r.price < r.memberPrice) return true;
                         return false;

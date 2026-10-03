@@ -234,11 +234,22 @@ class BankSampahService
                 throw new \InvalidArgumentException('Minimal satu detail penjualan harus diisi dengan berat lebih dari 0.');
             }
 
+            // Aggregate payload based on waste_category_id (prevent duplicate category over-selling)
+            $aggregatedWeights = $rawDetails->groupBy('waste_category_id')
+                ->map(fn ($rows) => round((float) $rows->sum('weight'), 2));
+
             $collectorId = (int) $data['collector_id'];
             $date = $data['date'];
+            $categoryIds = $aggregatedWeights->keys()->map(fn ($id) => (int) $id)->sort()->values();
+
+            // Concurrency locking: lock deposits, category records, and sales deterministically
+            Deposit::whereDate('date', $date)->lockForUpdate()->get();
+            \App\Models\WasteCategory::whereIn('id', $categoryIds)->orderBy('id')->lockForUpdate()->get();
+            Sale::whereDate('date', $date)->lockForUpdate()->get();
 
             // 1. Fetch deposited weights on this date
             $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+                ->whereIn('waste_category_id', $categoryIds)
                 ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
                 ->groupBy('waste_category_id')
                 ->pluck('total_deposited', 'waste_category_id');
@@ -250,6 +261,7 @@ class BankSampahService
                     $q->where('id', '!=', $saleId);
                 }
             })
+            ->whereIn('waste_category_id', $categoryIds)
             ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
             ->groupBy('waste_category_id')
             ->pluck('total_sold', 'waste_category_id');
@@ -257,24 +269,25 @@ class BankSampahService
             $collectorPrices = \App\Models\WastePrice::where('collector_id', $collectorId)
                 ->pluck('collector_price', 'waste_category_id');
 
-            $categories = \App\Models\WasteCategory::whereIn('id', $rawDetails->pluck('waste_category_id'))
+            $categories = \App\Models\WasteCategory::whereIn('id', $categoryIds)
                 ->get()
                 ->keyBy('id');
 
-            $totalAmount = 0;
-            $totalMargin = 0;
-            $processedDetails = [];
+            // If updating, load existing details to preserve historical price snapshots
+            $existingDetailsMap = collect();
+            $existingSale = null;
+            if ($saleId) {
+                $existingSale = Sale::with(['details', 'collector'])->findOrFail($saleId);
+                $existingDetailsMap = $existingSale->details->keyBy('waste_category_id');
+            }
 
-            foreach ($rawDetails as $d) {
-                $catId = (int) $d['waste_category_id'];
-                $weight = (float) $d['weight'];
-
+            // 3. Validate aggregated weight per material against remaining stock
+            foreach ($aggregatedWeights as $catId => $requestedWeight) {
                 $cat = $categories->get($catId);
                 if (! $cat) {
                     throw new \InvalidArgumentException("Kategori sampah dengan ID {$catId} tidak ditemukan.");
                 }
 
-                // Check remaining weight
                 $totalDep = (float) ($deposited[$catId] ?? 0);
                 $totalSld = (float) ($sold[$catId] ?? 0);
                 $remaining = round($totalDep - $totalSld, 2);
@@ -283,24 +296,40 @@ class BankSampahService
                     throw new \InvalidArgumentException("Kategori '{$cat->name}' tidak dapat dijual karena sisa setoran pada tanggal {$date} sudah habis (0 kg).");
                 }
 
-                if ($weight > $remaining) {
-                    throw new \InvalidArgumentException("Berat penjualan untuk '{$cat->name}' ({$weight} kg) melebihi sisa setoran yang tersedia ({$remaining} kg) pada tanggal {$date}.");
+                if ($requestedWeight > $remaining) {
+                    throw new \InvalidArgumentException("Berat penjualan untuk '{$cat->name}' ({$requestedWeight} kg) melebihi sisa setoran yang tersedia ({$remaining} kg) pada tanggal {$date}.");
+                }
+            }
+
+            $totalAmount = 0;
+            $totalMargin = 0;
+            $processedDetails = [];
+
+            // 4. Calculate prices, subtotals, and margins (preserving snapshots on edit)
+            foreach ($aggregatedWeights as $catId => $weight) {
+                $cat = $categories->get($catId);
+
+                if ($saleId && isset($existingDetailsMap[$catId])) {
+                    // PRESERVE historical snapshot from existing detail!
+                    $collectorPrice = (float) $existingDetailsMap[$catId]->price_per_unit;
+                    $memberPrice = (float) $existingDetailsMap[$catId]->member_price;
+                } else {
+                    // New item: check master aggregator price and margin rule
+                    if (! isset($collectorPrices[$catId])) {
+                        throw new \InvalidArgumentException("Agregator belum memiliki harga penawaran untuk kategori '{$cat->name}'.");
+                    }
+
+                    $collectorPrice = (float) $collectorPrices[$catId];
+                    $memberPrice = (float) $cat->member_price;
+
+                    if ($collectorPrice < $memberPrice) {
+                        throw new \InvalidArgumentException("Harga jual ke agregator (Rp " . number_format($collectorPrice, 0, ',', '.') . ") untuk '{$cat->name}' tidak boleh lebih rendah dari harga beli nasabah (Rp " . number_format($memberPrice, 0, ',', '.') . ").");
+                    }
                 }
 
-                // Check collector price
-                if (! isset($collectorPrices[$catId])) {
-                    throw new \InvalidArgumentException("Agregator belum memiliki harga penawaran untuk kategori '{$cat->name}'.");
-                }
-
-                $collectorPrice = (float) $collectorPrices[$catId];
-                $memberPrice = (float) $cat->member_price;
-
-                if ($collectorPrice < $memberPrice) {
-                    throw new \InvalidArgumentException("Harga jual ke agregator (Rp " . number_format($collectorPrice, 0, ',', '.') . ") untuk '{$cat->name}' tidak boleh lebih rendah dari harga beli nasabah (Rp " . number_format($memberPrice, 0, ',', '.') . ").");
-                }
-
-                $subtotal = round($weight * $collectorPrice, 2);
-                $margin = round(($collectorPrice - $memberPrice) * $weight, 2);
+                // Integer rupiah rounding for consistent totals, subtotals, and ledger entries
+                $subtotal = (float) round($weight * $collectorPrice, 0);
+                $margin = (float) round(($collectorPrice - $memberPrice) * $weight, 0);
 
                 $totalAmount += $subtotal;
                 $totalMargin += $margin;
@@ -316,7 +345,7 @@ class BankSampahService
             }
 
             if ($saleId) {
-                $sale = Sale::findOrFail($saleId);
+                $sale = $existingSale;
                 $sale->update([
                     'collector_id' => $collectorId,
                     'date' => $date,
@@ -342,13 +371,16 @@ class BankSampahService
                 ->where('reference_id', $sale->id)
                 ->first();
 
+            $sale->loadMissing('collector');
+            $collectorName = $sale->collector->name ?? 'Agregator';
+
             if ($totalMargin > 0) {
                 $currentBalance = $this->getWasteBankBalance();
                 if ($ledger) {
                     $ledger->update([
                         'amount' => $totalMargin,
                         'date' => $date,
-                        'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
+                        'description' => 'Keuntungan penjualan sampah ke ' . $collectorName,
                     ]);
                 } else {
                     WasteBankCashLedger::create([
@@ -358,7 +390,7 @@ class BankSampahService
                         'reference_type' => Sale::class,
                         'reference_id' => $sale->id,
                         'date' => $date,
-                        'description' => 'Keuntungan penjualan sampah ke ' . $sale->collector->name,
+                        'description' => 'Keuntungan penjualan sampah ke ' . $collectorName,
                     ]);
                 }
             } elseif ($ledger) {
@@ -369,6 +401,95 @@ class BankSampahService
 
             return $sale;
         });
+    }
+
+    public function validateDepositCanBeDeleted(Deposit $deposit): void
+    {
+        $deposit->loadMissing('details.wasteCategory');
+        $date = $deposit->date->format('Y-m-d');
+
+        $hasSales = Sale::whereDate('date', $date)->exists();
+        if (! $hasSales) {
+            return;
+        }
+
+        foreach ($deposit->details as $detail) {
+            $catId = $detail->waste_category_id;
+            $categoryName = $detail->wasteCategory->name ?? "Kategori #{$catId}";
+
+            $totalDeposited = (float) DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+                ->where('waste_category_id', $catId)
+                ->sum('weight');
+
+            $totalSold = (float) SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $date))
+                ->where('waste_category_id', $catId)
+                ->sum('weight');
+
+            if ($totalSold > 0) {
+                $remainingAfterDelete = round($totalDeposited - (float) $detail->weight - $totalSold, 2);
+                if ($remainingAfterDelete < 0) {
+                    $deficit = abs($remainingAfterDelete);
+                    throw new \InvalidArgumentException("Setoran tidak dapat dihapus karena sampah '{$categoryName}' sudah terjual ke agregator ({$totalSold} kg pada {$deposit->date->format('d/m/Y')}). Menghapus setoran ini akan menyebabkan defisit stok sebesar {$deficit} kg.");
+                }
+            }
+        }
+    }
+
+    public function validateDepositCanBeUpdated(Deposit $deposit, array $newDetails, string $newDate): void
+    {
+        $deposit->loadMissing('details.wasteCategory');
+        $oldDate = $deposit->date->format('Y-m-d');
+        $newDateFormatted = \Carbon\Carbon::parse($newDate)->format('Y-m-d');
+
+        // Aggregate old weights by category
+        $oldWeights = [];
+        foreach ($deposit->details as $d) {
+            $oldWeights[$d->waste_category_id] = ($oldWeights[$d->waste_category_id] ?? 0) + (float) $d->weight;
+        }
+
+        // Aggregate new weights by category
+        $newWeights = [];
+        foreach ($newDetails as $d) {
+            $cId = (int) $d['waste_category_id'];
+            $newWeights[$cId] = ($newWeights[$cId] ?? 0) + (float) $d['weight'];
+        }
+
+        // Check sales impact on old date
+        $hasSalesOnOldDate = Sale::whereDate('date', $oldDate)->exists();
+        if ($hasSalesOnOldDate) {
+            foreach ($oldWeights as $catId => $oldWeight) {
+                $cat = \App\Models\WasteCategory::find($catId);
+                $catName = $cat ? $cat->name : "Kategori #{$catId}";
+
+                $totalDepositedOld = (float) DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $oldDate))
+                    ->where('waste_category_id', $catId)
+                    ->sum('weight');
+
+                $totalSoldOld = (float) SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $oldDate))
+                    ->where('waste_category_id', $catId)
+                    ->sum('weight');
+
+                if ($totalSoldOld > 0) {
+                    if ($oldDate !== $newDateFormatted) {
+                        $newDepositedOldDate = $totalDepositedOld - $oldWeight;
+                        if ($newDepositedOldDate < $totalSoldOld) {
+                            $deficit = round($totalSoldOld - $newDepositedOldDate, 2);
+                            throw new \InvalidArgumentException("Tanggal setoran tidak dapat diubah karena sampah '{$catName}' pada tanggal {$deposit->date->format('d/m/Y')} sudah terjual ke agregator ({$totalSoldOld} kg). Perubahan tanggal menyebabkan defisit stok {$deficit} kg pada tanggal tersebut.");
+                        }
+                    } else {
+                        $newWeight = $newWeights[$catId] ?? 0;
+                        $diff = $newWeight - $oldWeight;
+                        if ($diff < 0) {
+                            $remainingAfterUpdate = round($totalDepositedOld + $diff - $totalSoldOld, 2);
+                            if ($remainingAfterUpdate < 0) {
+                                $deficit = abs($remainingAfterUpdate);
+                                throw new \InvalidArgumentException("Berat setoran untuk '{$catName}' tidak dapat dikurangi menjadi {$newWeight} kg karena sudah terjual ke agregator ({$totalSoldOld} kg pada {$deposit->date->format('d/m/Y')}). Perubahan ini menyebabkan defisit stok sebesar {$deficit} kg.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public function recalculateWasteBankBalances(): void

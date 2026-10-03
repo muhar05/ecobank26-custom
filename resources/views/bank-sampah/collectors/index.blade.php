@@ -45,7 +45,12 @@
                                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                                         </div>
                                         <div>
-                                            <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $collector->name }}</div>
+                                            <a href="{{ route('bank-sampah.collectors.show', $collector) }}" class="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 transition">
+                                                {{ $collector->name }}
+                                            </a>
+                                            <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                                {{ $collector->waste_prices_count ?? $collector->wastePrices->count() }} harga
+                                            </span>
                                             @if($collector->phone)
                                                 @php
                                                     $waPhone = preg_replace('/[^0-9]/', '', $collector->phone);
@@ -74,7 +79,8 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                    <a href="{{ route('bank-sampah.collectors.edit', $collector) }}" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 transition">Edit</a>
+                                    <a href="{{ route('bank-sampah.collectors.show', $collector) }}" class="text-emerald-600 dark:text-emerald-400 hover:underline transition">Harga Lapak &rarr;</a>
+                                    <a href="{{ route('bank-sampah.collectors.edit', $collector) }}" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition">Edit</a>
                                     <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.collectors.destroy', $collector) }}'})" class="text-rose-600 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-300 transition">Hapus</button>
                                 </td>
                             </tr>

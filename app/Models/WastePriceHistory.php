@@ -16,6 +16,7 @@ class WastePriceHistory extends Model
         'waste_category_id',
         'old_price',
         'new_price',
+        'unit',
         'changed_at',
         'changed_by_user_id',
         'admin_device_id',

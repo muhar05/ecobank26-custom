@@ -16,7 +16,7 @@
                         Harga Sampah &rarr;
                     </a>
                 @endcan
-                <x-ui.button variant="primary" size="md" onclick="window.location='{{ route('bank-sampah.sales.create') }}'">
+                <x-ui.button variant="primary" size="md" onclick="window.location='{{ route('bank-sampah.sales.create', ['date' => $selectedDate]) }}'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                     </svg>
@@ -24,6 +24,28 @@
                 </x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
+
+        {{-- Success Flash Alert with Print Action --}}
+        @if(session('print_sale_id'))
+            <div class="p-4 rounded-radius-md bg-success-light border border-success/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-success-text shadow-subtle">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-success text-white flex items-center justify-center shrink-0 font-bold text-caption">
+                        ✓
+                    </div>
+                    <div>
+                        <p class="text-body-sm font-bold">Penjualan berhasil disimpan!</p>
+                        <p class="text-caption text-text-muted mt-0.5">Laporan Timbangan Kami siap dicetak untuk diserahkan ke mitra agregator.</p>
+                    </div>
+                </div>
+                <a href="{{ route('bank-sampah.sales.show', session('print_sale_id')) }}"
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-caption font-bold shadow-subtle transition-subtle shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print Report Timbangan &rarr;
+                </a>
+            </div>
+        @endif
 
         {{-- ========================================================= --}}
         {{-- SECTION 1: SISA SETORAN SIAP DIJUAL                       --}}
@@ -66,12 +88,11 @@
                                 <th class="py-3 px-4 text-right">Sisa Siap Dijual</th>
                                 <th class="py-3 px-4 text-right">Harga Beli Nasabah</th>
                                 <th class="py-3 px-4 text-center">Status</th>
-                                <th class="py-3 px-4 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             @foreach($readyToSell as $item)
-                                <tr class="hover:bg-surface-muted/50 transition-subtle">
+                                <tr class="hover:bg-surface-muted/40 transition-subtle">
                                     <td class="py-3.5 px-4">
                                         <div class="flex items-center gap-2.5">
                                             <div class="w-8 h-8 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-caption shrink-0">
@@ -97,12 +118,6 @@
                                     </td>
                                     <td class="py-3.5 px-4 text-center">
                                         <x-ui.badge variant="success" size="sm">Siap Dijual</x-ui.badge>
-                                    </td>
-                                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                                        <a href="{{ route('bank-sampah.sales.create', ['date' => $selectedDate, 'category_id' => $item['category']->id]) }}"
-                                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-caption font-semibold shadow-subtle transition-subtle">
-                                            Jual ke Agregator &rarr;
-                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -141,15 +156,19 @@
                                 <span>Setoran: {{ number_format($item['total_deposited'], 2, ',', '.') }} {{ $item['category']->unit }}</span>
                                 <span>Terjual: {{ number_format($item['total_sold'], 2, ',', '.') }} {{ $item['category']->unit }}</span>
                             </div>
-
-                            <div class="pt-2 border-t border-border-subtle">
-                                <a href="{{ route('bank-sampah.sales.create', ['date' => $selectedDate, 'category_id' => $item['category']->id]) }}"
-                                   class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-caption font-semibold shadow-subtle transition-subtle">
-                                    Jual ke Agregator &rarr;
-                                </a>
-                            </div>
                         </div>
                     @endforeach
+                </div>
+
+                {{-- Section Action Footer --}}
+                <div class="pt-3 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p class="text-caption text-text-muted">
+                        Total <strong class="text-text font-mono">{{ $readyToSell->count() }}</strong> material siap jual dengan akumulasi berat <strong class="text-primary font-mono">{{ number_format($readyToSell->sum('remaining_weight'), 2, ',', '.') }} kg</strong>.
+                    </p>
+                    <a href="{{ route('bank-sampah.sales.create', ['date' => $selectedDate]) }}"
+                       class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-semibold shadow-subtle transition-subtle">
+                        Catat Penjualan ke Agregator &rarr;
+                    </a>
                 </div>
             @else
                 {{-- Honest Empty State: Sisa Setoran --}}
@@ -183,7 +202,7 @@
             <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-heading-sm font-bold text-text">Riwayat Transaksi Penjualan</h2>
-                    <p class="text-caption text-text-muted mt-0.5">Catatan pengiriman muatan sampah ke mitra agregator</p>
+                    <p class="text-caption text-text-muted mt-0.5">Catatan muatan sampah yang telah dijual ke mitra agregator</p>
                 </div>
 
                 {{-- Search Toolbar --}}
@@ -212,7 +231,7 @@
             </div>
 
             @if($sales->isNotEmpty())
-                {{-- DESKTOP SALES TABLE WITH DRAWER --}}
+                {{-- DESKTOP SALES TABLE WITH ACCORDION DRAWER --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -265,18 +284,25 @@
 
                                     <td class="py-3.5 px-5 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center justify-end gap-3 text-body-sm font-semibold">
+                                            <a href="{{ route('bank-sampah.sales.show', $sale) }}"
+                                               class="inline-flex items-center gap-1 text-caption font-bold text-primary hover:underline transition-subtle">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                                </svg>
+                                                Print Timbangan
+                                            </a>
                                             <button type="button"
                                                     @click="expanded = !expanded"
-                                                    class="text-caption font-semibold text-primary hover:underline transition-subtle">
+                                                    class="text-caption font-semibold text-text-muted hover:text-text transition-subtle">
                                                 <span x-text="expanded ? 'Tutup Rincian' : 'Lihat Rincian'"></span>
                                             </button>
                                             <a href="{{ route('bank-sampah.sales.edit', $sale) }}"
-                                               class="text-text-muted hover:text-text transition-subtle">
+                                               class="text-caption font-semibold text-text-muted hover:text-text transition-subtle">
                                                 Edit
                                             </a>
                                             <button type="button"
                                                     @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.sales.destroy', $sale) }}'})"
-                                                    class="text-danger hover:underline transition-subtle cursor-pointer">
+                                                    class="text-caption font-semibold text-danger hover:underline transition-subtle cursor-pointer">
                                                 Hapus
                                             </button>
                                         </div>
@@ -352,10 +378,13 @@
                             </div>
 
                             <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm">
-                                <button type="button" @click="expanded = !expanded" class="text-caption font-semibold text-primary hover:underline">
-                                    <span x-text="expanded ? 'Tutup Rincian' : 'Rincian Material (' + {{ $sale->details->count() }} + ')'"></span>
-                                </button>
+                                <a href="{{ route('bank-sampah.sales.show', $sale) }}" class="text-caption font-bold text-primary hover:underline">
+                                    Print Timbangan
+                                </a>
                                 <div class="flex items-center gap-3">
+                                    <button type="button" @click="expanded = !expanded" class="text-caption font-semibold text-text-muted hover:text-text">
+                                        <span x-text="expanded ? 'Tutup' : 'Rincian (' + {{ $sale->details->count() }} + ')'"></span>
+                                    </button>
                                     <a href="{{ route('bank-sampah.sales.edit', $sale) }}" class="text-text-muted hover:text-text font-semibold text-caption">Edit</a>
                                     <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.sales.destroy', $sale) }}'})" class="text-danger font-semibold text-caption">Hapus</button>
                                 </div>

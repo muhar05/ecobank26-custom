@@ -82,7 +82,14 @@ Route::middleware(['auth', 'permission:manage_waste_prices', 'track_admin_device
     Route::resource('waste-categories', WasteCategoryController::class)->except(['show']);
     Route::patch('waste-category-groups/{waste_category_group}/toggle', [WasteCategoryGroupController::class, 'toggle'])->name('waste-category-groups.toggle');
     Route::resource('waste-category-groups', WasteCategoryGroupController::class)->except(['show', 'destroy']);
-    Route::resource('collectors', CollectorController::class)->except(['show']);
+    Route::resource('collectors', CollectorController::class);
+    Route::get('collectors/{collector}/import', [\App\Http\Controllers\CollectorPriceImportController::class, 'showForm'])->name('collectors.import');
+    Route::get('collectors/{collector}/import/template', [\App\Http\Controllers\CollectorPriceImportController::class, 'downloadTemplate'])->name('collectors.import.template');
+    Route::post('collectors/{collector}/import/parse', [\App\Http\Controllers\CollectorPriceImportController::class, 'parse'])->name('collectors.import.parse');
+    Route::post('collectors/{collector}/import/commit', [\App\Http\Controllers\CollectorPriceImportController::class, 'commit'])->name('collectors.import.commit');
+    Route::post('collectors/{collector}/prices', [CollectorController::class, 'storePrice'])->name('collectors.prices.store');
+    Route::put('collectors/{collector}/prices/{wastePrice}', [CollectorController::class, 'updatePrice'])->name('collectors.prices.update');
+    Route::delete('collectors/{collector}/prices/{wastePrice}', [CollectorController::class, 'destroyPrice'])->name('collectors.prices.destroy');
     Route::resource('waste-prices', WastePriceController::class)->except(['show']);
 });
 
@@ -123,7 +130,7 @@ Route::middleware(['auth', 'permission:manage_withdrawals'])->prefix('bank-sampa
 // Bank Sampah - Sales
 Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
     Route::get('sales/daily-recap', [SaleController::class, 'dailyRecap'])->name('sales.daily-recap');
-    Route::resource('sales', SaleController::class)->except(['show']);
+    Route::resource('sales', SaleController::class);
 });
 
 // Bank Sampah - Expenses

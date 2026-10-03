@@ -453,4 +453,303 @@ class WasteSaleFlowTest extends TestCase
         $this->assertEquals(25000, $detailAfter->margin);
         $this->assertEquals(2500, $detailAfter->price_per_unit);
     }
+
+    public function test_edit_sale_preserves_historical_price_snapshots(): void
+    {
+        $date = '2026-09-27';
+
+        // 1. Initial Deposit 100 kg Kardus @ 2000
+        $deposit = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => 200000,
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $this->catKardus->id,
+            'weight' => 100,
+            'price_per_unit' => 2000,
+            'subtotal' => 200000,
+        ]);
+
+        // 2. Initial Sale of 50 kg (collector_price=2500, member_price=2000)
+        $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'notes' => 'Truk Awal',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 50],
+            ],
+        ])->assertRedirect(route('bank-sampah.sales.index'));
+
+        $sale = Sale::first();
+        $this->assertEquals(125000, $sale->total_amount); // 50 * 2500
+        $this->assertEquals(25000, $sale->details->first()->margin); // (2500 - 2000) * 50
+
+        // 3. Master prices are drastically changed in the system!
+        // Aggregator price jumps to 4000, member price jumps to 3000
+        WastePrice::where('collector_id', $this->collectorA->id)
+            ->where('waste_category_id', $this->catKardus->id)
+            ->update(['collector_price' => 4000]);
+        $this->catKardus->update(['member_price' => 3000]);
+
+        // 4. Admin edits the existing sale (e.g. adjusts weight from 50 kg to 60 kg)
+        $response = $this->actingAs($this->admin)->put(route('bank-sampah.sales.update', $sale), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'notes' => 'Truk Awal (Revisi Berat)',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 60],
+            ],
+        ]);
+
+        $response->assertRedirect(route('bank-sampah.sales.index'));
+
+        // 5. Verification: SNAPSHOTS MUST BE PRESERVED!
+        $saleFresh = $sale->fresh(['details']);
+        $detailFresh = $saleFresh->details->first();
+
+        // Must still be 2500 and 2000, NOT 4000 and 3000!
+        $this->assertEquals(2500, $detailFresh->price_per_unit, 'price_per_unit should retain old snapshot');
+        $this->assertEquals(2000, $detailFresh->member_price, 'member_price should retain old snapshot');
+        $this->assertEquals(150000, $saleFresh->total_amount, 'total_amount = 60 * 2500 = 150000');
+        $this->assertEquals(30000, $detailFresh->margin, 'margin = (2500 - 2000) * 60 = 30000');
+
+        // Cash ledger must reflect the preserved margin (30000)
+        $this->assertDatabaseHas('waste_bank_cash_ledgers', [
+            'reference_type' => Sale::class,
+            'reference_id' => $sale->id,
+            'amount' => 30000,
+        ]);
+    }
+
+    public function test_duplicate_material_in_payload_rejected_if_total_exceeds_remaining(): void
+    {
+        $date = '2026-09-27';
+
+        // Deposit 40 kg Kardus
+        $deposit = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => 80000,
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $this->catKardus->id,
+            'weight' => 40,
+            'price_per_unit' => 2000,
+            'subtotal' => 80000,
+        ]);
+
+        // Payload with 2 rows of the same category: 30 kg + 30 kg = 60 kg > 40 kg
+        // (Even though individually 30 <= 40, the aggregated total exceeds remaining 40 kg)
+        $response = $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 30],
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 30],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('details');
+        $this->assertCount(0, Sale::all());
+
+        // When valid (e.g. 20 kg + 15 kg = 35 kg <= 40 kg), it should succeed
+        $responseOk = $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 20],
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 15],
+            ],
+        ]);
+
+        $responseOk->assertRedirect(route('bank-sampah.sales.index'));
+        $this->assertCount(1, Sale::all());
+        $this->assertEquals(35, SaleDetail::sum('weight'));
+    }
+
+    public function test_concurrent_sales_cannot_double_sell(): void
+    {
+        $date = '2026-09-27';
+
+        // Deposit 50 kg Kardus
+        $deposit = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => 100000,
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $this->catKardus->id,
+            'weight' => 50,
+            'price_per_unit' => 2000,
+            'subtotal' => 100000,
+        ]);
+
+        // Sale 1 requests 40 kg
+        $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 40],
+            ],
+        ])->assertRedirect(route('bank-sampah.sales.index'));
+
+        // Sale 2 (which might have seen 50 kg initially) tries to sell 30 kg concurrently
+        // It must be rejected because remaining in transaction is now only 10 kg
+        $response2 = $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorB->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 30],
+            ],
+        ]);
+
+        $response2->assertSessionHasErrors('details');
+        $this->assertCount(1, Sale::all());
+        $this->assertEquals(40, SaleDetail::sum('weight'));
+    }
+
+    public function test_sold_deposit_cannot_be_deleted_or_reduced_below_sold_weight(): void
+    {
+        $date = '2026-09-27';
+
+        // Deposit 1: 100 kg Kardus
+        $deposit1 = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => 200000,
+        ]);
+        $depDetail1 = DepositDetail::create([
+            'deposit_id' => $deposit1->id,
+            'waste_category_id' => $this->catKardus->id,
+            'weight' => 100,
+            'price_per_unit' => 2000,
+            'subtotal' => 200000,
+        ]);
+
+        // Deposit 2: 50 kg Besi (Unsold deposit)
+        $deposit2 = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => 200000,
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit2->id,
+            'waste_category_id' => $this->catBesi->id,
+            'weight' => 50,
+            'price_per_unit' => 4000,
+            'subtotal' => 200000,
+        ]);
+
+        // Sale: 70 kg Kardus sold to Aggregator A
+        $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 70],
+            ],
+        ])->assertRedirect(route('bank-sampah.sales.index'));
+
+        // 1. Attempt to DELETE Deposit 1 (100 kg Kardus, 70 kg sold) -> MUST FAIL!
+        $responseDelete = $this->actingAs($this->admin)->delete(route('bank-sampah.deposits.destroy', $deposit1));
+        $responseDelete->assertSessionHas('error');
+        $this->assertNotNull(Deposit::find($deposit1->id), 'Deposit 1 must not be deleted');
+
+        // 2. Attempt to UPDATE Deposit 1 weight to 50 kg (< 70 kg sold) -> MUST FAIL!
+        $responseUpdateLow = $this->actingAs($this->admin)->put(route('bank-sampah.deposits.update', $deposit1), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 50],
+            ],
+        ]);
+        $responseUpdateLow->assertSessionHasErrors('details');
+        $this->assertEquals(100, $deposit1->fresh()->details->first()->weight);
+
+        // 3. Attempt to change Deposit 1 date to another date -> MUST FAIL!
+        $responseUpdateDate = $this->actingAs($this->admin)->put(route('bank-sampah.deposits.update', $deposit1), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => '2026-09-28',
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 100],
+            ],
+        ]);
+        $responseUpdateDate->assertSessionHasErrors('details');
+
+        // 4. Update Deposit 1 weight to 80 kg (>= 70 kg sold) -> MUST SUCCEED!
+        $responseUpdateOk = $this->actingAs($this->admin)->put(route('bank-sampah.deposits.update', $deposit1), [
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $this->catKardus->id, 'weight' => 80],
+            ],
+        ]);
+        $responseUpdateOk->assertRedirect(route('bank-sampah.deposits.index'));
+        $this->assertEquals(80, $deposit1->fresh()->details->first()->weight);
+
+        // 5. Unsold Deposit 2 (50 kg Besi) CAN BE DELETED without restriction
+        $responseDeleteUnsold = $this->actingAs($this->admin)->delete(route('bank-sampah.deposits.destroy', $deposit2));
+        $responseDeleteUnsold->assertRedirect(route('bank-sampah.deposits.index'));
+        $this->assertNull(Deposit::find($deposit2->id), 'Unsold Deposit 2 can be deleted');
+    }
+
+    public function test_rounding_subtotal_total_margin_and_ledger_are_consistent(): void
+    {
+        $date = '2026-09-27';
+
+        // Category with odd prices
+        $catOdd = WasteCategory::create([
+            'name' => 'Kabel Tembaga',
+            'unit' => 'kg',
+            'member_price' => 1333,
+        ]);
+
+        WastePrice::create([
+            'collector_id' => $this->collectorA->id,
+            'waste_category_id' => $catOdd->id,
+            'collector_price' => 2111,
+        ]);
+
+        // Deposit 12.35 kg
+        $deposit = Deposit::create([
+            'waste_customer_id' => $this->customer->id,
+            'date' => $date,
+            'total_amount' => round(12.35 * 1333, 0),
+        ]);
+        DepositDetail::create([
+            'deposit_id' => $deposit->id,
+            'waste_category_id' => $catOdd->id,
+            'weight' => 12.35,
+            'price_per_unit' => 1333,
+            'subtotal' => round(12.35 * 1333, 0),
+        ]);
+
+        // Sale of 12.35 kg
+        $this->actingAs($this->admin)->post(route('bank-sampah.sales.store'), [
+            'collector_id' => $this->collectorA->id,
+            'date' => $date,
+            'details' => [
+                ['waste_category_id' => $catOdd->id, 'weight' => 12.35],
+            ],
+        ])->assertRedirect(route('bank-sampah.sales.index'));
+
+        $sale = Sale::first();
+        $detail = $sale->details->first();
+
+        // subtotal = round(12.35 * 2111, 0) = 26071
+        $expectedSubtotal = round(12.35 * 2111, 0);
+        // margin = round((2111 - 1333) * 12.35, 0) = round(778 * 12.35, 0) = round(9608.3, 0) = 9608
+        $expectedMargin = round((2111 - 1333) * 12.35, 0);
+
+        $this->assertEquals($expectedSubtotal, $detail->subtotal);
+        $this->assertEquals($expectedSubtotal, $sale->total_amount);
+        $this->assertEquals($expectedMargin, $detail->margin);
+
+        // WasteBankCashLedger entry amount MUST be identical to margin without Rp 1 discrepancy
+        $ledger = WasteBankCashLedger::where('reference_type', Sale::class)->first();
+        $this->assertEquals($expectedMargin, $ledger->amount);
+    }
 }

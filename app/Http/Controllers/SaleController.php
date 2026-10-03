@@ -58,7 +58,13 @@ class SaleController extends Controller
                 ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest()->paginate(15)->withQueryString();
 
-        return view('bank-sampah.sales.index', compact('sales', 'search', 'readyToSell', 'selectedDate'));
+        $collectors = Collector::orderBy('name')->get();
+        $wastePrices = WastePrice::all()->groupBy('collector_id')
+            ->map(fn ($items) => $items->keyBy('waste_category_id')->map(fn ($p) => [
+                'collector_price' => (float) $p->collector_price,
+            ]));
+
+        return view('bank-sampah.sales.index', compact('sales', 'search', 'readyToSell', 'selectedDate', 'collectors', 'wastePrices'));
     }
 
     public function dailyRecap(Request $request)
@@ -91,13 +97,21 @@ class SaleController extends Controller
         $this->validateSale($request);
 
         try {
-            $this->service->recordSale($request->only('collector_id', 'date', 'notes', 'details'));
+            $sale = $this->service->recordSale($request->only('collector_id', 'date', 'notes', 'details'));
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->withErrors(['details' => $e->getMessage()]);
         }
 
         return redirect()->route('bank-sampah.sales.index')
-            ->with('success', 'Penjualan berhasil dicatat.');
+            ->with('success', 'Penjualan berhasil dicatat.')
+            ->with('print_sale_id', $sale->id);
+    }
+
+    public function show(Sale $sale)
+    {
+        $sale->load(['collector', 'details.wasteCategory']);
+
+        return view('bank-sampah.sales.show', compact('sale'));
     }
 
     public function edit(Sale $sale)

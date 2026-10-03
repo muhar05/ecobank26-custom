@@ -47,31 +47,35 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $login = $this->input('login');
+        $login = trim((string) $this->input('login'));
         
-        // 1. Normalisasi nomor telepon menggunakan logic terpusat
+        // 1. Normalisasi nomor telepon menggunakan logic terpusat jika input berupa digit/nomor telepon
         $phone = \App\Models\User::normalizePhone($login);
 
-        // 2. Cari user murni berdasarkan phone atau kolom alternatif (misal name/email jika ada)
-        // Tanpa menyentuh kolom 'username' yang tidak ada di database
-        $user = \App\Models\User::where('phone', $phone)
-            ->orWhere('name', $login) // Opsional: Berjaga-jaga jika admin ingin login pakai Nama Akun
-            ->first();
+        // 2. Cari user multi-kredensial: phone, username, email, atau name
+        $user = \App\Models\User::where(function ($query) use ($login, $phone) {
+            if (! empty($phone)) {
+                $query->where('phone', $phone);
+            }
+            $query->orWhere('username', $login)
+                  ->orWhere('email', $login)
+                  ->orWhere('name', $login);
+        })->first();
 
-    // 3. Verifikasi user dan kecocokan password teks mentahnya
-    if (! $user || ! \Illuminate\Support\Facades\Hash::check($this->input('password'), $user->password)) {
-        RateLimiter::hit($this->throttleKey());
+        // 3. Verifikasi user dan kecocokan password teks mentahnya
+        if (! $user || ! \Illuminate\Support\Facades\Hash::check($this->input('password'), $user->password)) {
+            RateLimiter::hit($this->throttleKey());
 
-        throw ValidationException::withMessages([
-            'login' => 'No. Telepon/Nama atau password salah.',
-        ]);
+            throw ValidationException::withMessages([
+                'login' => 'No. Telepon/Nama atau password salah.',
+            ]);
+        }
+
+        // 4. Jika password cocok, lakukan login langsung menggunakan objek User
+        Auth::login($user, $this->boolean('remember'));
+
+        RateLimiter::clear($this->throttleKey());
     }
-
-    // 4. Jika password cocok, lakukan login langsung menggunakan objek User
-    Auth::login($user, $this->boolean('remember'));
-
-    RateLimiter::clear($this->throttleKey());
-}
 
     /**
      * @throws ValidationException

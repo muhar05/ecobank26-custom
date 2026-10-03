@@ -82,7 +82,7 @@
                                 class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                             <option value="">-- Pilih Mitra Agregator --</option>
                             @foreach($collectors as $c)
-                                <option value="{{ $c->id }}" @selected(old('collector_id') == $c->id)>{{ $c->name }}</option>
+                                <option value="{{ $c->id }}" @selected(old('collector_id', request('collector_id')) == $c->id)>{{ $c->name }}</option>
                             @endforeach
                         </select>
                         @error('collector_id') <p class="text-caption text-danger mt-1">{{ $message }}</p> @enderror
@@ -225,12 +225,12 @@
                                                        x-model.number="row.weight"
                                                        placeholder="0.00"
                                                        class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
-                                                       :class="row.remainingWeight !== undefined && row.weight > row.remainingWeight ? 'border-danger text-danger' : ''">
+                                                        :class="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight ? 'border-danger text-danger' : ''">
 
                                                 {{-- Validation warnings near source --}}
-                                                <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
+                                                <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
                                                     <span class="text-caption font-semibold text-danger block mt-1">
-                                                        Maks sisa: <span x-text="row.remainingWeight"></span> kg!
+                                                        Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)!
                                                     </span>
                                                 </template>
                                             </td>
@@ -322,8 +322,8 @@
                                                x-model.number="row.weight"
                                                placeholder="0.00"
                                                class="w-full text-body font-mono font-bold rounded-radius-md border border-border p-2">
-                                        <template x-if="row.remainingWeight !== undefined && row.weight > row.remainingWeight">
-                                            <span class="text-caption text-danger font-semibold block mt-1">Melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
+                                        <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
+                                            <span class="text-caption text-danger font-semibold block mt-1">Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
                                         </template>
                                     </div>
 
@@ -399,7 +399,7 @@
             const prices = @json($wastePrices);
 
             return {
-                collectorId: '{{ old("collector_id", "") }}',
+                collectorId: '{{ old("collector_id", request("collector_id", "")) }}',
                 date: '{{ old("date", request("date", date("Y-m-d"))) }}',
                 notes: '{{ old("notes", "") }}',
                 prices: prices,
@@ -430,7 +430,9 @@
                         });
                     }
 
-                    if (this.collectorId && this.date) {
+                    if (this.collectorId && this.date && this.rows.length === 0) {
+                        this.fetchRecap(true);
+                    } else if (this.collectorId && this.date) {
                         this.fetchRecap(false);
                     }
 
@@ -549,7 +551,7 @@
                 updateAllPrices() {
                     this.rows.forEach(r => this.fillRowPrice(r));
                     if (this.collectorId && this.date) {
-                        this.fetchRecap(false);
+                        this.fetchRecap(this.rows.length === 0);
                     }
                 },
 
@@ -568,13 +570,19 @@
                     const w = parseFloat(row.weight) || 0;
                     const p = parseFloat(row.price) || 0;
                     const mp = parseFloat(row.memberPrice) || 0;
-                    return (p - mp) * w;
+                    return Math.round((p - mp) * w);
                 },
 
                 rowSubtotal(row) {
                     const w = parseFloat(row.weight) || 0;
                     const p = parseFloat(row.price) || 0;
-                    return w * p;
+                    return Math.round(w * p);
+                },
+
+                categoryTotalWeight(catId) {
+                    return this.rows
+                        .filter(r => r.catId == catId)
+                        .reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
                 },
 
                 grandTotalAmount() {
@@ -598,7 +606,8 @@
                     return this.rows.some(r => {
                         const w = parseFloat(r.weight) || 0;
                         if (w <= 0) return true;
-                        if (r.remainingWeight !== undefined && w > r.remainingWeight) return true;
+                        const catTotal = this.categoryTotalWeight(r.catId);
+                        if (r.remainingWeight !== undefined && catTotal > r.remainingWeight) return true;
                         if (!r.hasPrice) return true;
                         if (r.price < r.memberPrice) return true;
                         return false;

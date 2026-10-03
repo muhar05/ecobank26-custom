@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class DepositController extends Controller
 {
+    public function __construct(private BankSampahService $service) {}
+
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -61,7 +63,7 @@ class DepositController extends Controller
         ));
     }
 
-    public function store(Request $request, BankSampahService $service)
+    public function store(Request $request)
     {
         $request->validate([
             'waste_customer_id' => 'required|exists:waste_customers,id',
@@ -75,7 +77,7 @@ class DepositController extends Controller
             return back()->withErrors(['details' => 'Minimal satu item timbangan harus diisi dengan berat lebih dari 0.'])->withInput();
         }
 
-        $deposit = $service->recordDeposit([
+        $deposit = $this->service->recordDeposit([
             'waste_customer_id' => $request->waste_customer_id,
             'date' => $request->date,
             'notes' => $request->notes,
@@ -123,6 +125,12 @@ class DepositController extends Controller
             return back()->withErrors(['details' => 'Minimal satu item setoran harus diisi.'])->withInput();
         }
 
+        try {
+            $this->service->validateDepositCanBeUpdated($deposit, $details, $request->date);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->withErrors(['details' => $e->getMessage()]);
+        }
+
         $totalAmount = collect($details)->sum('subtotal');
         $customer = WasteCustomer::findOrFail($request->waste_customer_id);
 
@@ -155,6 +163,12 @@ class DepositController extends Controller
 
     public function destroy(Deposit $deposit)
     {
+        try {
+            $this->service->validateDepositCanBeDeleted($deposit);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage())->withErrors(['deposit' => $e->getMessage()]);
+        }
+
         DB::transaction(function () use ($deposit) {
             SavingsLedger::where('reference_type', Deposit::class)
                 ->where('reference_id', $deposit->id)
@@ -180,7 +194,7 @@ class DepositController extends Controller
                     'waste_category_id' => $row['waste_category_id'],
                     'weight' => $weight,
                     'price_per_unit' => $price,
-                    'subtotal' => $weight * $price,
+                    'subtotal' => (float) round($weight * $price, 0),
                 ];
             }
         }

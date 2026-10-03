@@ -87,7 +87,9 @@ class WastePriceController extends Controller
         $device = $request->attributes->get('admin_device') 
             ?? app(DeviceTrackingService::class)->getDeviceFromRequest($request, $request->user());
 
-        DB::transaction(function () use ($validated, $device) {
+        $category = WasteCategory::find($validated['waste_category_id']);
+
+        DB::transaction(function () use ($validated, $device, $category) {
             $price = WastePrice::create($validated);
 
             WastePriceHistory::create([
@@ -96,6 +98,7 @@ class WastePriceController extends Controller
                 'waste_category_id' => $validated['waste_category_id'],
                 'old_price'         => null,
                 'new_price'         => (float) $validated['collector_price'],
+                'unit'              => $category?->unit ?? 'kg',
                 'changed_at'        => now(),
                 'changed_by_user_id'=> auth()->id(),
                 'admin_device_id'   => $device?->id,
@@ -141,12 +144,15 @@ class WastePriceController extends Controller
 
             // Log history ONLY if price actually changed!
             if (abs($oldPrice - $newPrice) > 0.01) {
+                $category = $wastePrice->wasteCategory ?? WasteCategory::find($validated['waste_category_id']);
+
                 WastePriceHistory::create([
                     'waste_price_id'    => $wastePrice->id,
                     'collector_id'      => $validated['collector_id'],
                     'waste_category_id' => $validated['waste_category_id'],
                     'old_price'         => $oldPrice,
                     'new_price'         => $newPrice,
+                    'unit'              => $category?->unit ?? 'kg',
                     'changed_at'        => now(),
                     'changed_by_user_id'=> auth()->id(),
                     'admin_device_id'   => $device?->id,

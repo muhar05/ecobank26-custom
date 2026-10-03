@@ -144,13 +144,14 @@ class SaleReferenceTest extends TestCase
         $res->assertSee('Kardus Box', false);
         $res->assertSee('40,00', false); // remaining weight in id-ID format
         $res->assertSee('Siap Dijual', false);
-        $res->assertSee('Jual ke Agregator &rarr;', false);
+        $res->assertSee('Catat Penjualan ke Agregator &rarr;', false);
 
         // Section 2: Riwayat Penjualan
         $res->assertSee('PT Mitra Daur Ulang', false);
         $res->assertSee('Truk 1 Muatan Pagi', false);
         $res->assertSee('Rp 150.000', false);
         $res->assertSee('+Rp 30.000', false); // Margin Bank Sampah
+        $res->assertSee('Print Timbangan', false);
         $res->assertSee('Lihat Rincian', false);
     }
 
@@ -244,5 +245,106 @@ class SaleReferenceTest extends TestCase
             $res->assertDontSee('<!DOCTYPE html>', false);
             $res->assertDontSee('bg-slate-900', false);
         }
+    }
+
+    public function test_sales_index_has_no_selection_or_modal_dead_code(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+        $date = now()->format('Y-m-d');
+
+        $cat = WasteCategory::create(['name' => 'Kardus', 'code' => 'KRD.01', 'unit' => 'kg', 'member_price' => 2000]);
+        $customer = WasteCustomer::create(['name' => 'Pak Joko', 'customer_code' => WasteCustomer::generateNextCustomerCode(), 'status' => 'active']);
+
+        $dep = Deposit::create(['waste_customer_id' => $customer->id, 'date' => $date, 'total_amount' => 50000]);
+        DepositDetail::create(['deposit_id' => $dep->id, 'waste_category_id' => $cat->id, 'weight' => 25, 'price_per_unit' => 2000, 'subtotal' => 50000]);
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->get(route('bank-sampah.sales.index', ['date' => $date]));
+
+        $res->assertStatus(200);
+
+        // Selection, checkboxes, and modal must be REMOVED (no dead code)
+        $res->assertDontSee('readyToSellWorkflow', false);
+        $res->assertDontSee('Pilih semua material', false);
+        $res->assertDontSee('material dipilih', false);
+        $res->assertDontSee('id="modal_collector_id"', false);
+        $res->assertDontSee('Pilih Mitra Agregator', false);
+        $res->assertDontSee('type="checkbox"', false);
+    }
+
+    public function test_sales_show_renders_timbangan_kami_box_and_print_button(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+
+        $collector = Collector::create(['name' => 'PT Mitra Daur Ulang', 'phone' => '0812345678', 'address' => 'Jl. Industri No. 5']);
+        $cat1 = WasteCategory::create(['name' => 'Kardus Box', 'code' => 'KRD.01', 'unit' => 'kg', 'member_price' => 2000]);
+        $cat2 = WasteCategory::create(['name' => 'Besi Padat', 'code' => 'BSI.01', 'unit' => 'kg', 'member_price' => 5000]);
+
+        $sale = Sale::create([
+            'collector_id' => $collector->id,
+            'date' => '2026-10-03',
+            'total_amount' => 250000,
+            'notes' => 'Truk 1 Muatan Pagi',
+        ]);
+
+        SaleDetail::create([
+            'sale_id' => $sale->id,
+            'waste_category_id' => $cat1->id,
+            'weight' => 60,
+            'price_per_unit' => 2500,
+            'member_price' => 2000,
+            'subtotal' => 150000,
+            'margin' => 30000,
+        ]);
+
+        SaleDetail::create([
+            'sale_id' => $sale->id,
+            'waste_category_id' => $cat2->id,
+            'weight' => 20,
+            'price_per_unit' => 5000,
+            'member_price' => 4000,
+            'subtotal' => 100000,
+            'margin' => 20000,
+        ]);
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->get(route('bank-sampah.sales.show', $sale));
+
+        $res->assertStatus(200);
+
+        // Format checks
+        $res->assertSee('Timbangan Kami Box', false);
+        $res->assertSee('PT Mitra Daur Ulang', false);
+        $res->assertSee('Truk 1 Muatan Pagi', false);
+
+        // Table headers
+        $res->assertSee('No', false);
+        $res->assertSee('Jenis Sampah', false);
+        $res->assertSee('Harga', false);
+        $res->assertSee('Berat', false);
+        $res->assertSee('Total Harga', false);
+
+        // Material rows
+        $res->assertSee('Kardus Box', false);
+        $res->assertSee('Rp 2.500', false);
+        $res->assertSee('60,00 kg', false);
+        $res->assertSee('Rp 150.000', false);
+
+        $res->assertSee('Besi Padat', false);
+        $res->assertSee('Rp 5.000', false);
+        $res->assertSee('20,00 kg', false);
+        $res->assertSee('Rp 100.000', false);
+
+        // Below table totals
+        $res->assertSee('Total Berat', false);
+        $res->assertSee('80,00', false); // 60 + 20
+        $res->assertSee('Total Harga', false);
+        $res->assertSee('Rp 250.000', false);
+
+        // Print button
+        $res->assertSee('window.print()', false);
+        $res->assertSee('Print', false);
     }
 }
