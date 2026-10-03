@@ -9,10 +9,10 @@
             </x-slot:breadcrumbs>
             <x-slot:actions>
                 @can('manage_waste_prices')
-                    <a href="{{ route('bank-sampah.collectors.index') }}" class="text-caption font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1">
+                    <a href="{{ route('bank-sampah.collectors.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1">
                         Agregator &rarr;
                     </a>
-                    <a href="{{ route('bank-sampah.waste-prices.index') }}" class="text-caption font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1">
+                    <a href="{{ route('bank-sampah.waste-prices.index') }}" class="text-body-sm font-semibold text-text-muted hover:text-primary transition-subtle px-1 py-1">
                         Harga Sampah &rarr;
                     </a>
                 @endcan
@@ -38,7 +38,7 @@
                     </div>
                 </div>
                 <a href="{{ route('bank-sampah.sales.show', session('print_sale_id')) }}"
-                   class="inline-flex items-center gap-2 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-caption font-bold shadow-subtle transition-subtle shrink-0">
+                   class="inline-flex items-center gap-2 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-bold shadow-subtle transition-subtle shrink-0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
@@ -48,76 +48,103 @@
         @endif
 
         {{-- ========================================================= --}}
-        {{-- SECTION 1: SISA SETORAN SIAP DIJUAL                       --}}
+        {{-- SECTION 1: SISA SETORAN SIAP DIJUAL (COMPACT OPERATIONAL)  --}}
         {{-- ========================================================= --}}
-        <x-ui.card variant="bordered" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-4">
+        <x-ui.card variant="bordered" class="p-0 overflow-hidden" x-data="{ matSearch: '' }">
+            <div class="p-4 sm:px-5 sm:py-4 border-b border-border-subtle bg-surface flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                         <h2 class="text-heading-sm font-bold text-text">Sisa Setoran Siap Dijual</h2>
+                        @if($readyToSell->isNotEmpty())
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm bg-primary-light text-primary text-caption font-bold border border-primary/20">
+                                {{ $readyToSell->count() }} Material &bull; {{ number_format($readyToSell->sum('remaining_weight'), 2, ',', '.') }} kg siap dijual
+                            </span>
+                        @endif
                     </div>
                     <p class="text-caption text-text-muted mt-0.5">
-                        Sampah terpilah hasil timbangan nasabah yang siap dimuat ke truk agregator
+                        Timbangan sampah nasabah yang siap dimuat ke truk agregator
                     </p>
                 </div>
 
-                {{-- Date Selector Form --}}
-                <form method="GET" action="{{ route('bank-sampah.sales.index') }}" class="flex items-center gap-2">
-                    <span class="text-caption font-bold text-text-muted uppercase">Tanggal:</span>
-                    <input type="date"
-                           name="date"
-                           value="{{ $selectedDate }}"
-                           onchange="this.form.submit()"
-                           class="text-body-sm rounded-radius-md border border-border bg-surface text-text py-1.5 px-3 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                    @if(request('search'))
-                        <input type="hidden" name="search" value="{{ request('search') }}">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    @if($readyToSell->isNotEmpty())
+                        {{-- Search Material Input --}}
+                        <div class="relative w-full sm:w-52">
+                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-text-muted">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </span>
+                            <input type="text"
+                                   x-model="matSearch"
+                                   placeholder="Cari material..."
+                                   class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text pl-8 pr-2.5 py-1.5 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
+                        </div>
                     @endif
-                </form>
+
+                    {{-- Date Selector Form --}}
+                    <form method="GET" action="{{ route('bank-sampah.sales.index') }}" class="flex items-center gap-1.5">
+                        <span class="text-caption font-bold text-text-muted uppercase">Tanggal:</span>
+                        <input type="date"
+                               name="date"
+                               value="{{ $selectedDate }}"
+                               onchange="this.form.submit()"
+                               class="text-body-sm rounded-radius-md border border-border bg-surface text-text py-1 px-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                    </form>
+                </div>
             </div>
 
             @if($readyToSell->isNotEmpty())
-                {{-- DESKTOP TABLE: Sisa Setoran --}}
-                <div class="hidden md:block overflow-x-auto">
+                {{-- COMPACT OPERATIONAL TABLE (WITH INTERNAL VERTICAL SCROLL) --}}
+                <div class="max-h-[360px] overflow-y-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-border bg-surface-muted/40 text-caption font-bold text-text-muted uppercase tracking-wider">
-                                <th class="py-3 px-4">Material / Kategori Sampah</th>
-                                <th class="py-3 px-4 text-right">Total Setoran</th>
-                                <th class="py-3 px-4 text-right">Sudah Terjual</th>
-                                <th class="py-3 px-4 text-right">Sisa Siap Dijual</th>
-                                <th class="py-3 px-4 text-right">Harga Beli Nasabah</th>
-                                <th class="py-3 px-4 text-center">Status</th>
+                        <thead class="sticky top-0 z-10 bg-surface border-b border-border shadow-2xs">
+                            <tr class="bg-surface-muted/60 text-body-sm font-bold text-text-muted uppercase tracking-wider">
+                                <th class="py-2.5 px-4">Material</th>
+                                <th class="py-2.5 px-4 text-right">Sisa</th>
+                                <th class="py-2.5 px-4 text-right">Harga Beli</th>
+                                <th class="py-2.5 px-4 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             @foreach($readyToSell as $item)
-                                <tr class="hover:bg-surface-muted/40 transition-subtle">
-                                    <td class="py-3.5 px-4">
+                                <tr class="hover:bg-surface-muted/40 transition-subtle"
+                                    x-show="!matSearch || $el.dataset.search.includes(matSearch.toLowerCase().trim())"
+                                    data-search="{{ strtolower($item['category']->name . ' ' . ($item['category']->code ?? '')) }}"
+                                    title="Total Setoran: {{ number_format($item['total_deposited'], 2, ',', '.') }} {{ $item['category']->unit }} | Terjual: {{ number_format($item['total_sold'], 2, ',', '.') }} {{ $item['category']->unit }}">
+                                    <td class="py-2.5 px-4">
                                         <div class="flex items-center gap-2.5">
-                                            <div class="w-8 h-8 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-caption shrink-0">
+                                            <div class="w-7 h-7 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-caption shrink-0">
                                                 {{ strtoupper(substr($item['category']->name, 0, 1)) }}
                                             </div>
                                             <div>
-                                                <span class="text-body font-bold text-text block">{{ $item['category']->name }}</span>
-                                                <span class="font-mono text-caption text-text-muted block">{{ $item['category']->code ?? '-' }}</span>
+                                                <span class="text-body font-bold text-text block leading-tight">{{ $item['category']->name }}</span>
+                                                @if($item['category']->code)
+                                                    <span class="font-mono text-body-sm text-text-muted font-semibold block">{{ $item['category']->code }}</span>
+                                                @endif
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-mono text-body-sm text-text-muted">
-                                        {{ number_format($item['total_deposited'], 2, ',', '.') }} {{ $item['category']->unit }}
+                                    <td class="py-2.5 px-4 text-right whitespace-nowrap">
+                                        <span class="font-mono font-bold text-body-sm text-primary">
+                                            {{ number_format($item['remaining_weight'], 2, ',', '.') }}
+                                        </span>
+                                        <span class="text-caption text-text-muted font-normal">{{ $item['category']->unit }}</span>
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-mono text-body-sm text-text-muted">
-                                        {{ number_format($item['total_sold'], 2, ',', '.') }} {{ $item['category']->unit }}
+                                    <td class="py-2.5 px-4 text-right whitespace-nowrap">
+                                        <span class="font-mono text-body-sm font-semibold text-text">
+                                            Rp {{ number_format($item['member_price'], 0, ',', '.') }}
+                                        </span>
+                                        <span class="text-caption text-text-muted font-normal">/{{ $item['category']->unit }}</span>
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-mono text-heading-sm font-bold text-primary">
-                                        {{ number_format($item['remaining_weight'], 2, ',', '.') }} <span class="text-caption font-normal text-text-muted">{{ $item['category']->unit }}</span>
-                                    </td>
-                                    <td class="py-3.5 px-4 text-right font-mono text-body-sm font-semibold text-text">
-                                        Rp {{ number_format($item['member_price'], 0, ',', '.') }} <span class="text-caption text-text-muted font-normal">/ {{ $item['category']->unit }}</span>
-                                    </td>
-                                    <td class="py-3.5 px-4 text-center">
-                                        <x-ui.badge variant="success" size="sm">Siap Dijual</x-ui.badge>
+                                    <td class="py-2.5 px-4 text-center whitespace-nowrap">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-radius-sm bg-success-light text-success-text text-caption font-bold border border-success/30">
+                                            ✓ Siap Dijual
+                                        </span>
                                     </td>
                                 </tr>
                             @endforeach
@@ -125,56 +152,21 @@
                     </table>
                 </div>
 
-                {{-- MOBILE ADAPTIVE CARDS: Sisa Setoran (< md) --}}
-                <div class="block md:hidden space-y-3">
-                    @foreach($readyToSell as $item)
-                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <span class="text-body font-bold text-text block">{{ $item['category']->name }}</span>
-                                    <span class="font-mono text-caption text-text-muted">{{ $item['category']->code ?? '-' }}</span>
-                                </div>
-                                <x-ui.badge variant="success" size="sm">Siap Dijual</x-ui.badge>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2 text-caption pt-1 border-t border-border-subtle">
-                                <div>
-                                    <span class="text-text-muted uppercase font-bold block">Sisa Siap Dijual</span>
-                                    <span class="font-mono font-bold text-heading-sm text-primary">
-                                        {{ number_format($item['remaining_weight'], 2, ',', '.') }} {{ $item['category']->unit }}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="text-text-muted uppercase font-bold block">Harga Beli Nasabah</span>
-                                    <span class="font-mono font-bold text-body-sm text-text">
-                                        Rp {{ number_format($item['member_price'], 0, ',', '.') }}/{{ $item['category']->unit }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div class="text-caption text-text-muted flex justify-between">
-                                <span>Setoran: {{ number_format($item['total_deposited'], 2, ',', '.') }} {{ $item['category']->unit }}</span>
-                                <span>Terjual: {{ number_format($item['total_sold'], 2, ',', '.') }} {{ $item['category']->unit }}</span>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-
-                {{-- Section Action Footer --}}
-                <div class="pt-3 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {{-- Action Footer --}}
+                <div class="p-3 sm:px-5 sm:py-3 border-t border-border-subtle bg-surface-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <p class="text-caption text-text-muted">
                         Total <strong class="text-text font-mono">{{ $readyToSell->count() }}</strong> material siap jual dengan akumulasi berat <strong class="text-primary font-mono">{{ number_format($readyToSell->sum('remaining_weight'), 2, ',', '.') }} kg</strong>.
                     </p>
                     <a href="{{ route('bank-sampah.sales.create', ['date' => $selectedDate]) }}"
-                       class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-semibold shadow-subtle transition-subtle">
+                       class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary hover:bg-primary-hover text-white text-body-sm font-semibold shadow-subtle transition-subtle shrink-0">
                         Catat Penjualan ke Agregator &rarr;
                     </a>
                 </div>
             @else
                 {{-- Honest Empty State: Sisa Setoran --}}
-                <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-2.5">
-                    <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <div class="py-8 px-4 text-center border-2 border-dashed border-border rounded-radius-md m-4 flex flex-col items-center justify-center space-y-2">
+                    <div class="w-10 h-10 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                         </svg>
                     </div>
@@ -186,7 +178,7 @@
                     </div>
                     @can('manage_deposits')
                         <div class="pt-1">
-                            <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-radius-md bg-primary text-white text-caption font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
+                            <a href="{{ route('bank-sampah.deposits.create') }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-radius-md bg-primary text-white text-body-sm font-semibold hover:bg-primary-hover shadow-subtle transition-subtle">
                                 + Catat Setoran Baru
                             </a>
                         </div>
@@ -223,7 +215,7 @@
                         Cari
                     </x-ui.button>
                     @if(request('search'))
-                        <a href="{{ route('bank-sampah.sales.index') }}" class="text-caption font-semibold text-text-muted hover:text-danger px-2 py-1.5 transition-subtle">
+                        <a href="{{ route('bank-sampah.sales.index') }}" class="text-body font-semibold text-text-muted hover:text-danger px-2 py-1.5 transition-subtle">
                             Reset
                         </a>
                     @endif
@@ -246,7 +238,7 @@
                             <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
                                 <div class="flex items-center gap-2.5">
                                     <div class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></div>
-                                    <h3 class="text-body font-bold text-text">
+                                    <h3 class="text-heading-sm font-bold text-text">
                                         {{ $carbonDate ? $carbonDate->translatedFormat('d F Y') : 'Tanpa Tanggal' }}
                                     </h3>
                                     @if($carbonDate)
@@ -332,7 +324,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                         </svg>
                     </div>
-                    <p class="text-body-sm font-semibold text-text">Belum ada riwayat transaksi penjualan ke agregator.</p>
+                    <p class="text-heading-sm font-bold text-text">Belum ada riwayat transaksi penjualan ke agregator.</p>
                     <p class="text-caption text-text-muted">Gunakan tombol Catat Penjualan di atas untuk memuat timbangan ke truk agregator.</p>
                 </div>
             @endif

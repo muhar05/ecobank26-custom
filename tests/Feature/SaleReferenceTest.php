@@ -140,11 +140,21 @@ class SaleReferenceTest extends TestCase
 
         $res->assertStatus(200);
 
-        // Section 1: Sisa Setoran Siap Dijual (100 - 60 = 40 kg remaining)
+        // Section 1: Compact Sisa Setoran Siap Dijual
+        $res->assertSee('Sisa Setoran Siap Dijual', false);
+        $res->assertSee('1 Material &bull; 40,00 kg siap dijual', false);
+        $res->assertSee('placeholder="Cari material..."', false);
         $res->assertSee('Kardus Box', false);
         $res->assertSee('40,00', false); // remaining weight in id-ID format
-        $res->assertSee('Siap Dijual', false);
+        $res->assertSee('Rp 2.000', false); // member price
+        $res->assertSee('✓ Siap Dijual', false);
         $res->assertSee('Catat Penjualan ke Agregator &rarr;', false);
+
+        // Compact table: Total Setoran & Sudah Terjual omitted from main headers
+        $res->assertDontSee('<th class="py-2.5 px-4 text-right">Total Setoran</th>', false);
+        $res->assertDontSee('<th class="py-2.5 px-4 text-right">Sudah Terjual</th>', false);
+        $res->assertSee('max-h-[360px] overflow-y-auto', false);
+        $res->assertSee('sticky top-0', false);
 
         // Section 2: Riwayat Penjualan (Grouped by Date & Agregator)
         $res->assertSee(\Carbon\Carbon::parse($date)->translatedFormat('d F Y'), false);

@@ -36,7 +36,7 @@
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="border-b border-border bg-surface-muted/40 text-caption font-bold text-text-muted uppercase tracking-wider">
+                            <tr class="border-b border-border bg-surface-muted/40 text-body-sm font-bold text-text-muted uppercase tracking-wider">
                                 <th class="py-3 px-4 w-12 text-center">No</th>
                                 <th class="py-3 px-4">Nama Agregator</th>
                                 <th class="py-3 px-4">Kontak</th>
@@ -101,16 +101,16 @@
                                     <td class="py-3.5 px-4 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center justify-end gap-3 text-body-sm font-semibold">
                                             <a href="{{ route('bank-sampah.collectors.show', $collector) }}"
-                                               class="text-caption font-bold text-primary hover:underline transition-subtle px-1 py-2">
+                                               class="text-body-sm font-bold text-primary hover:underline transition-subtle px-1 py-2">
                                                 Lihat Detail
                                             </a>
                                             <a href="{{ route('bank-sampah.collectors.edit', $collector) }}"
-                                               class="text-caption font-semibold text-text-muted hover:text-text transition-subtle px-1 py-2">
+                                               class="text-body-sm font-semibold text-text-muted hover:text-text transition-subtle px-1 py-2">
                                                 Edit
                                             </a>
                                             <button type="button"
                                                     @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.collectors.destroy', $collector) }}'})"
-                                                    class="text-caption font-semibold text-danger hover:underline transition-subtle cursor-pointer px-1 py-2">
+                                                    class="text-body-sm font-semibold text-danger hover:underline transition-subtle cursor-pointer px-1 py-2">
                                                 Hapus
                                             </button>
                                         </div>
@@ -138,7 +138,7 @@
                                             {{ $collector->name }}
                                         </a>
                                         @if($materialCount > 0)
-                                            <span class="font-mono text-caption font-bold text-primary">{{ $materialCount }} Material</span>
+                                            <span class="font-mono text-body-sm font-bold text-primary">{{ $materialCount }} Material</span>
                                         @else
                                             <span class="text-caption text-text-muted italic">Belum ada harga</span>
                                         @endif
@@ -158,11 +158,11 @@
                             </div>
 
                             <div class="pt-2 border-t border-border-subtle flex items-center justify-between gap-2">
-                                <a href="{{ route('bank-sampah.collectors.show', $collector) }}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-radius-md bg-primary text-white text-caption font-bold hover:bg-primary-hover shadow-subtle transition-subtle">
+                                <a href="{{ route('bank-sampah.collectors.show', $collector) }}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-radius-md bg-primary text-white text-body-sm font-bold hover:bg-primary-hover shadow-subtle transition-subtle">
                                     Lihat Detail
                                 </a>
-                                <a href="{{ route('bank-sampah.collectors.edit', $collector) }}" class="px-3 py-2.5 text-caption font-semibold text-text-muted hover:text-text transition-subtle">Edit</a>
-                                <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.collectors.destroy', $collector) }}'})" class="px-3 py-2.5 text-caption font-semibold text-danger transition-subtle">Hapus</button>
+                                <a href="{{ route('bank-sampah.collectors.edit', $collector) }}" class="px-3 py-2.5 text-body-sm font-semibold text-text-muted hover:text-text transition-subtle">Edit</a>
+                                <button type="button" @click="$dispatch('open-delete-modal', {id: 'confirm-delete-modal', action: '{{ route('bank-sampah.collectors.destroy', $collector) }}'})" class="px-3 py-2.5 text-body-sm font-semibold text-danger transition-subtle">Hapus</button>
                             </div>
                         </div>
                     @endforeach

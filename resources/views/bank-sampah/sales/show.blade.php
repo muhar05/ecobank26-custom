@@ -12,7 +12,7 @@
                         <span class="text-text font-mono font-bold">SAL-{{ str_pad($sale->id, 5, '0', STR_PAD_LEFT) }}</span>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap pt-0.5">
-                        <h1 class="text-heading-md font-bold text-text">Detail Penjualan</h1>
+                        <h1 class="text-heading-lg sm:text-heading-xl font-bold text-text tracking-tight">Detail Penjualan</h1>
                         <x-ui.badge variant="success" size="sm">✓ Selesai</x-ui.badge>
                         <span class="font-mono text-body-sm font-bold text-text-muted">SAL-{{ str_pad($sale->id, 5, '0', STR_PAD_LEFT) }}</span>
                     </div>
@@ -140,7 +140,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse border border-border">
                     <thead>
-                        <tr class="border-b border-border bg-surface-muted/60 text-caption font-bold text-text-muted uppercase tracking-wider">
+                        <tr class="border-b border-border bg-surface-muted/60 text-body-sm font-bold text-text-muted uppercase tracking-wider">
                             <th class="py-3 px-3 w-12 text-center border-r border-border">No</th>
                             <th class="py-3 px-4 border-r border-border">Jenis Sampah</th>
                             <th class="py-3 px-4 text-right border-r border-border">Harga Lapak</th>
@@ -155,15 +155,15 @@
                                     {{ $index + 1 }}
                                 </td>
                                 <td class="py-3 px-4 border-r border-border">
-                                    <span class="font-bold text-text block">{{ $detail->wasteCategory->name ?? '-' }}</span>
+                                    <span class="font-bold text-text text-body block">{{ $detail->wasteCategory->name ?? '-' }}</span>
                                     @if($detail->wasteCategory && $detail->wasteCategory->code)
                                         <span class="font-mono text-caption text-text-muted block">{{ $detail->wasteCategory->code }}</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-4 text-right font-mono text-body-sm text-text border-r border-border">
+                                <td class="py-3 px-4 text-right font-mono text-body text-text border-r border-border">
                                     Rp {{ number_format($detail->price_per_unit, 0, ',', '.') }} <span class="text-caption text-text-muted font-normal">/ {{ $detail->wasteCategory->unit ?? 'kg' }}</span>
                                 </td>
-                                <td class="py-3 px-4 text-right font-mono font-bold text-body-sm text-text border-r border-border">
+                                <td class="py-3 px-4 text-right font-mono font-bold text-body text-text border-r border-border">
                                     {{ number_format($detail->weight, 2, ',', '.') }} {{ $detail->wasteCategory->unit ?? 'kg' }}
                                 </td>
                                 <td class="py-3 px-4 text-right font-mono font-bold text-body text-text">

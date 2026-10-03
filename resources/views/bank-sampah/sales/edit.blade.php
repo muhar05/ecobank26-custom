@@ -79,7 +79,7 @@
             <x-ui.card variant="bordered" class="space-y-4">
                 <div class="border-b border-border-subtle pb-3">
                     <h2 class="text-heading-sm font-bold text-text">1. Agregator & Tanggal Penjualan</h2>
-                    <p class="text-caption text-text-muted mt-0.5">Tentukan mitra agregator pembeli dan tanggal muat timbangan</p>
+                    <p class="text-body-sm text-text-muted mt-0.5">Tentukan mitra agregator pembeli dan tanggal muat timbangan</p>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
@@ -133,7 +133,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">2. Rincian Material yang Dijual</h2>
-                        <p class="text-caption text-text-muted mt-0.5">
+                        <p class="text-body-sm text-text-muted mt-0.5">
                             Sesuaikan berat jual atau tambahkan material lain yang tersedia
                         </p>
                     </div>

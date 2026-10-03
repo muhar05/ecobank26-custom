@@ -66,7 +66,7 @@
 
                     @if(request()->anyFilled(['search', 'status']))
                         <a href="{{ route('bank-sampah.customers.index') }}"
-                           class="text-caption font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle">
+                           class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle">
                             Reset
                         </a>
                     @endif
@@ -81,7 +81,7 @@
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="border-b border-border bg-surface-muted/40 text-caption font-bold text-text-muted uppercase tracking-wider">
+                            <tr class="border-b border-border bg-surface-muted/40 text-body-sm font-bold text-text-muted uppercase tracking-wider">
                                 <th class="py-3 px-5">Nasabah</th>
                                 <th class="py-3 px-5">Kontak & Alamat</th>
                                 <th class="py-3 px-5">Status & Akun</th>
@@ -101,7 +101,7 @@
                                                 <a href="{{ route('bank-sampah.customers.show', $customer) }}" class="text-body font-bold text-text hover:text-primary transition-subtle block truncate">
                                                     {{ $customer->name }}
                                                 </a>
-                                                <span class="font-mono text-caption text-text-muted font-semibold block">
+                                                <span class="font-mono text-body-sm text-text-muted font-semibold block">
                                                     {{ $customer->customer_code }}
                                                 </span>
                                             </div>
@@ -187,7 +187,7 @@
                                         <a href="{{ route('bank-sampah.customers.show', $customer) }}" class="text-body font-bold text-text hover:text-primary transition-subtle block truncate">
                                             {{ $customer->name }}
                                         </a>
-                                        <span class="font-mono text-caption text-text-muted font-semibold block">
+                                        <span class="font-mono text-body-sm text-text-muted font-semibold block">
                                             {{ $customer->customer_code }}
                                         </span>
                                     </div>

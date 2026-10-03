@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class SavingsLedger extends Model
 {
@@ -17,5 +18,10 @@ class SavingsLedger extends Model
     public function wasteCustomer(): BelongsTo
     {
         return $this->belongsTo(WasteCustomer::class);
+    }
+
+    public function reference(): MorphTo
+    {
+        return $this->morphTo();
     }
 }

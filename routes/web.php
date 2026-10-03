@@ -165,6 +165,9 @@ Route::get('/bank-sampah/savings', [SavingsReportController::class, 'index'])
 Route::get('/bank-sampah/savings/export', [SavingsReportController::class, 'export'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings.export');
 
+Route::get('/bank-sampah/savings/{customer}', [SavingsReportController::class, 'show'])
+    ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.savings.show');
+
 // Bank Sampah - Cash Report
 Route::get('/bank-sampah/cash-report', [WasteBankCashReportController::class, 'index'])
     ->middleware(['auth', 'permission:view_waste_reports'])->name('bank-sampah.cash-report');

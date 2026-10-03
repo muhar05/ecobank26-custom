@@ -46,6 +46,36 @@ class WasteCustomer extends Model
         return $this->hasMany(SavingsLedger::class);
     }
 
+    public function latestSavingsLedger()
+    {
+        return $this->hasOne(SavingsLedger::class)->latestOfMany();
+    }
+
+    /**
+     * Get extracted RT number (e.g. "RT 03") from address or name.
+     */
+    public function getRtNumberAttribute(): string
+    {
+        if ($this->address && preg_match('/RT\s*0*(\d+)/i', $this->address, $m)) {
+            return 'RT ' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        }
+        if ($this->name && preg_match('/RT\s*0*(\d+)/i', $this->name, $m)) {
+            return 'RT ' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        }
+        return $this->address ?: '-';
+    }
+
+    /**
+     * Get computed customer savings balance from existing ledger / service logic.
+     */
+    public function getBalanceAttribute(): float
+    {
+        if (isset($this->attributes['total_credit']) || array_key_exists('total_credit', $this->attributes)) {
+            return (float) ($this->total_credit ?? 0) - (float) ($this->total_debit ?? 0);
+        }
+        return app(\App\Services\BankSampahService::class)->getCustomerBalance($this->id);
+    }
+
     /**
      * Generate the next customer code safely with lockForUpdate to prevent race conditions.
      * Format: NSB-000001, NSB-000002, dst. (sequential, never changes once created).
