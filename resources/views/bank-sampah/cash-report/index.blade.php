@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Kas Bank Sampah">
-    <div class="space-y-6">
+    <div class="space-y-6 max-w-7xl mx-auto pb-10">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
                 <h2 class="text-xl font-bold text-text">Laporan Kas Bank Sampah</h2>

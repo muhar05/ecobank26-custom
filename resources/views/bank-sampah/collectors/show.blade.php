@@ -39,10 +39,23 @@
             </div>
         @endif
 
+        {{-- Navigasi Section Detail Agregator --}}
+        <nav aria-label="Navigasi detail agregator" class="flex flex-wrap items-center gap-2">
+            <a href="#informasi" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
+                Informasi
+            </a>
+            <a href="#harga-lapak" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
+                Harga Lapak ({{ $collector->wastePrices->count() }})
+            </a>
+            <a href="#riwayat-harga" class="px-4 py-2.5 rounded-radius-md border border-border bg-surface text-text text-body-sm font-semibold hover:bg-surface-muted transition-subtle">
+                Riwayat Harga
+            </a>
+        </nav>
+
         {{-- ========================================================= --}}
         {{-- PROFIL MITRA AGREGATOR                                    --}}
         {{-- ========================================================= --}}
-        <x-ui.card variant="bordered" class="space-y-4">
+        <x-ui.card variant="bordered" class="space-y-4 scroll-mt-24" id="informasi">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-3.5">
                     <div class="w-12 h-12 rounded-radius-md bg-primary-light text-primary flex items-center justify-center font-bold text-heading-sm shrink-0 shadow-subtle">
@@ -93,7 +106,7 @@
         {{-- ========================================================= --}}
         {{-- SECTION / TAB: HARGA LAPAK                                --}}
         {{-- ========================================================= --}}
-        <x-ui.card variant="bordered" class="p-0 overflow-hidden space-y-0">
+        <x-ui.card variant="bordered" class="p-0 overflow-hidden space-y-0 scroll-mt-24" id="harga-lapak">
             {{-- Section Toolbar --}}
             <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -172,12 +185,12 @@
                                         <div class="inline-flex items-center justify-end gap-2.5 text-body-sm font-semibold">
                                             <button type="button"
                                                     @click="openEditModal({{ $wp->id }}, '{{ addslashes($wp->wasteCategory->name ?? '-') }}', '{{ $wp->wasteCategory->unit ?? 'Kg' }}', {{ (float) $wp->collector_price }})"
-                                                    class="text-caption font-semibold text-primary hover:underline transition-subtle cursor-pointer">
+                                                    class="text-caption font-semibold text-primary hover:underline transition-subtle cursor-pointer px-1 py-2">
                                                 Edit Harga
                                             </button>
                                             <button type="button"
                                                     @click="$dispatch('open-delete-modal', {id: 'confirm-delete-price-modal', action: '{{ route('bank-sampah.collectors.prices.destroy', [$collector, $wp]) }}'})"
-                                                    class="text-caption font-semibold text-danger hover:underline transition-subtle cursor-pointer">
+                                                    class="text-caption font-semibold text-danger hover:underline transition-subtle cursor-pointer px-1 py-2">
                                                 Hapus
                                             </button>
                                         </div>
@@ -218,12 +231,12 @@
                             <div class="pt-2 border-t border-border-subtle flex items-center justify-end gap-3 text-caption font-semibold">
                                 <button type="button"
                                         @click="openEditModal({{ $wp->id }}, '{{ addslashes($wp->wasteCategory->name ?? '-') }}', '{{ $wp->wasteCategory->unit ?? 'Kg' }}', {{ (float) $wp->collector_price }})"
-                                        class="text-primary hover:underline">
+                                        class="text-primary hover:underline px-1 py-2">
                                     Edit Harga
                                 </button>
                                 <button type="button"
                                         @click="$dispatch('open-delete-modal', {id: 'confirm-delete-price-modal', action: '{{ route('bank-sampah.collectors.prices.destroy', [$collector, $wp]) }}'})"
-                                        class="text-danger hover:underline">
+                                        class="text-danger hover:underline px-1 py-2">
                                     Hapus
                                 </button>
                             </div>
@@ -265,6 +278,143 @@
         {{-- ========================================================= --}}
         {{-- MODAL 1: TAMBAH HARGA LAPAK                               --}}
         {{-- ========================================================= --}}
+        {{-- ========================================================= --}}
+        {{-- SECTION: RIWAYAT HARGA AGREGATOR --}}
+        {{-- ========================================================= --}}
+        @php
+            $recentHistories = $collector->wastePrices
+                ->flatMap(fn ($wp) => $wp->histories->map(fn ($h) => ['history' => $h, 'price' => $wp]))
+                ->sortByDesc(fn ($x) => $x['history']->changed_at)
+                ->take(10)
+                ->values();
+        @endphp
+
+        <x-ui.card variant="bordered" class="p-0 overflow-hidden space-y-0 scroll-mt-24" id="riwayat-harga">
+            <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-info"></span>
+                        <h3 class="text-heading-sm font-bold text-text">Riwayat Harga</h3>
+                    </div>
+                    <p class="text-caption text-text-muted mt-0.5">
+                        Perubahan harga lapak agregator ini. Harga pertama tercatat dari kosong, perubahan berikutnya mencatat harga lama ke harga baru.
+                    </p>
+                </div>
+
+                <a href="{{ route('bank-sampah.waste-prices.history', ['collector_id' => $collector->id]) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-radius-md border border-border bg-surface text-text hover:bg-surface-muted text-caption font-semibold transition-subtle shadow-subtle cursor-pointer">
+                    Lihat Riwayat Lengkap &rarr;
+                </a>
+            </div>
+
+            @if($recentHistories->isNotEmpty())
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-border bg-surface-muted/40 text-caption font-bold text-text-muted uppercase tracking-wider">
+                                <th class="py-3 px-4">Material</th>
+                                <th class="py-3 px-4 text-right">Harga Lama</th>
+                                <th class="py-3 px-4 text-right">Harga Baru</th>
+                                <th class="py-3 px-4 text-center">Satuan</th>
+                                <th class="py-3 px-4">Changed At</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border-subtle">
+                            @foreach($recentHistories as $item)
+                                @php
+                                    $h = $item['history'];
+                                    $wp = $item['price'];
+                                    $unit = $h->unit ?? $wp->wasteCategory->unit ?? 'Kg';
+                                @endphp
+                                <tr class="hover:bg-surface-muted/40 transition-subtle">
+                                    <td class="py-3.5 px-4">
+                                        <span class="text-body-sm font-bold text-text block">{{ $wp->wasteCategory->name ?? '-' }}</span>
+                                        <span class="font-mono text-caption text-text-muted block">{{ $wp->wasteCategory->code ?? '-' }}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                        @if($h->old_price !== null)
+                                            <span class="font-mono text-body-sm text-text-muted line-through">
+                                                Rp {{ number_format($h->old_price, 0, ',', '.') }}
+                                            </span>
+                                        @else
+                                            <x-ui.badge variant="info" size="sm">Harga Awal</x-ui.badge>
+                                        @endif
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                        <span class="font-mono text-body-sm font-bold text-text">
+                                            Rp {{ number_format($h->new_price, 0, ',', '.') }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                        <span class="font-mono text-caption uppercase px-2 py-0.5 rounded bg-surface-muted border border-border text-text font-semibold">
+                                            {{ $unit }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4 whitespace-nowrap">
+                                        <div class="text-body-sm text-text font-medium">{{ $h->changed_at?->format('d M Y H:i') ?? '-' }}</div>
+                                        <div class="text-caption text-text-muted">{{ $h->changed_at?->diffForHumans() }}</div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="block md:hidden divide-y divide-border-subtle p-3 space-y-3">
+                    @foreach($recentHistories as $item)
+                        @php
+                            $h = $item['history'];
+                            $wp = $item['price'];
+                            $unit = $h->unit ?? $wp->wasteCategory->unit ?? 'Kg';
+                        @endphp
+                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <span class="text-body font-bold text-text block">{{ $wp->wasteCategory->name ?? '-' }}</span>
+                                    <span class="font-mono text-caption text-text-muted">{{ $wp->wasteCategory->code ?? '-' }}</span>
+                                </div>
+                                <span class="font-mono text-caption uppercase px-2 py-0.5 rounded bg-surface-muted border border-border text-text font-semibold">
+                                    {{ $unit }}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-caption pt-1 border-t border-border-subtle">
+                                <div>
+                                    <span class="text-text-muted uppercase font-bold block">Harga Lama</span>
+                                    @if($h->old_price !== null)
+                                        <span class="font-mono font-medium text-text-muted line-through block">
+                                            Rp {{ number_format($h->old_price, 0, ',', '.') }}
+                                        </span>
+                                    @else
+                                        <span class="block mt-0.5"><x-ui.badge variant="info" size="sm">Harga Awal</x-ui.badge></span>
+                                    @endif
+                                </div>
+                                <div>
+                                    <span class="text-text-muted uppercase font-bold block">Harga Baru</span>
+                                    <span class="font-mono font-bold text-body-sm text-text block">
+                                        Rp {{ number_format($h->new_price, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="text-caption text-text-muted pt-1 border-t border-border-subtle">
+                                Diubah {{ $h->changed_at?->format('d M Y H:i') ?? '-' }} ({{ $h->changed_at?->diffForHumans() }})
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md m-4 flex flex-col items-center justify-center space-y-2.5">
+                    <div>
+                        <p class="text-body-sm font-bold text-text">Belum ada riwayat perubahan harga.</p>
+                        <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
+                            Riwayat tercatat otomatis setiap harga lapak ditambahkan atau diubah.
+                        </p>
+                    </div>
+                </div>
+            @endif
+        </x-ui.card>
+
         <div x-show="showAddModal"
              x-cloak
              class="fixed inset-0 z-50 overflow-y-auto"
@@ -295,8 +445,10 @@
                             <h3 class="text-heading-sm font-bold text-text">Tambah Harga Lapak</h3>
                             <p class="text-caption text-text-muted mt-0.5">Petakan harga beli agregator untuk material dari Master Sampah</p>
                         </div>
-                        <button type="button" @click="showAddModal = false" class="p-1 text-text-muted hover:text-text">
-                            ✕
+                        <button type="button" @click="showAddModal = false" aria-label="Tutup dialog tambah harga" class="min-w-[44px] min-h-[44px] p-2.5 -m-1 rounded-radius-sm text-text-muted hover:text-text hover:bg-surface-muted transition-subtle flex items-center justify-center cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </div>
 
@@ -391,8 +543,10 @@
                             <h3 class="text-heading-sm font-bold text-text">Edit Harga Lapak</h3>
                             <p class="text-caption text-text-muted mt-0.5">Perbarui harga agregator untuk material ini</p>
                         </div>
-                        <button type="button" @click="showEditModal = false" class="p-1 text-text-muted hover:text-text">
-                            ✕
+                        <button type="button" @click="showEditModal = false" aria-label="Tutup dialog edit harga" class="min-w-[44px] min-h-[44px] p-2.5 -m-1 rounded-radius-sm text-text-muted hover:text-text hover:bg-surface-muted transition-subtle flex items-center justify-center cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </div>
 

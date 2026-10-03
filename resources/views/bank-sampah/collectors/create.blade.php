@@ -1,24 +1,51 @@
 <x-layouts.dashboard title="Tambah Agregator">
-    <x-form-card title="Tambah Agregator" description="Daftarkan agregator baru untuk transaksi bank sampah.">
-        <form method="POST" action="{{ route('bank-sampah.collectors.store') }}">
-            @csrf
-            <x-form-section title="Data Agregator">
-                <div class="space-y-5">
-                    <x-field-group label="Nama Agregator" name="name" required>
-                        <input type="text" name="name" id="name" value="{{ old('name') }}" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    </x-field-group>
+    <div class="max-w-2xl mx-auto space-y-6 pb-12">
+        {{-- Page Header --}}
+        <x-ui.page-header title="Tambah Agregator" description="Daftarkan mitra pengepul baru. Harga lapak per material diatur setelah agregator dibuat.">
+            <x-slot:breadcrumbs>
+                <a href="{{ route('bank-sampah.dashboard') }}" class="hover:text-text transition-subtle">Dashboard</a>
+                <span>&rarr;</span>
+                <a href="{{ route('bank-sampah.collectors.index') }}" class="hover:text-text transition-subtle">Agregator</a>
+                <span>&rarr;</span>
+                <span class="text-text">Tambah</span>
+            </x-slot:breadcrumbs>
+            <x-slot:actions>
+                <x-ui.button variant="outline" size="sm" onclick="window.location='{{ route('bank-sampah.collectors.index') }}'">
+                    &larr; Kembali ke Agregator
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
-                    <x-field-group label="Telepon" name="phone">
-                        <input type="text" name="phone" id="phone" value="{{ old('phone') }}" placeholder="08xxxxxxxxxx" class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    </x-field-group>
+        <x-ui.card variant="bordered" class="space-y-5">
+            <div class="border-b border-border-subtle pb-4">
+                <h2 class="text-heading-sm font-bold text-text">Informasi Agregator</h2>
+                <p class="text-caption text-text-muted mt-0.5">Data profil mitra pengepul. Harga lapak dikelola dari halaman detail setelah agregator tersimpan.</p>
+            </div>
 
-                    <x-field-group label="Alamat" name="address">
-                        <input type="text" name="address" id="address" value="{{ old('address') }}" class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
-                    </x-field-group>
+            <form method="POST" action="{{ route('bank-sampah.collectors.store') }}" class="space-y-5">
+                @csrf
+
+                <x-field-group label="Nama Agregator" name="name" required>
+                    <input type="text" name="name" id="name" value="{{ old('name') }}" required autofocus placeholder="Contoh: Lapak Berkah Jaya" class="block w-full rounded-radius-md border-border bg-surface text-text text-base shadow-subtle min-h-[44px] px-3.5 focus:border-primary focus:ring-1 focus:ring-primary transition-subtle placeholder:text-text-muted" />
+                </x-field-group>
+
+                <x-field-group label="Telepon" name="phone" helper="Nomor kontak yang bisa dihubungi, contoh: 08xxxxxxxxxx.">
+                    <input type="text" name="phone" id="phone" value="{{ old('phone') }}" inputmode="tel" placeholder="08xxxxxxxxxx" class="block w-full rounded-radius-md border-border bg-surface text-text text-base shadow-subtle min-h-[44px] px-3.5 focus:border-primary focus:ring-1 focus:ring-primary transition-subtle placeholder:text-text-muted" />
+                </x-field-group>
+
+                <x-field-group label="Alamat" name="address" helper="Alamat gudang atau lokasi pengepul.">
+                    <input type="text" name="address" id="address" value="{{ old('address') }}" placeholder="Contoh: Jl. Industri No. 12" class="block w-full rounded-radius-md border-border bg-surface text-text text-base shadow-subtle min-h-[44px] px-3.5 focus:border-primary focus:ring-1 focus:ring-primary transition-subtle placeholder:text-text-muted" />
+                </x-field-group>
+
+                <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border-subtle">
+                    <x-ui.button variant="ghost" size="md" onclick="window.location='{{ route('bank-sampah.collectors.index') }}'">
+                        Batal
+                    </x-ui.button>
+                    <x-ui.button type="submit" variant="primary" size="md">
+                        Simpan Agregator
+                    </x-ui.button>
                 </div>
-            </x-form-section>
-
-            <x-form-actions cancelUrl="{{ route('bank-sampah.collectors.index') }}" submitLabel="Simpan Agregator" />
-        </form>
-    </x-form-card>
+            </form>
+        </x-ui.card>
+    </div>
 </x-layouts.dashboard>
