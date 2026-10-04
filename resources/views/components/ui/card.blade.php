@@ -2,10 +2,13 @@
     'variant' => 'bordered', // bordered, muted, flat
     'title' => null,
     'description' => null,
+    'overflow' => null,
 ])
 
 @php
-$baseClasses = 'transition-subtle overflow-hidden';
+$hasOverflowClass = str_contains($attributes->get('class', ''), 'overflow-');
+$defaultOverflow = $overflow ?? ($hasOverflowClass ? '' : 'overflow-hidden');
+$baseClasses = 'transition-subtle ' . $defaultOverflow;
 
 $variantClasses = [
     'bordered' => 'bg-surface border border-border rounded-radius-lg shadow-subtle p-5 sm:p-6',

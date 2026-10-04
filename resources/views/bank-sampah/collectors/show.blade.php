@@ -114,12 +114,13 @@
                         </svg>
                         + Import Harga
                     </a>
-                    <x-ui.button type="button" variant="primary" size="sm" @click="openAddModal()">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <a href="{{ route('bank-sampah.collectors.prices.create', $collector) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-radius-md bg-primary text-white text-caption font-semibold hover:bg-primary-hover shadow-subtle transition-subtle cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                         + Tambah Harga
-                    </x-ui.button>
+                    </a>
                 </div>
             </div>
 
@@ -245,11 +246,10 @@
                         </p>
                     </div>
                     <div class="flex items-center gap-2.5 pt-1">
-                        <button type="button"
-                                @click="openAddModal()"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary text-white text-caption font-semibold hover:bg-primary-hover shadow-subtle transition-subtle cursor-pointer">
+                        <a href="{{ route('bank-sampah.collectors.prices.create', $collector) }}"
+                           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md bg-primary text-white text-caption font-semibold hover:bg-primary-hover shadow-subtle transition-subtle cursor-pointer">
                             + Tambah Harga
-                        </button>
+                        </a>
                         <a href="{{ route('bank-sampah.collectors.import', $collector) }}"
                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-radius-md border border-border bg-surface text-text hover:bg-surface-muted text-caption font-semibold transition-subtle shadow-subtle cursor-pointer">
                             <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -402,103 +402,8 @@
             @endif
         </x-ui.card>
 
-        <div x-show="showAddModal"
-             x-cloak
-             class="fixed inset-0 z-50 overflow-y-auto"
-             role="dialog"
-             aria-modal="true">
-            <div x-show="showAddModal"
-                 x-transition:enter="ease-out duration-200"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in duration-150"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-                 @click="showAddModal = false"></div>
-
-            <div class="flex min-h-full items-end sm:items-center justify-center p-3 sm:p-4 text-center sm:p-0">
-                <div x-show="showAddModal"
-                     x-transition:enter="ease-out duration-200"
-                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                     x-transition:leave="ease-in duration-150"
-                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                     class="relative transform overflow-hidden rounded-radius-lg bg-surface border border-border text-left shadow-popover transition-all sm:my-8 sm:w-full sm:max-w-lg p-5 sm:p-6 space-y-4">
-                    
-                    <div class="flex items-start justify-between border-b border-border-subtle pb-3">
-                        <div>
-                            <h3 class="text-heading-sm font-bold text-text">Tambah Harga Lapak</h3>
-                            <p class="text-caption text-text-muted mt-0.5">Petakan harga beli agregator untuk material dari Master Sampah</p>
-                        </div>
-                        <button type="button" @click="showAddModal = false" aria-label="Tutup dialog tambah harga" class="min-w-[44px] min-h-[44px] p-2.5 -m-1 rounded-radius-sm text-text-muted hover:text-text hover:bg-surface-muted transition-subtle flex items-center justify-center cursor-pointer">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <form method="POST" action="{{ route('bank-sampah.collectors.prices.store', $collector) }}" class="space-y-4">
-                        @csrf
-
-                        {{-- Pilih Material dari Master Material --}}
-                        <div class="space-y-1">
-                            <x-input-label for="waste_category_id" value="Pilih Material (Master Sampah)" :required="true" />
-                            <select name="waste_category_id"
-                                    id="waste_category_id"
-                                    required
-                                    x-model.number="selectedCategory"
-                                    @change="onCategorySelect()"
-                                    class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text px-3 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                                <option value="">-- Pilih Material dari Master --</option>
-                                @foreach($categories as $cat)
-                                    @php
-                                        $alreadyHasPrice = $collector->wastePrices->contains('waste_category_id', $cat->id);
-                                    @endphp
-                                    <option value="{{ $cat->id }}" @disabled($alreadyHasPrice)>
-                                        {{ $cat->name }} ({{ $cat->code ?? '-' }}) — Satuan: {{ $cat->unit }} {{ $alreadyHasPrice ? '[Sudah ada harga]' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Satuan Mengikuti Master (Read-only Indicator) --}}
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="space-y-1">
-                                <span class="text-caption font-bold uppercase tracking-wider text-text-muted block">Satuan Ukuran</span>
-                                <div class="px-3 py-2 rounded-radius-md bg-surface-muted border border-border font-mono text-body-sm font-semibold text-text" x-text="categoryUnit || '-'"></div>
-                                <span class="text-caption text-text-muted">Mengikuti master kategori</span>
-                            </div>
-
-                            {{-- Input Harga Lapak --}}
-                            <div class="space-y-1">
-                                <x-input-label for="collector_price" value="Harga Lapak (Rp)" :required="true" />
-                                <x-text-input type="number"
-                                              name="collector_price"
-                                              id="collector_price"
-                                              step="1"
-                                              min="0"
-                                              placeholder="Contoh: 2500"
-                                              required />
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
-                            <button type="button" @click="showAddModal = false" class="px-4 py-2 rounded-radius-md border border-border bg-surface text-text hover:bg-surface-muted text-body-sm font-semibold transition-subtle">
-                                Batal
-                            </button>
-                            <x-ui.button type="submit" variant="primary" size="md">
-                                Simpan Harga
-                            </x-ui.button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
         {{-- ========================================================= --}}
-        {{-- MODAL 2: EDIT HARGA LAPAK                                 --}}
+        {{-- MODAL: EDIT HARGA LAPAK (tetap memakai mekanisme existing) --}}
         {{-- ========================================================= --}}
         <div x-show="showEditModal"
              x-cloak
@@ -581,30 +486,13 @@
     {{-- Script Logika Alpine --}}
     <script>
         function collectorPricesManager() {
-            const categories = @json($categories->map(fn($c) => ['id' => $c->id, 'unit' => $c->unit]));
-
             return {
-                categories: categories,
-                showAddModal: false,
                 showEditModal: false,
-                selectedCategory: '',
-                categoryUnit: '',
                 editPriceId: null,
                 editMaterialName: '',
                 editUnit: '',
                 editPrice: 0,
                 editActionUrl: '',
-
-                openAddModal() {
-                    this.selectedCategory = '';
-                    this.categoryUnit = '';
-                    this.showAddModal = true;
-                },
-
-                onCategorySelect() {
-                    const found = this.categories.find(c => c.id == this.selectedCategory);
-                    this.categoryUnit = found ? found.unit : '';
-                },
 
                 openEditModal(id, name, unit, price) {
                     this.editPriceId = id;

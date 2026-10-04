@@ -615,12 +615,14 @@
                                                             <span class="block text-body-sm text-warning-text font-semibold mt-0.5">Nama ganda di database &rarr; pilih yang sesuai:</span>
                                                         </div>
                                                         <div class="flex items-center gap-2 flex-1 max-w-md">
-                                                            <select name="customer_mappings[{{ $rawCust }}]" aria-label="Pilih Nasabah untuk {{ $rawCust }}" class="w-full text-body rounded-radius-md border-border bg-surface text-text py-2">
-                                                                <option value="">-- Pilih Nasabah --</option>
-                                                                @foreach($customers as $c)
-                                                                    <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->customer_code }})</option>
-                                                                @endforeach
-                                                            </select>
+                                                            <x-ui.combobox
+                                                                name="customer_mappings[{{ $rawCust }}]"
+                                                                :options="$customers"
+                                                                placeholder="-- Pilih Nasabah --"
+                                                                searchPlaceholder="Cari nama atau kode nasabah..."
+                                                                allowClear
+                                                                compact
+                                                            />
                                                         </div>
                                                     </div>
                                                 @endforeach

@@ -17,6 +17,11 @@ class WastePriceController extends Controller
     {
         $search = $request->input('search');
         $groupId = $request->input('waste_category_group_id');
+        $collectorId = $request->input('collector_id');
+
+        $collectors = Collector::orderBy('name')->get();
+        $selectedCollectorId = $collectorId ?? $collectors->first()?->id;
+        $compareBId = $request->input('compare_b', $collectors->count() > 1 ? $collectors[1]->id : null);
 
         // Primary dataset is WasteCategory so every material stays visible
         // even when it has no aggregator price (WastePrice) yet.
@@ -57,7 +62,8 @@ class WastePriceController extends Controller
         $uncategorizedCount = WasteCategory::whereNull('waste_category_group_id')->count();
 
         return view('bank-sampah.waste-prices.index', compact(
-            'categories', 'search', 'groupId', 'groups', 'totalCategories', 'totalActivePrices', 'uncategorizedCount'
+            'categories', 'search', 'groupId', 'groups', 'totalCategories', 'totalActivePrices', 'uncategorizedCount',
+            'collectors', 'selectedCollectorId', 'compareBId'
         ));
     }
 

@@ -60,12 +60,15 @@
                 </div>
                 <div>
                     <label class="block text-body-sm font-semibold text-text-muted uppercase tracking-wider mb-1">Nasabah</label>
-                    <select name="waste_customer_id" class="block w-full rounded-radius-md border-border bg-surface text-body-sm shadow-sm focus:ring-primary focus:border-primary">
-                        <option value="">Semua Nasabah</option>
-                        @foreach($customers as $c)
-                            <option value="{{ $c->id }}" {{ $customerId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-ui.combobox
+                        name="waste_customer_id"
+                        :options="$customers"
+                        :value="$customerId"
+                        placeholder="Semua Nasabah"
+                        searchPlaceholder="Cari nasabah..."
+                        allowClear
+                        compact
+                    />
                 </div>
                 <div>
                     <label class="block text-body-sm font-semibold text-text-muted uppercase tracking-wider mb-1">Tipe Transaksi</label>

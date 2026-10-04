@@ -84,6 +84,20 @@ class CollectorController extends Controller
             ->with('success', 'Data pengepul berhasil dihapus.');
     }
 
+    public function createPrice(Collector $collector)
+    {
+        $pricedCategoryIds = $collector->wastePrices()->pluck('waste_category_id')->all();
+
+        $categories = WasteCategory::with('wasteCategoryGroup')
+            ->whereNotIn('id', $pricedCategoryIds ?: [0])
+            ->orderBy('name')
+            ->get();
+
+        $collector->loadCount('wastePrices');
+
+        return view('bank-sampah.collectors.prices.create', compact('collector', 'categories'));
+    }
+
     public function storePrice(Request $request, Collector $collector)
     {
         $validated = $request->validate([
@@ -125,7 +139,8 @@ class CollectorController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Harga lapak berhasil ditambahkan.');
+        return redirect()->route('bank-sampah.collectors.show', $collector)
+            ->with('success', 'Harga lapak berhasil ditambahkan.');
     }
 
     public function updatePrice(Request $request, Collector $collector, WastePrice $wastePrice)

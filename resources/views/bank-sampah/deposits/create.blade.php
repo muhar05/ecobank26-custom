@@ -48,7 +48,7 @@
             })->values()->all();
     @endphp
 
-    <div x-data="depositWorkflow()" @keydown.window="handleGlobalKeydown($event)" x-cloak class="max-w-5xl mx-auto space-y-6 pb-12">
+    <div x-data="depositWorkflow()" @keydown.window="handleGlobalKeydown($event)" x-cloak class="space-y-6 max-w-7xl mx-auto pb-10">
         {{-- Page Header --}}
         <x-ui.page-header title="Setoran Sampah" description="Catat penimbangan sampah nasabah aktif dengan cepat">
             <x-slot:breadcrumbs>
@@ -78,7 +78,7 @@
             {{-- ========================================================= --}}
             {{-- STEP 1: NASABAH (SEARCH-CENTERED SELECTION)               --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 overflow-visible">
                 {{-- State A: Belum Memilih Nasabah --}}
                 <div x-show="!selectedCustomer" class="space-y-4">
                     <div class="flex items-center justify-between border-b border-border-subtle pb-3">
@@ -112,7 +112,8 @@
                         {{-- Search Results Dropdown --}}
                         <div x-show="customerDropdownOpen && filteredCustomers.length > 0"
                              x-transition.opacity.duration.100ms
-                             class="absolute z-30 left-0 right-0 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-60 overflow-y-auto divide-y divide-border-subtle">
+                             class="absolute z-50 left-0 right-0 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-60 overflow-y-auto divide-y divide-border-subtle"
+                             style="display: none;">
                             <template x-for="(cust, cIdx) in filteredCustomers" :key="cust.id">
                                 <div @mousedown.prevent="selectCustomer(cust)"
                                      @mouseenter="customerHighlightIndex = cIdx"
@@ -185,7 +186,7 @@
             {{-- ========================================================= --}}
             {{-- STEP 2: MATERIAL SETORAN (HYBRID TABLE-LIKE INPUT)        --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="space-y-4">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 space-y-4 overflow-visible">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">2. Rincian Material Timbangan</h2>
@@ -204,22 +205,25 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-border text-caption font-bold text-text-muted uppercase tracking-wider">
-                                <th class="py-3 px-3 w-8 text-center">#</th>
-                                <th class="py-3 px-3 min-w-[240px]">Material / Jenis Sampah</th>
-                                <th class="py-3 px-3 w-36 text-right">Berat (kg)</th>
-                                <th class="py-3 px-3 w-40 text-right">Harga Beli</th>
-                                <th class="py-3 px-3 w-40 text-right">Subtotal</th>
-                                <th class="py-3 px-2 w-12 text-center"></th>
+                                <th class="py-3.5 px-4 w-8 text-center">#</th>
+                                <th class="py-3.5 px-4 min-w-[240px]">Material / Jenis Sampah</th>
+                                <th class="py-3.5 px-4 w-36 text-right">Berat (kg)</th>
+                                <th class="py-3.5 px-4 w-40 text-right">Harga Beli</th>
+                                <th class="py-3.5 px-4 w-40 text-right">Subtotal</th>
+                                <th class="py-3.5 px-2 w-12 text-center"></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             <template x-for="(row, i) in rows" :key="row.id">
-                                <tr class="group hover:bg-surface-muted/50 transition-subtle">
+                                <tr class="group hover:bg-surface-muted/50 transition-subtle"
+                                    :class="row.dropdownOpen ? 'relative z-40' : ''">
                                     {{-- Index --}}
-                                    <td class="py-3 px-3 text-center text-body font-mono text-text-muted" x-text="i + 1"></td>
+                                    <td class="py-3.5 px-4 text-center text-body font-mono text-text-muted" x-text="i + 1"></td>
 
                                     {{-- Material Search Combobox --}}
-                                    <td class="py-3 px-3 relative" @click.outside="row.dropdownOpen = false">
+                                    <td class="py-3.5 px-4 relative"
+                                        :class="row.dropdownOpen ? 'z-40' : ''"
+                                        @click.outside="row.dropdownOpen = false">
                                         <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
 
                                         <div class="relative">
@@ -248,7 +252,7 @@
                                         {{-- Material Dropdown Results --}}
                                         <div x-show="row.dropdownOpen"
                                              x-transition.opacity.duration.100ms
-                                             class="absolute z-30 left-3 right-3 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-56 overflow-y-auto divide-y divide-border-subtle">
+                                             class="absolute z-50 left-3 right-3 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-56 overflow-y-auto divide-y divide-border-subtle min-w-[280px]">
                                             <template x-for="(cat, catIdx) in getFilteredMaterials(row.searchQuery)" :key="cat.uniqueKey || cat.id">
                                                 <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                      @mouseenter="row.highlightedIndex = catIdx"
@@ -276,7 +280,7 @@
                                                     <p>Material tidak ditemukan.</p>
                                                     <button type="button" 
                                                             @click="openQuickAddModal(row.searchQuery, i)"
-                                                            class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline min-h-[44px]"
+                                                            class="inline-flex items-center gap-1.5 text-body-sm font-bold text-primary hover:underline min-h-[44px]">
                                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                                         + Tambah Sebagai Jenis Sampah Baru
                                                     </button>
@@ -286,7 +290,7 @@
                                     </td>
 
                                     {{-- Weight Input --}}
-                                    <td class="py-3 px-3 text-right">
+                                    <td class="py-3.5 px-4 text-right">
                                         <input type="number"
                                                step="any"
                                                min="0"
@@ -299,7 +303,7 @@
                                     </td>
 
                                     {{-- Price with Override Support --}}
-                                    <td class="py-3 px-3 text-right whitespace-nowrap">
+                                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
                                         <input type="hidden" :name="'details[' + i + '][price_per_unit]'" :value="row.price">
 
                                         <template x-if="!row.editingPrice">
@@ -336,10 +340,10 @@
                                     </td>
 
                                     {{-- Subtotal --}}
-                                    <td class="py-3 px-3 text-right font-mono font-bold text-body text-text whitespace-nowrap" x-text="formatRp(calculateRowSubtotal(row))"></td>
+                                    <td class="py-3.5 px-4 text-right font-mono font-bold text-body text-text whitespace-nowrap" x-text="formatRp(calculateRowSubtotal(row))"></td>
 
                                     {{-- Delete Row Action --}}
-                                    <td class="py-3 px-2 text-center">
+                                    <td class="py-3.5 px-2 text-center">
                                         <button type="button" 
                                                 @click="removeRow(i)" 
                                                 title="Hapus baris ini"
@@ -356,7 +360,8 @@
                 {{-- MOBILE VIEW: Stacked Adaptive Cards (< md) --}}
                 <div class="block md:hidden space-y-3">
                     <template x-for="(row, i) in rows" :key="row.id">
-                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
+                        <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3"
+                             :class="row.dropdownOpen ? 'relative z-40' : ''">
                             <div class="flex items-start justify-between gap-3">
                                 <span class="text-caption font-bold text-text-muted font-mono pt-2" x-text="'#' + (i + 1)"></span>
                                 <div class="flex-1 relative" @click.outside="row.dropdownOpen = false">
@@ -374,7 +379,7 @@
                                     {{-- Mobile material dropdown results (same source as desktop) --}}
                                     <div x-show="row.dropdownOpen"
                                          x-transition.opacity.duration.100ms
-                                         class="absolute z-30 left-0 right-0 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-56 overflow-y-auto divide-y divide-border-subtle">
+                                         class="absolute z-50 left-0 right-0 mt-1.5 bg-surface rounded-radius-md shadow-popover border border-border max-h-56 overflow-y-auto divide-y divide-border-subtle">
                                         <template x-for="(cat, catIdx) in getFilteredMaterials(row.searchQuery)" :key="cat.uniqueKey || cat.id">
                                             <div @mousedown.prevent="selectMaterial(row, cat, i)"
                                                  @mouseenter="row.highlightedIndex = catIdx"
@@ -468,7 +473,7 @@
             {{-- ========================================================= --}}
             {{-- STEP 3: TOTAL SETORAN & ACTION BUTTONS                    --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="bg-surface">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 bg-surface">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center border-b border-border-subtle pb-5">
                     <div>
                         <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Material</span>
@@ -516,10 +521,10 @@
         {{-- ========================================================= --}}
         {{-- ACCORDION: REKAP TIMBANGAN HARI INI                       --}}
         {{-- ========================================================= --}}
-        <div x-data="{ recapOpen: false }" class="pt-4">
+        <div x-data="{ recapOpen: false }" class="pt-2">
             <button type="button" 
                     @click="recapOpen = !recapOpen"
-                    class="w-full flex items-center justify-between p-4 rounded-radius-md bg-surface border border-border shadow-subtle hover:bg-surface-muted transition-subtle text-left">
+                    class="w-full flex items-center justify-between p-4 sm:p-5 rounded-radius-md bg-surface border border-border shadow-subtle hover:bg-surface-muted transition-subtle text-left">
                 <div class="flex items-center gap-2.5">
                     <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

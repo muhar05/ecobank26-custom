@@ -19,7 +19,7 @@
         })->values()->all();
     @endphp
 
-    <div x-data="saleCreateWorkflow()" x-cloak class="max-w-5xl mx-auto space-y-6 pb-12">
+    <div x-data="saleCreateWorkflow()" x-cloak class="space-y-6 max-w-7xl mx-auto pb-10">
         {{-- Page Header --}}
         <x-ui.page-header title="Catat Penjualan ke Agregator" description="Muat timbangan sampah terpilah ke truk agregator dan pantau margin kas bank sampah">
             <x-slot:breadcrumbs>
@@ -64,28 +64,65 @@
             {{-- ========================================================= --}}
             {{-- STEP 1 & 2: AGREGATOR & TANGGAL PENJUALAN                 --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="space-y-4">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 space-y-4 overflow-visible">
                 <div class="border-b border-border-subtle pb-3">
                     <h2 class="text-heading-sm font-bold text-text">1. Agregator & Tanggal Penjualan</h2>
                     <p class="text-body-sm text-text-muted mt-0.5">Tentukan mitra agregator pembeli dan tanggal muat timbangan</p>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                    {{-- Agregator Selection --}}
-                    <div class="sm:col-span-6 space-y-1">
-                        <x-input-label for="collector_id" value="Pilih Mitra Agregator" :required="true" />
-                        <select name="collector_id"
-                                id="collector_id"
-                                required
-                                x-model="collectorId"
-                                @change="updateAllPrices()"
-                                class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                            <option value="">-- Pilih Mitra Agregator --</option>
-                            @foreach($collectors as $c)
-                                <option value="{{ $c->id }}" @selected(old('collector_id', request('collector_id')) == $c->id)>{{ $c->name }}</option>
-                            @endforeach
-                        </select>
+                    {{-- Agregator Selection (Contextual Selector) --}}
+                    <div class="sm:col-span-6 space-y-2">
+                        <div>
+                            <x-input-label for="collector_id" value="Pilih Mitra Agregator Pembeli" :required="true" />
+                            <p class="text-caption text-text-muted mt-0.5">Agregator acuan harga lapak dan kalkulasi margin transaksi ini.</p>
+                        </div>
+
+                        <x-ui.combobox
+                            name="collector_id"
+                            x-model="collectorId"
+                            @change="updateAllPrices()"
+                            :options="$collectors"
+                            placeholder="-- Pilih Mitra Agregator --"
+                            searchPlaceholder="Cari nama agregator..."
+                            emptyText="Agregator tidak ditemukan."
+                            required
+                        />
                         @error('collector_id') <p class="text-caption text-danger mt-1">{{ $message }}</p> @enderror
+
+                        {{-- Neutral hint when collector is not yet selected --}}
+                        <template x-if="!collectorId">
+                            <div class="p-3 rounded-radius-md bg-surface-muted/60 border border-border-subtle flex items-start gap-2 text-text-muted">
+                                <svg class="w-4 h-4 text-text-muted mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <p class="text-caption leading-relaxed">
+                                    Pilih agregator pembeli untuk memuat sisa setoran dan mengaktifkan harga lapak.
+                                </p>
+                            </div>
+                        </template>
+
+                        {{-- Contextual feedback when collector is selected --}}
+                        <template x-if="collectorId && getSelectedCollector(collectorId)">
+                            <div class="p-3.5 rounded-radius-md bg-primary-light/30 border border-primary/20 space-y-1.5 transition-subtle">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></span>
+                                        <span class="text-body-sm font-bold text-text truncate" x-text="getSelectedCollector(collectorId).name"></span>
+                                    </div>
+                                    <span class="font-mono text-caption text-primary font-bold px-2 py-0.5 rounded bg-primary-light shrink-0"
+                                          x-text="getCollectorPriceCount(collectorId) + ' Material Terdaftar'"></span>
+                                </div>
+                                <template x-if="getSelectedCollector(collectorId).phone">
+                                    <p class="text-caption text-text-muted font-mono" x-text="'Kontak: ' + getSelectedCollector(collectorId).phone"></p>
+                                </template>
+                                <template x-if="getCollectorPriceCount(collectorId) === 0">
+                                    <p class="text-caption font-semibold text-warning">
+                                        ⚠️ Agregator ini belum memiliki katalog harga lapak terdaftar. Harga jual akan bernilai Rp 0.
+                                    </p>
+                                </template>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Tanggal Penjualan --}}
@@ -117,7 +154,7 @@
             {{-- ========================================================= --}}
             {{-- STEP 3: RINCIAN MATERIAL TIMBANGAN JUAL                   --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="space-y-4">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 space-y-4 overflow-visible">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">2. Rincian Material yang Dijual</h2>
@@ -178,45 +215,46 @@
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-border text-caption font-bold text-text-muted uppercase tracking-wider">
-                                        <th class="py-3 px-3 w-8 text-center">#</th>
-                                        <th class="py-3 px-3 min-w-[220px]">Material / Jenis Sampah</th>
-                                        <th class="py-3 px-3 w-32 text-right">Sisa Setoran</th>
-                                        <th class="py-3 px-3 w-36 text-right">Berat Dijual (kg)</th>
-                                        <th class="py-3 px-3 w-36 text-right">Harga Agregator</th>
-                                        <th class="py-3 px-3 w-36 text-right">Subtotal</th>
-                                        <th class="py-3 px-3 w-36 text-right">Margin Bank</th>
-                                        <th class="py-3 px-2 w-10 text-center"></th>
+                                        <th class="py-3.5 px-4 w-8 text-center">#</th>
+                                        <th class="py-3.5 px-4 min-w-[220px]">Material / Jenis Sampah</th>
+                                        <th class="py-3.5 px-4 w-32 text-right">Sisa Setoran</th>
+                                        <th class="py-3.5 px-4 w-36 text-right">Berat Dijual (kg)</th>
+                                        <th class="py-3.5 px-4 w-36 text-right">Harga Agregator</th>
+                                        <th class="py-3.5 px-4 w-36 text-right">Subtotal</th>
+                                        <th class="py-3.5 px-4 w-36 text-right">Margin Bank</th>
+                                        <th class="py-3.5 px-2 w-10 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-border-subtle">
                                     <template x-for="(row, i) in rows" :key="row.catId">
                                         <tr class="group hover:bg-surface-muted/50 transition-subtle">
                                             {{-- Number --}}
-                                            <td class="py-3 px-3 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
+                                            <td class="py-3.5 px-4 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
 
                                             {{-- Material Selector --}}
-                                            <td class="py-3 px-3">
+                                            <td class="py-3.5 px-4">
                                                 <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
-                                                <select x-model.number="row.catId"
-                                                        @change="onCategoryChange(row)"
-                                                        class="w-full text-body-sm font-semibold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                                                    <template x-for="cat in allCategories" :key="cat.id">
-                                                        <option :value="cat.id" x-text="cat.name" :selected="cat.id == row.catId"></option>
-                                                    </template>
-                                                </select>
+                                                <x-ui.combobox
+                                                    x-model="row.catId"
+                                                    @change="onCategoryChange(row)"
+                                                    :options="$wasteCategories"
+                                                    placeholder="Pilih Material..."
+                                                    searchPlaceholder="Cari material..."
+                                                    compact
+                                                />
                                                 <span class="text-caption text-text-muted block mt-0.5">
                                                     Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(row.memberPrice)"></strong> / <span x-text="row.unit || 'kg'"></span>
                                                 </span>
                                             </td>
 
                                             {{-- Sisa Setoran --}}
-                                            <td class="py-3 px-3 text-right">
+                                            <td class="py-3.5 px-4 text-right">
                                                 <span class="font-mono text-body-sm font-bold text-text block" x-text="row.remainingWeight !== undefined ? row.remainingWeight.toFixed(2) + ' ' + (row.unit || 'kg') : '-'"></span>
                                                 <span class="text-caption text-text-muted block">Tersedia</span>
                                             </td>
 
                                             {{-- Berat Dijual Input --}}
-                                            <td class="py-3 px-3 text-right">
+                                            <td class="py-3.5 px-4 text-right">
                                                 <input type="number"
                                                        step="0.01"
                                                        min="0.01"
@@ -236,7 +274,7 @@
                                             </td>
 
                                             {{-- Harga Agregator --}}
-                                            <td class="py-3 px-3 text-right whitespace-nowrap">
+                                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
                                                 <template x-if="row.hasPrice">
                                                     <div>
                                                         <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(row.price)"></span>
@@ -254,18 +292,18 @@
                                             </td>
 
                                             {{-- Subtotal Penjualan --}}
-                                            <td class="py-3 px-3 text-right font-mono font-bold text-body text-text whitespace-nowrap">
+                                            <td class="py-3.5 px-4 text-right font-mono font-bold text-body text-text whitespace-nowrap">
                                                 <span x-text="formatRp(rowSubtotal(row))"></span>
                                             </td>
 
                                             {{-- Margin Kas Bank Sampah --}}
-                                            <td class="py-3 px-3 text-right font-mono font-bold text-body whitespace-nowrap">
+                                            <td class="py-3.5 px-4 text-right font-mono font-bold text-body whitespace-nowrap">
                                                 <span :class="rowMargin(row) > 0 ? 'text-success-text' : (rowMargin(row) < 0 ? 'text-danger-text' : 'text-text-muted')"
                                                       x-text="formatRp(rowMargin(row))"></span>
                                             </td>
 
                                             {{-- Action Remove --}}
-                                            <td class="py-3 px-2 text-center">
+                                            <td class="py-3.5 px-2 text-center">
                                                 <button type="button"
                                                         @click="removeRow(i)"
                                                         title="Hapus baris"
@@ -287,13 +325,14 @@
                                 <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="flex-1">
-                                            <select x-model.number="row.catId"
-                                                    @change="onCategoryChange(row)"
-                                                    class="w-full text-body-sm font-semibold rounded-radius-md border border-border bg-surface text-text p-2">
-                                                <template x-for="cat in allCategories" :key="cat.id">
-                                                    <option :value="cat.id" x-text="cat.name" :selected="cat.id == row.catId"></option>
-                                                </template>
-                                            </select>
+                                            <x-ui.combobox
+                                                x-model="row.catId"
+                                                @change="onCategoryChange(row)"
+                                                :options="$wasteCategories"
+                                                placeholder="Pilih Material..."
+                                                searchPlaceholder="Cari material..."
+                                                compact
+                                            />
                                         </div>
                                         <button type="button" @click="removeRow(i)" class="p-2 text-text-muted hover:text-danger">
                                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,15 +358,20 @@
                                                step="0.01"
                                                min="0.01"
                                                :max="row.remainingWeight || undefined"
+                                               :name="'details[' + i + '][weight]'"
                                                x-model.number="row.weight"
                                                placeholder="0.00"
-                                               class="w-full text-body font-mono font-bold rounded-radius-md border border-border p-2">
+                                               class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
+                                               :class="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight ? 'border-danger text-danger' : ''">
+
                                         <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
-                                            <span class="text-caption text-danger font-semibold block mt-1">Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)</span>
+                                            <span class="text-caption font-semibold text-danger block mt-1">
+                                                Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)!
+                                            </span>
                                         </template>
                                     </div>
 
-                                    <div class="pt-2 border-t border-border-subtle flex items-center justify-between text-body-sm">
+                                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-border-subtle text-body-sm">
                                         <div>
                                             <span class="text-caption text-text-muted block">Margin Kas:</span>
                                             <span class="font-mono font-bold text-success-text" x-text="formatRp(rowMargin(row))"></span>
@@ -347,7 +391,7 @@
             {{-- ========================================================= --}}
             {{-- STEP 4: TOTAL PENJUALAN & MARGIN KAS                      --}}
             {{-- ========================================================= --}}
-            <x-ui.card variant="bordered" class="bg-surface">
+            <x-ui.card variant="bordered" class="p-4 sm:p-5 bg-surface">
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center border-b border-border-subtle pb-5">
                     <div>
                         <span class="block text-caption font-bold uppercase tracking-wider text-text-muted">Total Material</span>
@@ -396,6 +440,7 @@
     <script>
         function saleCreateWorkflow() {
             const allCategories = @json($categoryOptions);
+            const allCollectors = @json($collectorOptions);
             const prices = @json($wastePrices);
 
             return {
@@ -404,10 +449,20 @@
                 notes: '{{ old("notes", "") }}',
                 prices: prices,
                 allCategories: allCategories,
+                allCollectors: allCollectors,
                 rows: [],
                 availableRecap: [],
                 loadingRecap: false,
                 submitting: false,
+
+                getSelectedCollector(id) {
+                    return this.allCollectors.find(c => c.id == id) || null;
+                },
+
+                getCollectorPriceCount(id) {
+                    if (!id || !this.prices[id]) return 0;
+                    return Object.keys(this.prices[id]).length;
+                },
 
                 init() {
                     const oldRows = @json(old('details', []));

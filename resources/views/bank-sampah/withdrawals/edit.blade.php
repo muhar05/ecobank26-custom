@@ -5,12 +5,13 @@
             <x-form-section title="Data Nasabah">
                 <div class="space-y-5">
                     <x-field-group label="Nasabah" name="waste_customer_id" required>
-                        <select name="waste_customer_id" id="waste_customer_id" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-body focus:border-primary focus:ring-primary">
-                            <option value="">-- Pilih Nasabah --</option>
-                            @foreach($customers as $c)
-                                <option value="{{ $c->id }}" {{ old('waste_customer_id', $withdrawal->waste_customer_id) == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->customer_code }})</option>
-                            @endforeach
-                        </select>
+                        <x-ui.combobox name="waste_customer_id"
+                                       :options="$customers"
+                                       :value="old('waste_customer_id', $withdrawal->waste_customer_id)"
+                                       placeholder="-- Pilih Nasabah --"
+                                       searchPlaceholder="Cari nama atau kode nasabah (NSB-...)..."
+                                       emptyText="Nasabah tidak ditemukan."
+                                       required />
                     </x-field-group>
 
                     <div class="rounded-radius-md bg-warning-light border border-warning/30 p-3">

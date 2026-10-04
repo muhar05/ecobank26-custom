@@ -52,13 +52,17 @@
                            class="w-full text-body rounded-radius-md border border-border bg-surface text-text pl-10 pr-4 py-2 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                 </div>
 
-                <div class="flex items-center gap-2.5">
-                    <select name="status"
-                            class="text-body-sm rounded-radius-md border border-border bg-surface text-text py-2 pl-3 pr-8 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                        <option value="">Semua Status</option>
-                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif</option>
-                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Nonaktif</option>
-                    </select>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <x-ui.filter-pills
+                        name="status"
+                        :value="request('status')"
+                        :options="[
+                            ['value' => '', 'label' => 'Semua Status'],
+                            ['value' => 'active', 'label' => 'Aktif'],
+                            ['value' => 'inactive', 'label' => 'Nonaktif'],
+                        ]"
+                        autoSubmit
+                    />
 
                     <x-ui.button type="submit" variant="secondary" size="md">
                         Filter

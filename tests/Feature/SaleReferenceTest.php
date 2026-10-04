@@ -269,6 +269,11 @@ class SaleReferenceTest extends TestCase
         $res->assertSee('+ Tambah Baris', false);
         $res->assertSee('Konfirmasi Penjualan', false);
 
+        // Layout & Padding consistency with Index
+        $res->assertSee('space-y-6 max-w-7xl mx-auto pb-10', false);
+        $res->assertSee('p-4 sm:p-5', false);
+        $res->assertSee('py-3.5 px-4', false);
+
         // Anti-Slop: Zero 80vh popup modal / broken duplicate templates
         $res->assertDontSee('modalOpen', false);
         $res->assertDontSee('Pilih Kategori Sampah', false);

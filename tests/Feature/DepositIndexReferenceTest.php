@@ -304,4 +304,28 @@ class DepositIndexReferenceTest extends TestCase
         // Save action stays enabled on edit as well.
         $edit->assertSee('Simpan Perubahan', false);
     }
+
+    public function test_deposit_create_padding_and_unclipped_dropdown_structure(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+        $asAdmin = fn () => $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token);
+
+        $res = $asAdmin()->get(route('bank-sampah.deposits.create'));
+        $res->assertStatus(200);
+
+        // Outer container matches index max-width and vertical padding
+        $res->assertSee('space-y-6 max-w-7xl mx-auto pb-10', false);
+
+        // Cards have overflow-visible and p-4 sm:p-5
+        $res->assertSee('overflow-visible', false);
+        $res->assertSee('p-4 sm:p-5', false);
+
+        // Table cells have py-3.5 px-4 matching index
+        $res->assertSee('py-3.5 px-4', false);
+
+        // Dropdown has z-50 and min-w-[280px] to escape card boundary cleanly
+        $res->assertSee('z-50', false);
+        $res->assertSee('min-w-[280px]', false);
+    }
 }

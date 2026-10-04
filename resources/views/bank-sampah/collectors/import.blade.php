@@ -204,16 +204,18 @@
                                    class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text px-3.5 py-2 placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <span class="text-caption font-bold text-text-muted uppercase">Filter:</span>
-                            <select x-model="filterStatus"
-                                    class="text-body-sm rounded-radius-md border border-border bg-surface text-text py-1.5 px-3 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                                <option value="ALL">Semua Status</option>
-                                <option value="NEEDS_MAPPING">Perlu Mapping</option>
-                                <option value="NEW">Harga Baru</option>
-                                <option value="CHANGED">Harga Berubah</option>
-                                <option value="UNCHANGED">Tidak Berubah</option>
-                            </select>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-caption font-bold text-text-muted uppercase mr-1">Filter:</span>
+                            <x-ui.filter-pills
+                                x-model="filterStatus"
+                                :options="[
+                                    ['value' => 'ALL', 'label' => 'Semua Status'],
+                                    ['value' => 'NEEDS_MAPPING', 'label' => 'Perlu Mapping', 'countExpr' => 'countStatus(\'NEEDS_MAPPING\')'],
+                                    ['value' => 'NEW', 'label' => 'Harga Baru', 'countExpr' => 'countStatus(\'NEW\')'],
+                                    ['value' => 'CHANGED', 'label' => 'Harga Berubah', 'countExpr' => 'countStatus(\'CHANGED\')'],
+                                    ['value' => 'UNCHANGED', 'label' => 'Tidak Berubah', 'countExpr' => 'countStatus(\'UNCHANGED\')'],
+                                ]"
+                            />
                         </div>
                     </div>
 
@@ -250,17 +252,15 @@
                                             {{-- Master Material Selector --}}
                                             <td class="py-3.5 px-4">
                                                 <input type="hidden" :name="'mappings[' + row.index + ']'" :value="row.category_id || ''">
-                                                <select x-model.number="row.category_id"
-                                                        @change="onMappingChange(row)"
-                                                        class="w-full text-body-sm font-semibold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
-                                                        :class="!row.category_id ? 'border-danger text-danger' : ''">
-                                                    <option value="">-- Pilih Master Material --</option>
-                                                    <template x-for="cat in categories" :key="cat.id">
-                                                        <option :value="cat.id"
-                                                                x-text="cat.name + ' (' + (cat.code || '-') + ') [' + cat.unit + ']'"
-                                                                :selected="cat.id == row.category_id"></option>
-                                                    </template>
-                                                </select>
+                                                <x-ui.combobox
+                                                    x-model="row.category_id"
+                                                    @change="onMappingChange(row)"
+                                                    :options="$categories"
+                                                    placeholder="-- Pilih Master Material --"
+                                                    searchPlaceholder="Cari master material (nama/kode)..."
+                                                    compact
+                                                    allowClear
+                                                />
                                                 <template x-if="row.category_unit">
                                                     <span class="text-caption text-text-muted mt-0.5 block font-mono" x-text="'Satuan: ' + row.category_unit"></span>
                                                 </template>

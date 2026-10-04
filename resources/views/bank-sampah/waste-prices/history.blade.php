@@ -39,21 +39,29 @@
 
                 <div>
                     <label class="block text-caption font-bold text-text-muted uppercase tracking-wider mb-1">Material / Kategori</label>
-                    <select name="waste_category_id" class="w-full text-xs rounded-radius-md border-border bg-surface text-text">
-                        <option value="">Semua Material</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ $wasteCategoryId == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                    <x-ui.combobox
+                        name="waste_category_id"
+                        :options="$categories"
+                        :value="$wasteCategoryId"
+                        placeholder="Semua Material"
+                        searchPlaceholder="Cari material..."
+                        allowClear
+                        compact
+                    />
                 </div>
 
                 <div>
                     <label class="block text-caption font-bold text-text-muted uppercase tracking-wider mb-1">Sumber Perubahan</label>
-                    <select name="source" class="w-full text-xs rounded-radius-md border-border bg-surface text-text">
-                        <option value="">Semua Sumber</option>
-                        <option value="MANUAL" {{ $source === 'MANUAL' ? 'selected' : '' }}>Manual (Aplikasi)</option>
-                        <option value="IMPORT" {{ $source === 'IMPORT' ? 'selected' : '' }}>Import Excel</option>
-                    </select>
+                    <x-ui.filter-pills
+                        name="source"
+                        :value="$source"
+                        :options="[
+                            ['value' => '', 'label' => 'Semua'],
+                            ['value' => 'MANUAL', 'label' => 'Manual'],
+                            ['value' => 'IMPORT', 'label' => 'Import'],
+                        ]"
+                        autoSubmit
+                    />
                 </div>
 
                 <div class="flex items-center gap-2">

@@ -49,14 +49,25 @@
 
                     {{-- Status Nasabah --}}
                     <div>
-                        <x-input-label for="status" value="Status Nasabah" :required="true" />
-                        <select name="status"
-                                id="status"
-                                required
-                                class="w-full text-body rounded-radius-md border border-border bg-surface text-text px-3.5 py-2.5 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
-                            <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Aktif (Dapat mencatat setoran & penarikan)</option>
-                            <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Nonaktif (Akun ditangguhkan sementara)</option>
-                        </select>
+                        <x-input-label value="Status Nasabah" :required="true" />
+                        <x-ui.filter-pills
+                            name="status"
+                            :value="old('status', 'active')"
+                            :options="[
+                                [
+                                    'value' => 'active',
+                                    'label' => 'Aktif',
+                                    'description' => 'Nasabah dapat melakukan transaksi setoran dan penarikan saldo.'
+                                ],
+                                [
+                                    'value' => 'inactive',
+                                    'label' => 'Nonaktif',
+                                    'description' => 'Akun ditangguhkan sementara dari transaksi penimbangan & penarikan.'
+                                ],
+                            ]"
+                            cards
+                            required
+                        />
                         <x-input-error :messages="$errors->get('status')" class="mt-1" />
                     </div>
 

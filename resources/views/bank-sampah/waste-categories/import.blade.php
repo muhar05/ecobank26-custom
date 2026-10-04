@@ -80,11 +80,29 @@
             <x-form-section title="2. Pilihan Mode & Upload" description="Sesuaikan strategi penanganan data duplikat dan upload file Excel (.xlsx).">
                 <div class="space-y-4">
                     <x-field-group label="Mode Import" name="mode" required helper="Tentukan strategi jika Kode Kategori sudah ada di database.">
-                        <select name="mode" id="mode" required class="block w-full rounded-radius-md border-border dark:bg-surface-muted dark:text-text shadow-sm text-sm focus:border-primary focus:ring-primary">
-                            <option value="insert_only" {{ old('mode') === 'insert_only' ? 'selected' : '' }}>Insert Only (Tolak baris jika kode sudah terdaftar)</option>
-                            <option value="insert_or_update" {{ old('mode', 'insert_or_update') === 'insert_or_update' ? 'selected' : '' }}>Insert or Update (Perbarui data jika kode sudah terdaftar)</option>
-                            <option value="skip_duplicate" {{ old('mode') === 'skip_duplicate' ? 'selected' : '' }}>Skip Duplicate (Lewati baris jika kode sudah terdaftar)</option>
-                        </select>
+                        <x-ui.filter-pills
+                            name="mode"
+                            :value="old('mode', 'insert_or_update')"
+                            :options="[
+                                [
+                                    'value' => 'insert_or_update',
+                                    'label' => 'Update + Tambah (Disarankan)',
+                                    'description' => 'Perbarui data material yang sudah ada dan tambahkan data baru jika belum terdaftar.'
+                                ],
+                                [
+                                    'value' => 'insert_only',
+                                    'label' => 'Tambah Baru Saja',
+                                    'description' => 'Hanya tambahkan data baru. Baris akan ditolak jika kode kategori sudah terdaftar.'
+                                ],
+                                [
+                                    'value' => 'skip_duplicate',
+                                    'label' => 'Lewati Duplikat',
+                                    'description' => 'Tambahkan data baru dan abaikan baris yang memiliki kode kategori duplikat.'
+                                ],
+                            ]"
+                            cards
+                            required
+                        />
                     </x-field-group>
 
                     @error('file')
