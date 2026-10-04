@@ -163,7 +163,7 @@ class BankSampahService
     /**
      * Calculate remaining deposit weight for each category on a given date.
      * remaining_weight = total_deposited - total_sold
-     * Only returns categories with remaining_weight > 0 that have a collector_price for the given collector.
+     * Includes categories with remaining > 0 even without a collector_price (NULL).
      */
     public function getDailyRemainingWaste(string $date, int $collectorId, ?int $excludeSaleId = null): Collection
     {
@@ -201,10 +201,11 @@ class BankSampahService
             $soldWeight = (float) ($sold[$catId] ?? 0);
             $remaining = round((float) $depWeight - $soldWeight, 2);
 
-            // Only offer if remaining > 0 and aggregator has a collector_price
-            if ($remaining > 0 && isset($collectorPrices[$catId])) {
+            // Show all categories with remaining > 0, even without a collector_price
+            if ($remaining > 0) {
                 $cat = $categories[$catId];
-                $colPrice = (float) $collectorPrices[$catId];
+                $cat = $categories[$catId];
+                $colPrice = isset($collectorPrices[$catId]) ? (float) $collectorPrices[$catId] : null;
                 $memPrice = (float) $cat->member_price;
 
                 $result->push([
@@ -305,6 +306,15 @@ class BankSampahService
             $totalMargin = 0;
             $processedDetails = [];
 
+            // Build detail lookup by category_id for custom_price / save_as_master_price
+            $detailByCat = collect();
+            foreach ($data['details'] as $idx => $d) {
+                $cid = (int) $d['waste_category_id'];
+                if ($cid > 0) {
+                    $detailByCat[$cid] = $d;
+                }
+            }
+
             // 4. Calculate prices, subtotals, and margins (preserving snapshots on edit)
             foreach ($aggregatedWeights as $catId => $weight) {
                 $cat = $categories->get($catId);
@@ -314,12 +324,16 @@ class BankSampahService
                     $collectorPrice = (float) $existingDetailsMap[$catId]->price_per_unit;
                     $memberPrice = (float) $existingDetailsMap[$catId]->member_price;
                 } else {
-                    // New item: check master aggregator price and margin rule
-                    if (! isset($collectorPrices[$catId])) {
-                        throw new \InvalidArgumentException("Agregator belum memiliki harga penawaran untuk kategori '{$cat->name}'.");
+                    // New item: use custom_price if provided, otherwise master price, otherwise reject
+                    $detailEntry = $detailByCat[$catId] ?? [];
+                    $customPrice = $detailEntry['custom_price'] ?? null;
+                    if ($customPrice !== null && $customPrice !== '' && (float)$customPrice > 0) {
+                        $collectorPrice = (float) $customPrice;
+                    } elseif (isset($collectorPrices[$catId])) {
+                        $collectorPrice = (float) $collectorPrices[$catId];
+                    } else {
+                        throw new \InvalidArgumentException("Harga penjualan untuk '{$cat->name}' belum ditentukan.");
                     }
-
-                    $collectorPrice = (float) $collectorPrices[$catId];
                     $memberPrice = (float) $cat->member_price;
 
                     if ($collectorPrice < $memberPrice) {
@@ -364,6 +378,60 @@ class BankSampahService
 
             foreach ($processedDetails as $pd) {
                 SaleDetail::create(array_merge($pd, ['sale_id' => $sale->id]));
+            }
+
+            // Save-as-master-price: create/update WastePrice for items with flag
+            $changedByUserId = $data['changed_by_user_id'] ?? null;
+            foreach ($aggregatedWeights as $catId => $weight) {
+                $detailEntry = $detailByCat[$catId] ?? [];
+                $saveAsMaster = $detailEntry['save_as_master_price'] ?? null;
+                if ($saveAsMaster !== '1' && $saveAsMaster !== true) continue;
+
+                $cat = $categories->get((int) $catId);
+                if (! $cat) continue;
+
+                $existingPrice = \App\Models\WastePrice::where('collector_id', $collectorId)
+                    ->where('waste_category_id', (int) $catId)
+                    ->first();
+
+                $pdEntry = collect($processedDetails)->firstWhere('waste_category_id', (int) $catId);
+                $newPrice = $pdEntry ? (float) $pdEntry['price_per_unit'] : 0;
+                if ($newPrice <= 0) continue;
+
+                if ($existingPrice) {
+                    $oldPrice = (float) $existingPrice->collector_price;
+                    $existingPrice->update(['collector_price' => $newPrice]);
+                    if (abs($oldPrice - $newPrice) > 0.001) {
+                        \App\Models\WastePriceHistory::create([
+                            'waste_price_id' => $existingPrice->id,
+                            'collector_id' => $collectorId,
+                            'waste_category_id' => (int) $catId,
+                            'old_price' => $oldPrice,
+                            'new_price' => $newPrice,
+                            'unit' => $cat->unit,
+                            'changed_by_user_id' => $changedByUserId,
+                            'changed_at' => now(),
+                            'source' => \App\Models\WastePriceHistory::SOURCE_MANUAL,
+                        ]);
+                    }
+                } else {
+                    $wp = \App\Models\WastePrice::create([
+                        'waste_category_id' => (int) $catId,
+                        'collector_id' => $collectorId,
+                        'collector_price' => $newPrice,
+                    ]);
+                    \App\Models\WastePriceHistory::create([
+                        'waste_price_id' => $wp->id,
+                        'collector_id' => $collectorId,
+                        'waste_category_id' => (int) $catId,
+                        'old_price' => null,
+                        'new_price' => $newPrice,
+                        'unit' => $cat->unit,
+                        'changed_by_user_id' => $changedByUserId,
+                        'changed_at' => now(),
+                        'source' => \App\Models\WastePriceHistory::SOURCE_MANUAL,
+                    ]);
+                }
             }
 
             // Update cash ledger

@@ -97,7 +97,9 @@ class SaleController extends Controller
         $this->validateSale($request);
 
         try {
-            $sale = $this->service->recordSale($request->only('collector_id', 'date', 'notes', 'details'));
+            $data = $request->only('collector_id', 'date', 'notes', 'details');
+            $data['changed_by_user_id'] = auth()->id();
+            $sale = $this->service->recordSale($data);
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->withErrors(['details' => $e->getMessage()]);
         }
@@ -127,7 +129,9 @@ class SaleController extends Controller
         $this->validateSale($request);
 
         try {
-            $this->service->recordSale($request->only('collector_id', 'date', 'notes', 'details'), $sale->id);
+            $data = $request->only('collector_id', 'date', 'notes', 'details');
+            $data['changed_by_user_id'] = auth()->id();
+            $this->service->recordSale($data, $sale->id);
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->withErrors(['details' => $e->getMessage()]);
         }

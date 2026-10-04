@@ -92,7 +92,7 @@ class UiComboboxComponentTest extends TestCase
         $resEdit->assertSee('Pak Budi Santoso', false);
     }
 
-    public function test_sales_create_and_edit_render_material_combobox(): void
+    public function test_sales_create_renders_material_selection_workspace(): void
     {
         WasteCategory::create([
             'name' => 'Kardus Super Tebal',
@@ -104,7 +104,11 @@ class UiComboboxComponentTest extends TestCase
         $resCreate = $this->getAsAdmin(route('bank-sampah.sales.create'));
         $resCreate->assertStatus(200);
         $resCreate->assertSee('Kardus Super Tebal', false);
-        $resCreate->assertSee('min-w-[260px]', false);
+        $resCreate->assertSee('Material Agregator', false);
+        $resCreate->assertSee('Pilih Semua', false);
+        $resCreate->assertSee('Pilih Semua Berat', false);
+        $resCreate->assertSee('type="checkbox"', false);
+        $resCreate->assertDontSee('+ Tambah Baris', false);
     }
 
     public function test_reports_deposits_and_savings_journal_render_combobox(): void

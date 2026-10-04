@@ -264,9 +264,13 @@ class SaleReferenceTest extends TestCase
         $res->assertSee('Prinsip Operasional:', false);
         $res->assertSee('Margin Bank Sampah = (Harga Agregator &minus; Harga Nasabah)', false);
 
-        // Controls
+        // Controls (material selection workspace, no manual row flow)
         $res->assertSee('Tarik Sisa Setoran', false);
-        $res->assertSee('+ Tambah Baris', false);
+        $res->assertSee('Material Agregator', false);
+        $res->assertSee('Pilih Semua', false);
+        $res->assertSee('Pilih Semua Berat', false);
+        $res->assertSee('type="checkbox"', false);
+        $res->assertDontSee('+ Tambah Baris', false);
         $res->assertSee('Konfirmasi Penjualan', false);
 
         // Layout & Padding consistency with Index

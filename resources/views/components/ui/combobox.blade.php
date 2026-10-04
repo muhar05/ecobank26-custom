@@ -64,7 +64,7 @@
      x-modelable="selectedValue"
      @click.outside="close()"
      @keydown.escape.stop="close()"
-     class="relative w-full {{ $attributes->get('class') }}"
+     {{ $attributes->except(['id'])->merge(['class' => 'relative w-full']) }}
      id="{{ $comboboxWrapperId }}">
 
     {{-- Hidden Input for Standard Form Submission --}}

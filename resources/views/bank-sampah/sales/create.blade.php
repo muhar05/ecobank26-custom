@@ -50,6 +50,40 @@
                 </div>
             </div>
 
+            <!-- Modal for price confirmation -->
+        <x-ui.modal name="price-confirmation" title="Harga Lapak Belum Terdaftar" maxWidth="sm">
+            <template x-if="pendingPriceItem">
+                <div class="space-y-3">
+                    <p class="text-body-sm text-text leading-relaxed">
+                        Material <strong class="text-text font-semibold" x-text="pendingPriceItem.name"></strong> tetap dapat dijual ke Agregator ini, tetapi harga belum tersedia di sistem. Tentukan harga yang akan digunakan.
+                    </p>
+                    <div>
+                        <x-input-label value="Harga Penjualan (Rp)" />
+                        <x-text-input type="number"
+                                      x-model.number="pendingPriceAmount"
+                                      placeholder="0"
+                                      min="1"
+                                      class="no-spinner"
+                                      autocomplete="off" />
+                    </div>
+                    <label class="flex items-center gap-2 text-body-sm cursor-pointer">
+                        <input type="checkbox"
+                               x-model="pendingPriceSaveAsMaster"
+                               class="h-4 w-4 rounded border-border text-primary focus:ring-primary">
+                        <span>Simpan sebagai Harga Lapak Agregator</span>
+                    </label>
+                </div>
+            </template>
+            <x-slot:actions>
+                <x-ui.button type="button" variant="ghost" @click="cancelPendingPrice()">
+                    Batal
+                </x-ui.button>
+                <x-ui.button type="button" variant="primary" @click="confirmPendingPrice()">
+                    Konfirmasi Harga
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.modal>
+
             {{-- Error Banner --}}
             @if($errors->any())
                 <div class="p-4 rounded-radius-md bg-danger-light border border-danger/30 text-danger-text">
@@ -123,16 +157,33 @@
                                 </template>
                             </div>
                         </template>
+
+                        {{-- Inline state when date is missing --}}
+                        <template x-if="collectorId && !date">
+                            <div class="p-3 rounded-radius-md bg-warning-light border border-warning/30 flex items-start gap-2">
+                                <svg class="w-4 h-4 text-warning mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p class="text-caption leading-relaxed text-warning-text">
+                                    <span class="font-bold">Pilih tanggal terlebih dahulu</span> untuk memuat sisa setoran. Harga lapak tetap mengikuti agregator yang dipilih.
+                                </p>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Tanggal Penjualan --}}
                     <div class="sm:col-span-6 space-y-1">
                         <x-input-label for="date" value="Tanggal Penjualan" :required="true" />
-                        <x-text-input type="date"
+                        <x-text-input type="text"
                                       name="date"
                                       id="date"
                                       x-model="date"
-                                      @change="fetchRecap(false)"
+                                      @change="fetchRecap()"
+                                      data-sale-date-picker
+                                      placeholder="YYYY-MM-DD"
+                                      inputmode="numeric"
+                                      pattern="\d{4}-\d{2}-\d{2}"
+                                      autocomplete="off"
                                       value="{{ old('date', request('date', date('Y-m-d'))) }}"
                                       required />
                         @error('date') <p class="text-caption text-danger mt-1">{{ $message }}</p> @enderror
@@ -157,9 +208,13 @@
             <x-ui.card variant="bordered" class="p-4 sm:p-5 space-y-4 overflow-visible">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-3">
                     <div>
-                        <h2 class="text-heading-sm font-bold text-text">2. Rincian Material yang Dijual</h2>
+                        <h2 class="text-heading-sm font-bold text-text">2. Material Agregator</h2>
                         <p class="text-body-sm text-text-muted mt-0.5">
-                            Tarik sisa setoran yang tersedia atau tambahkan baris material secara mandiri
+                            Centang material yang dibeli agregator, lalu isi berat jual tiap material
+                        </p>
+                        <p class="text-caption text-text-muted mt-0.5" x-show="collectorId && visibleItems().length > 0">
+                            <span class="font-mono font-bold text-text" x-text="visibleItems().length"></span> material
+                            · <span class="font-mono font-bold text-text" x-text="availableTotalKg().toFixed(2)"></span> kg tersedia
                         </p>
                     </div>
 
@@ -167,7 +222,7 @@
                         <x-ui.button type="button"
                                      variant="secondary"
                                      size="sm"
-                                     @click="fetchRecap(true)"
+                                     @click="fetchRecap()"
                                      x-bind:disabled="loadingRecap || !collectorId || !date">
                             <template x-if="loadingRecap">
                                 <x-ui.spinner size="sm" class="-ml-1 mr-1.5" />
@@ -181,17 +236,46 @@
                         <x-ui.button type="button"
                                      variant="outline"
                                      size="sm"
-                                     @click="addRow()">
+                                     @click="selectAllItems()"
+                                     x-bind:disabled="!canSelectAll()">
                             <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            + Tambah Baris
+                            Pilih Semua
+                        </x-ui.button>
+
+                        <x-ui.button type="button"
+                                     variant="ghost"
+                                     size="sm"
+                                     @click="fillAllWeights()"
+                                     x-bind:disabled="!canFillAllWeights()">
+                            <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Pilih Semua Berat
                         </x-ui.button>
                     </div>
                 </div>
 
-                {{-- Empty rows guide --}}
-                <template x-if="rows.length === 0">
+                <div x-show="collectorId && visibleItems().length > 0">
+                    <x-text-input type="text"
+                                  x-model="searchQuery"
+                                  placeholder="Cari material..."
+                                  autocomplete="off" />
+                </div>
+
+                <template x-if="recapNotice">
+                    <div class="p-3 rounded-radius-md border flex items-start gap-2 transition-subtle"
+                         :class="recapNotice.type === 'error' ? 'bg-danger-light border-danger/30 text-danger-text' : 'bg-warning-light border-warning/30 text-warning-text'">
+                        <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <p class="text-caption leading-relaxed" x-text="recapNotice.message"></p>
+                    </div>
+                </template>
+
+                {{-- Workspace empty states --}}
+                <template x-if="!collectorId">
                     <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
                         <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,119 +283,138 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-body-sm font-bold text-text">Belum ada baris material yang dipilih.</p>
+                            <p class="text-body-sm font-bold text-text">Pilih agregator terlebih dahulu.</p>
                             <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
-                                Pilih Agregator dan Tanggal di atas, lalu klik <span class="font-semibold text-text">Tarik Sisa Setoran</span> untuk mengisi otomatis, atau klik <span class="font-semibold text-text">+ Tambah Baris</span> untuk memilih manual.
+                                Daftar material yang dibeli agregator akan langsung tampil di sini.
                             </p>
                         </div>
                     </div>
                 </template>
 
-                {{-- Rows present --}}
-                <template x-if="rows.length > 0">
+                <template x-if="collectorId && visibleItems().length === 0">
+                    <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-body-sm font-bold text-text">Agregator ini belum memiliki katalog harga.</p>
+                            <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
+                                Daftarkan harga lapak agregator di master harga sebelum mencatat penjualan.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="collectorId && availableRecap.length > 0 && visibleItems().length === 0">
+                    <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
+                        <div>
+                            <p class="text-body-sm font-bold text-text">Tidak ada material yang cocok.</p>
+                            <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
+                                Ubah kata kunci pencarian untuk melihat material lain.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Material workspace --}}
+                <template x-if="visibleItems().length > 0">
                     <div>
                         {{-- DESKTOP VIEW: Row-oriented Table (md+) --}}
                         <div class="hidden md:block overflow-x-visible">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-border text-caption font-bold text-text-muted uppercase tracking-wider">
-                                        <th class="py-3.5 px-4 w-8 text-center">#</th>
+                                        <th class="py-3.5 px-4 w-10 text-center">Pilih</th>
                                         <th class="py-3.5 px-4 min-w-[220px]">Material / Jenis Sampah</th>
+                                        <th class="py-3.5 px-4 w-36 text-right">Harga Agregator</th>
                                         <th class="py-3.5 px-4 w-32 text-right">Sisa Setoran</th>
                                         <th class="py-3.5 px-4 w-36 text-right">Berat Dijual (kg)</th>
-                                        <th class="py-3.5 px-4 w-36 text-right">Harga Agregator</th>
                                         <th class="py-3.5 px-4 w-36 text-right">Subtotal</th>
                                         <th class="py-3.5 px-4 w-36 text-right">Margin Bank</th>
-                                        <th class="py-3.5 px-2 w-10 text-center"></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-border-subtle">
-                                    <template x-for="(row, i) in rows" :key="row.catId">
-                                        <tr class="group hover:bg-surface-muted/50 transition-subtle">
-                                            {{-- Number --}}
-                                            <td class="py-3.5 px-4 text-center text-body-sm font-mono text-text-muted" x-text="i + 1"></td>
+                                    <template x-for="item in visibleItems()" :key="item.catId">
+                                        <tr @click="toggleItem(item)"
+                                            class="transition-subtle cursor-pointer"
+                                            :class="item.selected ? 'bg-primary-light/30 hover:bg-primary-light/50' : 'hover:bg-surface-muted/50'">
+                                            {{-- Checkbox --}}
+                                            <td class="py-3.5 px-4 text-center" @click.stop>
+                                                <input type="checkbox"
+                                                       @click.stop="checkboxToggle(item)"
+                                                       :checked="item.selected"
+                                                       :aria-label="'Pilih ' + item.name"
+                                                       class="h-5 w-5 rounded border-border text-primary focus:ring-primary cursor-pointer">
+                                            </td>
 
-                                            {{-- Material Selector --}}
+                                            {{-- Material --}}
                                             <td class="py-3.5 px-4">
-                                                <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
-                                                <x-ui.combobox
-                                                    x-model="row.catId"
-                                                    @change="onCategoryChange(row)"
-                                                    :options="$wasteCategories"
-                                                    placeholder="Pilih Material..."
-                                                    searchPlaceholder="Cari material..."
-                                                    compact
-                                                />
+                                                <span class="text-body-sm font-bold text-text block" x-text="item.name"></span>
                                                 <span class="text-caption text-text-muted block mt-0.5">
-                                                    Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(row.memberPrice)"></strong> / <span x-text="row.unit || 'kg'"></span>
+                                                    Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(item.memberPrice)"></strong> / <span x-text="item.unit || 'kg'"></span>
                                                 </span>
-                                            </td>
-
-                                            {{-- Sisa Setoran --}}
-                                            <td class="py-3.5 px-4 text-right">
-                                                <span class="font-mono text-body-sm font-bold text-text block" x-text="row.remainingWeight !== undefined ? row.remainingWeight.toFixed(2) + ' ' + (row.unit || 'kg') : '-'"></span>
-                                                <span class="text-caption text-text-muted block">Tersedia</span>
-                                            </td>
-
-                                            {{-- Berat Dijual Input --}}
-                                            <td class="py-3.5 px-4 text-right">
-                                                <input type="number"
-                                                       step="0.01"
-                                                       min="0.01"
-                                                       :max="row.remainingWeight || undefined"
-                                                       :name="'details[' + i + '][weight]'"
-                                                       x-model.number="row.weight"
-                                                       placeholder="0.00"
-                                                       class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
-                                                        :class="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight ? 'border-danger text-danger' : ''">
-
-                                                {{-- Validation warnings near source --}}
-                                                <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
-                                                    <span class="text-caption font-semibold text-danger block mt-1">
-                                                        Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)!
-                                                    </span>
-                                                </template>
                                             </td>
 
                                             {{-- Harga Agregator --}}
                                             <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                                                <template x-if="row.hasPrice">
+                                                <template x-if="item.priceNull">
+                                                    <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
+                                                        Belum terdaftar
+                                                    </span>
+                                                </template>
+                                                <template x-if="!item.priceNull && item.hasPrice">
                                                     <div>
-                                                        <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(row.price)"></span>
-                                                        <span class="text-caption text-text-muted">/ <span x-text="row.unit || 'kg'"></span></span>
-                                                        <template x-if="row.price < row.memberPrice">
-                                                            <span class="text-caption text-danger font-bold block mt-0.5">⚠️ Rugi! &lt; Beli</span>
+                                                        <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(item.price)"></span>
+                                                        <span class="text-caption text-text-muted">/ <span x-text="item.unit || 'kg'"></span></span>
+                                                        <template x-if="item.price < item.memberPrice">
+                                                            <span class="text-caption text-danger font-bold block mt-0.5">Rugi! &lt; Beli</span>
                                                         </template>
                                                     </div>
                                                 </template>
-                                                <template x-if="!row.hasPrice">
+                                                <template x-if="!item.priceNull && !item.hasPrice">
                                                     <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
-                                                        ⚠️ Belum ada harga
+                                                        Belum ada harga
+                                                    </span>
+                                                </template>
+                                            </td>
+
+                                            {{-- Sisa Setoran --}}
+                                            <td class="py-3.5 px-4 text-right">
+                                                <span class="font-mono text-body-sm font-bold text-text block" x-text="item.remainingWeight !== undefined ? item.remainingWeight.toFixed(2) + ' ' + (item.unit || 'kg') : '-'"></span>
+                                                <span class="text-caption text-text-muted block">Tersedia</span>
+                                            </td>
+
+                                            {{-- Berat Dijual Input --}}
+                                            <td class="py-3.5 px-4 text-right" @click.stop>
+                                                <input type="number"
+                                                       step="0.01"
+                                                       min="0.01"
+                                                       :max="item.remainingWeight || undefined"
+                                                       :disabled="!item.selected"
+                                                       x-model.number="item.weight"
+                                                       placeholder="0.00"
+                                                       class="no-spinner w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        :class="item.remainingWeight !== undefined && categoryTotalWeight(item.catId) > item.remainingWeight ? 'border-danger text-danger' : ''">
+
+                                                {{-- Validation warnings near source --}}
+                                                <template x-if="item.remainingWeight !== undefined && categoryTotalWeight(item.catId) > item.remainingWeight">
+                                                    <span class="text-caption font-semibold text-danger block mt-1">
+                                                        Total muatan (<span x-text="categoryTotalWeight(item.catId)"></span> kg) melebihi sisa (<span x-text="item.remainingWeight"></span> kg)!
                                                     </span>
                                                 </template>
                                             </td>
 
                                             {{-- Subtotal Penjualan --}}
                                             <td class="py-3.5 px-4 text-right font-mono font-bold text-body text-text whitespace-nowrap">
-                                                <span x-text="formatRp(rowSubtotal(row))"></span>
+                                                <span x-text="item.selected ? formatRp(rowSubtotal(item)) : '-'"></span>
                                             </td>
 
                                             {{-- Margin Kas Bank Sampah --}}
                                             <td class="py-3.5 px-4 text-right font-mono font-bold text-body whitespace-nowrap">
-                                                <span :class="rowMargin(row) > 0 ? 'text-success-text' : (rowMargin(row) < 0 ? 'text-danger-text' : 'text-text-muted')"
-                                                      x-text="formatRp(rowMargin(row))"></span>
-                                            </td>
-
-                                            {{-- Action Remove --}}
-                                            <td class="py-3.5 px-2 text-center">
-                                                <button type="button"
-                                                        @click="removeRow(i)"
-                                                        title="Hapus baris"
-                                                        class="p-1.5 rounded-radius-sm text-text-muted hover:text-danger hover:bg-danger-light transition-subtle cursor-pointer">
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
+                                                <span :class="!item.selected ? 'text-text-muted' : (rowMargin(item) > 0 ? 'text-success-text' : (rowMargin(item) < 0 ? 'text-danger-text' : 'text-text-muted'))"
+                                                      x-text="item.selected ? formatRp(rowMargin(item)) : '-'"></span>
                                             </td>
                                         </tr>
                                     </template>
@@ -321,69 +424,81 @@
 
                         {{-- MOBILE VIEW: Stacked Adaptive Cards (< md) --}}
                         <div class="block md:hidden space-y-3">
-                            <template x-for="(row, i) in rows" :key="row.catId">
-                                <div class="p-4 rounded-radius-md border border-border bg-surface shadow-subtle space-y-3">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="flex-1">
-                                            <x-ui.combobox
-                                                x-model="row.catId"
-                                                @change="onCategoryChange(row)"
-                                                :options="$wasteCategories"
-                                                placeholder="Pilih Material..."
-                                                searchPlaceholder="Cari material..."
-                                                compact
-                                            />
+                            <template x-for="item in visibleItems()" :key="item.catId">
+                                <div @click="toggleItem(item)"
+                                     class="p-4 rounded-radius-md border shadow-subtle space-y-3 transition-subtle cursor-pointer"
+                                     :class="item.selected ? 'border-primary/40 bg-primary-light/20' : 'border-border bg-surface'">
+                                    <div class="flex items-start gap-3">
+                                        <span @click.stop>
+<input type="checkbox"
+                                           @click.stop="checkboxToggle(item)"
+                                           :checked="item.selected"
+                                           :aria-label="'Pilih ' + item.name"
+                                           class="mt-1 h-5 w-5 rounded border-border text-primary focus:ring-primary cursor-pointer">
+                                        </span>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-body-sm font-bold text-text" x-text="item.name"></p>
+                                            <p class="text-caption text-text-muted mt-0.5">
+                                                Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(item.memberPrice)"></strong> / <span x-text="item.unit || 'kg'"></span>
+                                            </p>
                                         </div>
-                                        <button type="button" @click="removeRow(i)" class="p-2 text-text-muted hover:text-danger">
-                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                        <div class="text-right shrink-0">
+                                            <span class="font-mono font-bold text-body-sm text-text block" x-text="item.priceNull ? 'Belum terdaftar' : (item.hasPrice ? formatRp(item.price) : 'Belum ada harga')"></span>
+                                            <span class="text-caption text-text-muted">lapak</span>
+                                        </div>
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-3 text-caption pt-1 border-t border-border-subtle">
                                         <div>
                                             <span class="text-text-muted uppercase font-bold block">Sisa Setoran</span>
-                                            <span class="font-mono font-bold text-body-sm text-text" x-text="row.remainingWeight !== undefined ? row.remainingWeight.toFixed(2) + ' ' + (row.unit || 'kg') : '-'"></span>
+                                            <span class="font-mono font-bold text-body-sm text-text" x-text="item.remainingWeight !== undefined ? item.remainingWeight.toFixed(2) + ' ' + (item.unit || 'kg') : '-'"></span>
                                         </div>
-                                        <div>
-                                            <span class="text-text-muted uppercase font-bold block">Harga Agregator</span>
-                                            <span class="font-mono font-bold text-body-sm text-text" x-text="row.hasPrice ? formatRp(row.price) : 'Belum ada harga'"></span>
+                                        <div @click.stop>
+                                            <span class="text-text-muted uppercase font-bold block">Berat Dijual (kg)</span>
+                                            <input type="number"
+                                                   step="0.01"
+                                                   min="0.01"
+                                                   :max="item.remainingWeight || undefined"
+                                                   :disabled="!item.selected"
+                                                   x-model.number="item.weight"
+                                                   placeholder="0.00"
+                                                   class="no-spinner w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                                                   :class="item.remainingWeight !== undefined && categoryTotalWeight(item.catId) > item.remainingWeight ? 'border-danger text-danger' : ''">
                                         </div>
                                     </div>
-
-                                    <div>
-                                        <span class="block text-caption font-bold text-text-muted uppercase mb-1">Berat Dijual (kg)</span>
-                                        <input type="number"
-                                               step="0.01"
-                                               min="0.01"
-                                               :max="row.remainingWeight || undefined"
-                                               :name="'details[' + i + '][weight]'"
-                                               x-model.number="row.weight"
-                                               placeholder="0.00"
-                                               class="w-full text-right text-body font-mono font-bold rounded-radius-md border border-border bg-surface text-text p-2 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle"
-                                               :class="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight ? 'border-danger text-danger' : ''">
-
-                                        <template x-if="row.remainingWeight !== undefined && categoryTotalWeight(row.catId) > row.remainingWeight">
-                                            <span class="text-caption font-semibold text-danger block mt-1">
-                                                Total muatan (<span x-text="categoryTotalWeight(row.catId)"></span> kg) melebihi sisa (<span x-text="row.remainingWeight"></span> kg)!
-                                            </span>
-                                        </template>
-                                    </div>
+                                    <template x-if="item.remainingWeight !== undefined && categoryTotalWeight(item.catId) > item.remainingWeight">
+                                        <span class="text-caption font-semibold text-danger block">
+                                            Total muatan (<span x-text="categoryTotalWeight(item.catId)"></span> kg) melebihi sisa (<span x-text="item.remainingWeight"></span> kg)!
+                                        </span>
+                                    </template>
 
                                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-border-subtle text-body-sm">
                                         <div>
                                             <span class="text-caption text-text-muted block">Margin Kas:</span>
-                                            <span class="font-mono font-bold text-success-text" x-text="formatRp(rowMargin(row))"></span>
+                                            <span class="font-mono font-bold text-success-text" x-text="item.selected ? formatRp(rowMargin(item)) : '-'"></span>
                                         </div>
                                         <div class="text-right">
                                             <span class="text-caption text-text-muted block">Subtotal:</span>
-                                            <span class="font-mono font-bold text-text text-heading-sm" x-text="formatRp(rowSubtotal(row))"></span>
+                                            <span class="font-mono font-bold text-text text-heading-sm" x-text="item.selected ? formatRp(rowSubtotal(item)) : '-'"></span>
                                         </div>
                                     </div>
                                 </div>
                             </template>
                         </div>
+                    </div>
+                </template>
+
+                {{-- Payload submit mengikuti kontrak backend existing --}}
+                <template x-for="(row, i) in selectedItems()" :key="'payload-' + row.catId">
+                    <div>
+                        <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
+                        <input type="hidden" :name="'details[' + i + '][weight]'" :value="row.weight">
+                        <template x-if="row.pendingPrice !== undefined">
+                            <input type="hidden" :name="'details[' + i + '][custom_price]'" :value="row.pendingPrice">
+                        </template>
+                        <template x-if="row.pendingPrice !== undefined && row.saveAsMasterPrice">
+                            <input type="hidden" :name="'details[' + i + '][save_as_master_price]'" :value="'1'">
+                        </template>
                     </div>
                 </template>
             </x-ui.card>
@@ -450,9 +565,14 @@
                 prices: prices,
                 allCategories: allCategories,
                 allCollectors: allCollectors,
-                rows: [],
+                items: [],
+                searchQuery: '',
+                pendingPriceItem: null,
+                pendingPriceAmount: 0,
+                pendingPriceSaveAsMaster: false,
                 availableRecap: [],
                 loadingRecap: false,
+                recapNotice: null,
                 submitting: false,
 
                 getSelectedCollector(id) {
@@ -465,44 +585,201 @@
                 },
 
                 init() {
+                    this.buildWorkspace();
+
                     const oldRows = @json(old('details', []));
                     if (oldRows && Object.keys(oldRows).length) {
                         Object.values(oldRows).forEach(d => {
                             if (!d.waste_category_id) return;
-                            const cat = this.allCategories.find(c => c.id == d.waste_category_id);
-                            if (cat) {
-                                this.rows.push({
-                                    catId: cat.id,
-                                    name: cat.name,
-                                    unit: cat.unit,
-                                    price: Number(d.price_per_unit) || 0,
-                                    weight: Number(d.weight) || 0,
-                                    memberPrice: Math.round(cat.member_price),
-                                    remainingWeight: undefined,
-                                    hasPrice: false,
-                                });
+                            const it = this.items.find(x => x.catId == d.waste_category_id);
+                            if (it) {
+                                it.selected = true;
+                                it.weight = Number(d.weight) || 0;
                             }
                         });
                     }
 
-                    if (this.collectorId && this.date && this.rows.length === 0) {
-                        this.fetchRecap(true);
-                    } else if (this.collectorId && this.date) {
-                        this.fetchRecap(false);
+                    const preSelectCatId = '{{ request("category_id") }}';
+                    if (preSelectCatId) {
+                        const it = this.items.find(x => x.catId == preSelectCatId);
+                        if (it && it.hasPrice && !it.selected) {
+                            it.selected = true;
+                            this.defaultItemWeight(it);
+                        }
                     }
 
-                    const preSelectCatId = '{{ request("category_id") }}';
-                    if (preSelectCatId && this.rows.length === 0) {
-                        this.addCategoryById(preSelectCatId);
+                    if (this.collectorId && this.date) {
+                        this.fetchRecap();
                     }
                 },
 
-                fetchRecap(autoPopulate = true) {
-                    if (!this.collectorId || !this.date) {
-                        alert('Silakan pilih Mitra Agregator dan Tanggal terlebih dahulu.');
+                selectedItems() {
+                    return this.items.filter(it => it.selected && it.catId);
+                },
+
+                visibleItems() {
+                    const q = (this.searchQuery || '').toLowerCase().trim();
+                    return this.items.filter(it => {
+                        if (it.remainingWeight === undefined) return false;
+                        if (!q) return true;
+                        return it.name.toLowerCase().includes(q) || (it.code && it.code.toLowerCase().includes(q));
+                    });
+                },
+
+                availableTotalKg() {
+                    return this.items.reduce((sum, it) => sum + (it.remainingWeight !== undefined ? Number(it.remainingWeight) : 0), 0);
+                },
+
+                buildWorkspace() {
+                    const prev = {};
+                    this.items.forEach(it => {
+                        prev[it.catId] = {
+                            selected: it.selected, weight: it.weight, price: it.price, memberPrice: it.memberPrice,
+                            isExisting: !!it.isExisting, pendingPrice: it.pendingPrice, saveAsMasterPrice: it.saveAsMasterPrice,
+                        };
+                    });
+                    this.items = [];
+                    this.allCategories.forEach(cat => {
+                        const saved = prev[cat.id] || null;
+                        const item = {
+                            catId: cat.id, name: cat.name, code: cat.code, unit: cat.unit,
+                            memberPrice: Math.round(cat.member_price), price: 0,
+                            weight: saved ? saved.weight : '', remainingWeight: undefined,
+                            selected: saved ? saved.selected : false, hasPrice: false, priceNull: false,
+                            pendingPrice: saved ? saved.pendingPrice : undefined,
+                            saveAsMasterPrice: saved ? saved.saveAsMasterPrice : false,
+                        };
+                        if (saved && saved.isExisting) {
+                            item.price = saved.price;
+                            item.memberPrice = saved.memberPrice;
+                            item.hasPrice = true;
+                            item.isExisting = true;
+                        } else {
+                            this.fillRowPrice(item);
+                        }
+                        this.items.push(item);
+                    });
+                    Object.keys(prev).forEach(catKey => {
+                        if (this.items.some(x => x.catId == catKey)) return;
+                        const saved = prev[catKey];
+                        if (saved && saved.isExisting) {
+                            const cat = this.allCategories.find(c => c.id == catKey);
+                            if (!cat) return;
+                            const item = {
+                                catId: cat.id, name: cat.name, code: cat.code, unit: cat.unit,
+                                memberPrice: saved.memberPrice, price: saved.price,
+                                weight: saved.weight, remainingWeight: undefined,
+                                selected: saved.selected, hasPrice: true, priceNull: false,
+                                isExisting: true,
+                                pendingPrice: saved.pendingPrice, saveAsMasterPrice: saved.saveAsMasterPrice,
+                            };
+                            this.items.push(item);
+                        }
+                    });
+                    this.syncRecap();
+                },
+
+                toggleItem(item) {
+                    if (!item) return;
+                    if (item.priceNull && !item.selected && item.pendingPrice === undefined) {
+                        item.selected = true;
+                        this.openPriceConfirm(item);
                         return;
                     }
+                    item.selected = !item.selected;
+                    this.onItemToggle(item);
+                },
+
+                checkboxToggle(item) {
+                    if (item.selected) {
+                        item.selected = false;
+                    } else {
+                        item.selected = true;
+                        if (item.priceNull && item.pendingPrice === undefined) {
+                            this.openPriceConfirm(item);
+                        } else {
+                            this.onItemToggle(item);
+                        }
+                    }
+                },
+
+                onItemToggle(item) {
+                    if (item.selected) this.defaultItemWeight(item);
+                    if (this.recapNotice && this.recapNotice.code === 'no-selection') this.recapNotice = null;
+                },
+
+                defaultItemWeight(item) {
+                    if ((parseFloat(item.weight) || 0) > 0) return;
+                    if (item.remainingWeight !== undefined) item.weight = Number(item.remainingWeight);
+                },
+
+                openPriceConfirm(item) {
+                    this.pendingPriceItem = item;
+                    this.pendingPriceAmount = 0;
+                    this.pendingPriceSaveAsMaster = false;
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'price-confirmation' }));
+                },
+
+                cancelPendingPrice() {
+                    if (this.pendingPriceItem) this.pendingPriceItem.selected = false;
+                    this.pendingPriceItem = null;
+                    this.pendingPriceAmount = 0;
+                    this.pendingPriceSaveAsMaster = false;
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'price-confirmation' }));
+                },
+
+                confirmPendingPrice() {
+                    const amt = parseFloat(this.pendingPriceAmount) || 0;
+                    if (amt <= 0) return;
+                    const item = this.pendingPriceItem;
+                    if (!item) return;
+                    item.pendingPrice = amt;
+                    item.price = amt;
+                    item.hasPrice = true;
+                    item.priceNull = false;
+                    this.pendingPriceItem = null;
+                    this.pendingPriceAmount = 0;
+                    this.pendingPriceSaveAsMaster = false;
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'price-confirmation' }));
+                },
+
+                selectAllItems() {
+                    this.visibleItems().forEach(it => {
+                        if (it.selected) return;
+                        it.selected = true;
+                        if (it.priceNull) return;
+                        this.defaultItemWeight(it);
+                    });
+                    const nullItems = this.visibleItems().filter(it => it.selected && it.priceNull);
+                    if (nullItems.length > 0) {
+                        this.openPriceConfirm(nullItems[0]);
+                    }
+                },
+
+                canSelectAll() {
+                    return this.visibleItems().some(it => !it.selected);
+                },
+
+                canFillAllWeights() {
+                    return this.selectedItems().some(r => r.remainingWeight !== undefined && Number(r.remainingWeight) > 0);
+                },
+
+                fillAllWeights() {
+                    const targets = this.selectedItems().filter(r => r.remainingWeight !== undefined && Number(r.remainingWeight) > 0);
+                    if (targets.length === 0) {
+                        this.recapNotice = { type: 'warning', code: 'no-selection', message: 'Pilih minimal satu material terlebih dahulu untuk mengisi berat.' };
+                        return;
+                    }
+                    targets.forEach(r => {
+                        r.weight = Number(r.remainingWeight);
+                    });
+                    if (this.recapNotice && this.recapNotice.code === 'no-selection') this.recapNotice = null;
+                },
+
+                fetchRecap() {
+                    if (!this.collectorId || !this.date) return;
                     this.loadingRecap = true;
+                    this.recapNotice = null;
 
                     fetch(`{{ route('bank-sampah.sales.daily-recap') }}?date=${encodeURIComponent(this.date)}&collector_id=${encodeURIComponent(this.collectorId)}`)
                         .then(res => res.json())
@@ -510,113 +787,78 @@
                             this.loadingRecap = false;
                             if (res.status === 'success' && res.data) {
                                 this.availableRecap = res.data;
-                                if (res.data.length === 0 && autoPopulate) {
-                                    alert('Tidak ada sisa setoran yang tersedia untuk dijual pada tanggal dan agregator ini.');
-                                    return;
+                                if (res.data.length === 0) {
+                                    this.recapNotice = { type: 'warning', message: 'Tidak ada sisa setoran untuk tanggal dan agregator ini.' };
                                 }
-                                if (autoPopulate && this.rows.length === 0) {
-                                    this.populateFromRecap();
-                                } else {
-                                    this.syncRowsWithRecap();
-                                }
+                                this.syncRecap();
                             }
                         })
                         .catch(() => {
                             this.loadingRecap = false;
-                            alert('Gagal mengambil data sisa setoran.');
+                            this.recapNotice = { type: 'error', message: 'Gagal mengambil sisa setoran. Periksa koneksi lalu coba lagi.' };
                         });
-                },
-
-                populateFromRecap() {
-                    this.rows = [];
-                    this.availableRecap.forEach(item => {
-                        this.rows.push({
-                            catId: item.waste_category_id,
-                            name: item.name,
-                            unit: item.unit,
-                            price: Math.round(item.collector_price),
-                            memberPrice: Math.round(item.member_price),
-                            remainingWeight: Number(item.remaining_weight),
-                            weight: Number(item.remaining_weight),
-                            hasPrice: true,
-                        });
-                    });
-                },
-
-                addCategoryById(catId) {
-                    const cat = this.allCategories.find(c => c.id == catId);
-                    if (!cat) return;
-                    if (this.rows.some(r => r.catId == cat.id)) return;
-
-                    const row = {
-                        catId: cat.id,
-                        name: cat.name,
-                        unit: cat.unit,
-                        price: 0,
-                        weight: '',
-                        memberPrice: Math.round(cat.member_price),
-                        remainingWeight: undefined,
-                        hasPrice: false,
-                    };
-                    this.fillRowPrice(row);
-                    this.rows.push(row);
-                    this.syncRowsWithRecap();
-                },
-
-                addRow() {
-                    const unselected = this.allCategories.find(c => !this.rows.some(r => r.catId == c.id));
-                    if (!unselected) {
-                        alert('Semua jenis sampah sudah dimasukkan.');
-                        return;
-                    }
-                    this.addCategoryById(unselected.id);
-                },
-
-                removeRow(idx) {
-                    this.rows.splice(idx, 1);
-                },
-
-                onCategoryChange(row) {
-                    const cat = this.allCategories.find(c => c.id == row.catId);
-                    if (cat) {
-                        row.name = cat.name;
-                        row.unit = cat.unit;
-                        row.memberPrice = Math.round(cat.member_price);
-                    }
-                    this.fillRowPrice(row);
-                    this.syncRowsWithRecap();
                 },
 
                 fillRowPrice(row) {
+                    if (row.isExisting) return;
+                    if (row.pendingPrice !== undefined) {
+                        row.price = row.pendingPrice;
+                        row.hasPrice = true;
+                        row.priceNull = false;
+                        return;
+                    }
                     if (!this.collectorId || !row.catId) {
                         row.hasPrice = false;
                         row.price = 0;
+                        row.priceNull = false;
                         return;
                     }
                     const colPrices = this.prices[this.collectorId];
                     if (colPrices && colPrices[row.catId]) {
                         row.price = Math.round(colPrices[row.catId].collector_price);
                         row.hasPrice = true;
+                        row.priceNull = false;
                     } else {
                         row.hasPrice = false;
                         row.price = 0;
+                        row.priceNull = true;
                     }
                 },
 
                 updateAllPrices() {
-                    this.rows.forEach(r => this.fillRowPrice(r));
+                    this.buildWorkspace();
                     if (this.collectorId && this.date) {
-                        this.fetchRecap(this.rows.length === 0);
+                        this.fetchRecap();
+                    } else {
+                        this.recapNotice = null;
                     }
                 },
 
-                syncRowsWithRecap() {
-                    this.rows.forEach(r => {
-                        const found = this.availableRecap.find(item => item.waste_category_id == r.catId);
-                        if (found) {
-                            r.remainingWeight = Number(found.remaining_weight);
-                            if (r.price === 0) r.price = Math.round(found.collector_price);
-                            r.hasPrice = true;
+                syncRecap() {
+                    if (this.availableRecap.length === 0) return;
+                    this.availableRecap.forEach(x => {
+                        let it = this.items.find(i => i.catId == x.waste_category_id);
+                        if (!it) {
+                            const cat = this.allCategories.find(c => c.id == x.waste_category_id);
+                            if (!cat) return;
+                            it = {
+                                catId: cat.id, name: cat.name, code: cat.code, unit: cat.unit,
+                                memberPrice: Math.round(cat.member_price), price: 0,
+                                weight: '', remainingWeight: undefined,
+                                selected: false, hasPrice: false, priceNull: false,
+                                pendingPrice: undefined, saveAsMasterPrice: false,
+                            };
+                            this.items.push(it);
+                        }
+                        it.remainingWeight = Number(x.remaining_weight);
+                        if (it.isExisting) return;
+                        if (x.collector_price !== null && x.collector_price !== undefined) {
+                            if (!it.pendingPrice) it.price = Math.round(x.collector_price);
+                            it.hasPrice = true;
+                            it.priceNull = false;
+                        } else {
+                            it.hasPrice = false;
+                            it.priceNull = true;
                         }
                     });
                 },
@@ -635,38 +877,43 @@
                 },
 
                 categoryTotalWeight(catId) {
-                    return this.rows
+                    return this.selectedItems()
                         .filter(r => r.catId == catId)
                         .reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
                 },
 
                 grandTotalAmount() {
-                    return this.rows.reduce((sum, r) => sum + this.rowSubtotal(r), 0);
+                    return this.selectedItems().reduce((sum, r) => sum + this.rowSubtotal(r), 0);
                 },
 
                 grandTotalWeight() {
-                    return this.rows.reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+                    return this.selectedItems().reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
                 },
 
                 grandTotalMargin() {
-                    return this.rows.reduce((sum, r) => sum + this.rowMargin(r), 0);
+                    return this.selectedItems().reduce((sum, r) => sum + this.rowMargin(r), 0);
                 },
 
                 validRowCount() {
-                    return this.rows.filter(r => r.catId && (parseFloat(r.weight) || 0) > 0).length;
+                    return this.selectedItems().filter(r => r.catId && (parseFloat(r.weight) || 0) > 0).length;
                 },
 
                 hasErrors() {
-                    if (this.rows.length === 0) return true;
-                    return this.rows.some(r => {
+                    if (this.selectedItems().length === 0) return true;
+                    return this.selectedItems().some(r => {
                         const w = parseFloat(r.weight) || 0;
                         if (w <= 0) return true;
                         const catTotal = this.categoryTotalWeight(r.catId);
                         if (r.remainingWeight !== undefined && catTotal > r.remainingWeight) return true;
+                        if (!r.hasPrice && r.priceNull) return false; // caught by priceNeededItems below on submit
                         if (!r.hasPrice) return true;
                         if (r.price < r.memberPrice) return true;
                         return false;
                     });
+                },
+
+                priceNeededItems() {
+                    return this.selectedItems().filter(r => r.priceNull && !r.pendingPrice);
                 },
 
                 formatRp(val) {
@@ -676,15 +923,21 @@
 
                 submitSale() {
                     if (!this.collectorId) {
-                        alert('Silakan pilih Mitra Agregator terlebih dahulu.');
+                        this.recapNotice = { type: 'error', message: 'Pilih Mitra Agregator terlebih dahulu.' };
                         return;
                     }
                     if (this.validRowCount() === 0) {
-                        alert('Minimal satu jenis sampah harus diisi dengan berat > 0 kg.');
+                        this.recapNotice = { type: 'error', message: 'Minimal satu jenis sampah harus diisi dengan berat > 0 kg.' };
+                        return;
+                    }
+                    const missing = this.priceNeededItems();
+                    if (missing.length > 0) {
+                        const names = missing.map(r => r.name).join(', ');
+                        this.recapNotice = { type: 'error', message: 'Masih ada material yang belum memiliki harga penjualan: ' + names + '. Tentukan harga terlebih dahulu.' };
                         return;
                     }
                     if (this.hasErrors()) {
-                        alert('Terdapat kesalahan pada baris timbangan (melebihi sisa setoran atau harga agregator rugi).');
+                        this.recapNotice = { type: 'error', message: 'Terdapat kesalahan pada baris timbangan (melebihi sisa setoran atau harga agregator rugi).' };
                         return;
                     }
                     this.submitting = true;
