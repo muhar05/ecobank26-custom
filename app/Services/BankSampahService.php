@@ -161,14 +161,16 @@ class BankSampahService
     }
 
     /**
-     * Calculate remaining deposit weight for each category on a given date.
-     * remaining_weight = total_deposited - total_sold
-     * Includes categories with remaining > 0 even without a collector_price (NULL).
+     * Calculate cumulative remaining stock for each category as of a given date.
+     * remaining_weight(cat, asOf) = SUM deposit weight (deposit.date <= asOf)
+     *                             - SUM sale weight    (sale.date <= asOf)
+     * Carry-over from earlier dates is included. Includes categories with
+     * remaining > 0 even without a collector_price (NULL).
      */
     public function getDailyRemainingWaste(string $date, int $collectorId, ?int $excludeSaleId = null): Collection
     {
-        // 1. Total deposited on date per category
-        $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+        // 1. Cumulative deposited weight up to and including the date, per category
+        $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', '<=', $date))
             ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
             ->groupBy('waste_category_id')
             ->pluck('total_deposited', 'waste_category_id');
@@ -177,9 +179,10 @@ class BankSampahService
             return collect();
         }
 
-        // 2. Total sold on date per category (excluding $excludeSaleId if editing an existing sale)
+        // 2. Cumulative sold weight up to and including the date, per category
+        // (excluding $excludeSaleId if editing an existing sale)
         $sold = SaleDetail::whereHas('sale', function ($q) use ($date, $excludeSaleId) {
-            $q->whereDate('date', $date);
+            $q->whereDate('date', '<=', $date);
             if ($excludeSaleId) {
                 $q->where('id', '!=', $excludeSaleId);
             }
@@ -198,13 +201,16 @@ class BankSampahService
 
         $result = collect();
         foreach ($deposited as $catId => $depWeight) {
+            $cat = $categories[$catId] ?? null;
+            if (! $cat) {
+                continue;
+            }
+
             $soldWeight = (float) ($sold[$catId] ?? 0);
             $remaining = round((float) $depWeight - $soldWeight, 2);
 
             // Show all categories with remaining > 0, even without a collector_price
             if ($remaining > 0) {
-                $cat = $categories[$catId];
-                $cat = $categories[$catId];
                 $colPrice = isset($collectorPrices[$catId]) ? (float) $collectorPrices[$catId] : null;
                 $memPrice = (float) $cat->member_price;
 
@@ -243,21 +249,27 @@ class BankSampahService
             $date = $data['date'];
             $categoryIds = $aggregatedWeights->keys()->map(fn ($id) => (int) $id)->sort()->values();
 
-            // Concurrency locking: lock deposits, category records, and sales deterministically
-            Deposit::whereDate('date', $date)->lockForUpdate()->get();
+            // Concurrency locking: lock the material stock rows deterministically
+            DepositDetail::whereIn('waste_category_id', $categoryIds)->lockForUpdate()->get();
             \App\Models\WasteCategory::whereIn('id', $categoryIds)->orderBy('id')->lockForUpdate()->get();
-            Sale::whereDate('date', $date)->lockForUpdate()->get();
+            SaleDetail::whereIn('waste_category_id', $categoryIds)->lockForUpdate()->get();
 
-            // 1. Fetch deposited weights on this date
-            $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
+            // 1. Cumulative deposited weight up to and including the sale date
+            $deposited = DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', '<=', $date))
                 ->whereIn('waste_category_id', $categoryIds)
                 ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
                 ->groupBy('waste_category_id')
                 ->pluck('total_deposited', 'waste_category_id');
 
-            // 2. Fetch sold weights on this date (excluding this sale if updating)
+            // 1b. All-time deposited weight (guards against backdated over-selling)
+            $depositedAll = DepositDetail::whereIn('waste_category_id', $categoryIds)
+                ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
+                ->groupBy('waste_category_id')
+                ->pluck('total_deposited', 'waste_category_id');
+
+            // 2. Cumulative sold weight up to and including the sale date (excluding this sale if updating)
             $sold = SaleDetail::whereHas('sale', function ($q) use ($date, $saleId) {
-                $q->whereDate('date', $date);
+                $q->whereDate('date', '<=', $date);
                 if ($saleId) {
                     $q->where('id', '!=', $saleId);
                 }
@@ -266,6 +278,13 @@ class BankSampahService
             ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
             ->groupBy('waste_category_id')
             ->pluck('total_sold', 'waste_category_id');
+
+            // 2b. All-time sold weight (excluding this sale if updating)
+            $soldAll = SaleDetail::whereIn('waste_category_id', $categoryIds)
+                ->when($saleId, fn ($q) => $q->whereHas('sale', fn ($q2) => $q2->where('id', '!=', $saleId)))
+                ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
+                ->groupBy('waste_category_id')
+                ->pluck('total_sold', 'waste_category_id');
 
             $collectorPrices = \App\Models\WastePrice::where('collector_id', $collectorId)
                 ->pluck('collector_price', 'waste_category_id');
@@ -282,25 +301,59 @@ class BankSampahService
                 $existingDetailsMap = $existingSale->details->keyBy('waste_category_id');
             }
 
-            // 3. Validate aggregated weight per material against remaining stock
+            // 3. Validate aggregated weight per material against cumulative stock.
+            // B(D) and B(infinity) checks give informative errors; the timeline scan
+            // below guarantees no intermediate date dips below zero.
+            $pendingStockChanges = [];
+            $affectedCategoryIds = $categoryIds->map(fn ($id) => (int) $id)->all();
+
+            if ($saleId && $existingSale) {
+                // The stored sale is still in the DB; neutralise it so edits are not
+                // counted twice (returns stock it currently withholds).
+                $oldSaleDate = $existingSale->date->format('Y-m-d');
+                foreach ($existingSale->details as $existingDetail) {
+                    $pendingStockChanges[] = [
+                        'waste_category_id' => (int) $existingDetail->waste_category_id,
+                        'date' => $oldSaleDate,
+                        'weight' => (float) $existingDetail->weight,
+                        'direction' => 'in',
+                    ];
+                    $affectedCategoryIds[] = (int) $existingDetail->waste_category_id;
+                }
+            }
+
             foreach ($aggregatedWeights as $catId => $requestedWeight) {
                 $cat = $categories->get($catId);
                 if (! $cat) {
                     throw new \InvalidArgumentException("Kategori sampah dengan ID {$catId} tidak ditemukan.");
                 }
 
-                $totalDep = (float) ($deposited[$catId] ?? 0);
-                $totalSld = (float) ($sold[$catId] ?? 0);
-                $remaining = round($totalDep - $totalSld, 2);
+                $remainingAsOf = round((float) ($deposited[$catId] ?? 0) - (float) ($sold[$catId] ?? 0), 2);
+                $remainingAllTime = round((float) ($depositedAll[$catId] ?? 0) - (float) ($soldAll[$catId] ?? 0), 2);
+                $remaining = min($remainingAsOf, $remainingAllTime);
 
                 if ($remaining <= 0) {
-                    throw new \InvalidArgumentException("Kategori '{$cat->name}' tidak dapat dijual karena sisa setoran pada tanggal {$date} sudah habis (0 kg).");
+                    throw new \InvalidArgumentException("Kategori '{$cat->name}' tidak dapat dijual karena sisa stok sampai tanggal {$date} sudah habis (0 kg).");
                 }
 
                 if ($requestedWeight > $remaining) {
-                    throw new \InvalidArgumentException("Berat penjualan untuk '{$cat->name}' ({$requestedWeight} kg) melebihi sisa setoran yang tersedia ({$remaining} kg) pada tanggal {$date}.");
+                    throw new \InvalidArgumentException("Berat penjualan untuk '{$cat->name}' ({$requestedWeight} kg) melebihi sisa stok yang tersedia sampai tanggal {$date} ({$remaining} kg).");
                 }
+
+                $pendingStockChanges[] = [
+                    'waste_category_id' => (int) $catId,
+                    'date' => $date,
+                    'weight' => (float) $requestedWeight,
+                    'direction' => 'out',
+                ];
             }
+
+            // Full-timeline guard: reject any sale that would make cumulative stock
+            // negative at any date point (e.g. backdated sales).
+            $this->assertCumulativeStockNotNegative(
+                array_values(array_unique($affectedCategoryIds)),
+                $pendingStockChanges
+            );
 
             $totalAmount = 0;
             $totalMargin = 0;
@@ -319,15 +372,18 @@ class BankSampahService
             foreach ($aggregatedWeights as $catId => $weight) {
                 $cat = $categories->get($catId);
 
-                if ($saleId && isset($existingDetailsMap[$catId])) {
+                $detailEntry = $detailByCat[$catId] ?? [];
+                $customPrice = $detailEntry['custom_price'] ?? null;
+                $hasCustom = $customPrice !== null && $customPrice !== '' && (float) $customPrice > 0;
+
+                if ($saleId && isset($existingDetailsMap[$catId]) && ! $hasCustom) {
                     // PRESERVE historical snapshot from existing detail!
                     $collectorPrice = (float) $existingDetailsMap[$catId]->price_per_unit;
                     $memberPrice = (float) $existingDetailsMap[$catId]->member_price;
                 } else {
-                    // New item: use custom_price if provided, otherwise master price, otherwise reject
-                    $detailEntry = $detailByCat[$catId] ?? [];
-                    $customPrice = $detailEntry['custom_price'] ?? null;
-                    if ($customPrice !== null && $customPrice !== '' && (float)$customPrice > 0) {
+                    // New item, or explicit price override from inline edit:
+                    // custom_price > master price > reject
+                    if ($hasCustom) {
                         $collectorPrice = (float) $customPrice;
                     } elseif (isset($collectorPrices[$catId])) {
                         $collectorPrice = (float) $collectorPrices[$catId];
@@ -471,93 +527,121 @@ class BankSampahService
         });
     }
 
-    public function validateDepositCanBeDeleted(Deposit $deposit): void
+    /**
+     * Ensure cumulative stock for the given categories never drops below zero
+     * across the full timeline, including optional pending changes.
+     *
+     * @param  array<int>  $categoryIds
+     * @param  array<int, array{waste_category_id:int|string,date:string,weight:float|int,direction:string}>  $pendingChanges
+     */
+    private function assertCumulativeStockNotNegative(array $categoryIds, array $pendingChanges = []): void
     {
-        $deposit->loadMissing('details.wasteCategory');
-        $date = $deposit->date->format('Y-m-d');
-
-        $hasSales = Sale::whereDate('date', $date)->exists();
-        if (! $hasSales) {
+        $categoryIds = array_values(array_unique(array_map('intval', $categoryIds)));
+        if (empty($categoryIds)) {
             return;
         }
 
-        foreach ($deposit->details as $detail) {
-            $catId = $detail->waste_category_id;
-            $categoryName = $detail->wasteCategory->name ?? "Kategori #{$catId}";
+        $timeline = []; // 'Y-m-d' => [categoryId => delta]
 
-            $totalDeposited = (float) DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $date))
-                ->where('waste_category_id', $catId)
-                ->sum('weight');
+        $depositDetails = DepositDetail::query()
+            ->whereIn('waste_category_id', $categoryIds)
+            ->with('deposit:id,date')
+            ->get(['id', 'deposit_id', 'waste_category_id', 'weight']);
 
-            $totalSold = (float) SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $date))
-                ->where('waste_category_id', $catId)
-                ->sum('weight');
+        foreach ($depositDetails as $detail) {
+            if (! $detail->deposit) {
+                continue;
+            }
+            $date = $detail->deposit->date->format('Y-m-d');
+            $timeline[$date][$detail->waste_category_id] = ($timeline[$date][$detail->waste_category_id] ?? 0) + (float) $detail->weight;
+        }
 
-            if ($totalSold > 0) {
-                $remainingAfterDelete = round($totalDeposited - (float) $detail->weight - $totalSold, 2);
-                if ($remainingAfterDelete < 0) {
-                    $deficit = abs($remainingAfterDelete);
-                    throw new \InvalidArgumentException("Setoran tidak dapat dihapus karena sampah '{$categoryName}' sudah terjual ke agregator ({$totalSold} kg pada {$deposit->date->format('d/m/Y')}). Menghapus setoran ini akan menyebabkan defisit stok sebesar {$deficit} kg.");
+        $saleDetails = SaleDetail::query()
+            ->whereIn('waste_category_id', $categoryIds)
+            ->with('sale:id,date')
+            ->get(['id', 'sale_id', 'waste_category_id', 'weight']);
+
+        foreach ($saleDetails as $detail) {
+            if (! $detail->sale) {
+                continue;
+            }
+            $date = $detail->sale->date->format('Y-m-d');
+            $timeline[$date][$detail->waste_category_id] = ($timeline[$date][$detail->waste_category_id] ?? 0) - (float) $detail->weight;
+        }
+
+        foreach ($pendingChanges as $change) {
+            $catId = (int) $change['waste_category_id'];
+            $date = \Carbon\Carbon::parse($change['date'])->format('Y-m-d');
+            $delta = ($change['direction'] === 'out' ? -1 : 1) * (float) $change['weight'];
+            $timeline[$date][$catId] = ($timeline[$date][$catId] ?? 0) + $delta;
+        }
+
+        ksort($timeline);
+
+        $running = array_fill_keys($categoryIds, 0.0);
+        foreach ($timeline as $date => $deltas) {
+            foreach ($deltas as $catId => $delta) {
+                $running[$catId] = round(($running[$catId] ?? 0) + $delta, 2);
+            }
+            foreach ($categoryIds as $catId) {
+                if (($running[$catId] ?? 0) < -0.0001) {
+                    $cat = \App\Models\WasteCategory::find($catId);
+                    $name = $cat?->name ?? "Kategori #{$catId}";
+                    throw new \InvalidArgumentException("Transaksi ini akan membuat stok '{$name}' negatif pada {$date} ({$running[$catId]} kg).");
                 }
             }
         }
     }
 
-    public function validateDepositCanBeUpdated(Deposit $deposit, array $newDetails, string $newDate): void
+    public function validateDepositCanBeDeleted(Deposit $deposit): void
     {
         $deposit->loadMissing('details.wasteCategory');
+
+        $date = $deposit->date->format('Y-m-d');
+        $categoryIds = $deposit->details->pluck('waste_category_id')->map(fn ($id) => (int) $id)->all();
+
+        $pending = [];
+        foreach ($deposit->details as $detail) {
+            $pending[] = [
+                'waste_category_id' => $detail->waste_category_id,
+                'date' => $date,
+                'weight' => (float) $detail->weight,
+                'direction' => 'out',
+            ];
+        }
+
+        $this->assertCumulativeStockNotNegative($categoryIds, $pending);
+    }
+
+    public function validateDepositCanBeUpdated(Deposit $deposit, array $newDetails, string $newDate): void
+    {
+        $deposit->loadMissing('details');
+
         $oldDate = $deposit->date->format('Y-m-d');
         $newDateFormatted = \Carbon\Carbon::parse($newDate)->format('Y-m-d');
 
-        // Aggregate old weights by category
-        $oldWeights = [];
-        foreach ($deposit->details as $d) {
-            $oldWeights[$d->waste_category_id] = ($oldWeights[$d->waste_category_id] ?? 0) + (float) $d->weight;
+        // Remove old contribution, add the new contribution at the new date.
+        $pending = [];
+        foreach ($deposit->details as $detail) {
+            $pending[] = [
+                'waste_category_id' => $detail->waste_category_id,
+                'date' => $oldDate,
+                'weight' => (float) $detail->weight,
+                'direction' => 'out',
+            ];
+        }
+        foreach ($newDetails as $detail) {
+            $pending[] = [
+                'waste_category_id' => (int) $detail['waste_category_id'],
+                'date' => $newDateFormatted,
+                'weight' => (float) $detail['weight'],
+                'direction' => 'in',
+            ];
         }
 
-        // Aggregate new weights by category
-        $newWeights = [];
-        foreach ($newDetails as $d) {
-            $cId = (int) $d['waste_category_id'];
-            $newWeights[$cId] = ($newWeights[$cId] ?? 0) + (float) $d['weight'];
-        }
+        $categoryIds = collect($pending)->pluck('waste_category_id')->map(fn ($id) => (int) $id)->all();
 
-        // Check sales impact on old date
-        $hasSalesOnOldDate = Sale::whereDate('date', $oldDate)->exists();
-        if ($hasSalesOnOldDate) {
-            foreach ($oldWeights as $catId => $oldWeight) {
-                $cat = \App\Models\WasteCategory::find($catId);
-                $catName = $cat ? $cat->name : "Kategori #{$catId}";
-
-                $totalDepositedOld = (float) DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $oldDate))
-                    ->where('waste_category_id', $catId)
-                    ->sum('weight');
-
-                $totalSoldOld = (float) SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $oldDate))
-                    ->where('waste_category_id', $catId)
-                    ->sum('weight');
-
-                if ($totalSoldOld > 0) {
-                    if ($oldDate !== $newDateFormatted) {
-                        $newDepositedOldDate = $totalDepositedOld - $oldWeight;
-                        if ($newDepositedOldDate < $totalSoldOld) {
-                            $deficit = round($totalSoldOld - $newDepositedOldDate, 2);
-                            throw new \InvalidArgumentException("Tanggal setoran tidak dapat diubah karena sampah '{$catName}' pada tanggal {$deposit->date->format('d/m/Y')} sudah terjual ke agregator ({$totalSoldOld} kg). Perubahan tanggal menyebabkan defisit stok {$deficit} kg pada tanggal tersebut.");
-                        }
-                    } else {
-                        $newWeight = $newWeights[$catId] ?? 0;
-                        $diff = $newWeight - $oldWeight;
-                        if ($diff < 0) {
-                            $remainingAfterUpdate = round($totalDepositedOld + $diff - $totalSoldOld, 2);
-                            if ($remainingAfterUpdate < 0) {
-                                $deficit = abs($remainingAfterUpdate);
-                                throw new \InvalidArgumentException("Berat setoran untuk '{$catName}' tidak dapat dikurangi menjadi {$newWeight} kg karena sudah terjual ke agregator ({$totalSoldOld} kg pada {$deposit->date->format('d/m/Y')}). Perubahan ini menyebabkan defisit stok sebesar {$deficit} kg.");
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        $this->assertCumulativeStockNotNegative($categoryIds, $pending);
     }
 
     public function recalculateWasteBankBalances(): void

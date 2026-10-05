@@ -44,7 +44,7 @@
         disabled: @js($disabled),
      })"
      x-modelable="activeVal"
-     class="w-full {{ $attributes->get('class') }}"
+     {{ $attributes->except(['id'])->merge(['class' => 'w-full']) }}
      id="{{ $pillsId }}">
 
     {{-- Hidden input for regular form submission --}}

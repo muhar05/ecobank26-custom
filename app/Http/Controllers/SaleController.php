@@ -8,7 +8,9 @@ use App\Models\SaleDetail;
 use App\Models\WasteBankCashLedger;
 use App\Models\WasteCategory;
 use App\Models\WastePrice;
+use App\Models\WastePriceHistory;
 use App\Services\BankSampahService;
+use App\Services\DeviceTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -21,13 +23,13 @@ class SaleController extends Controller
         $search = $request->input('search');
         $selectedDate = $request->input('date', date('Y-m-d'));
 
-        // 1. Calculate remaining deposited waste on selected date ready to sell
-        $deposited = \App\Models\DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', $selectedDate))
+        // 1. Calculate cumulative remaining stock (carry-over included) as of selected date
+        $deposited = \App\Models\DepositDetail::whereHas('deposit', fn ($q) => $q->whereDate('date', '<=', $selectedDate))
             ->select('waste_category_id', DB::raw('SUM(weight) as total_deposited'))
             ->groupBy('waste_category_id')
             ->pluck('total_deposited', 'waste_category_id');
 
-        $sold = SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', $selectedDate))
+        $sold = SaleDetail::whereHas('sale', fn ($q) => $q->whereDate('date', '<=', $selectedDate))
             ->select('waste_category_id', DB::raw('SUM(weight) as total_sold'))
             ->groupBy('waste_category_id')
             ->pluck('total_sold', 'waste_category_id');
@@ -138,6 +140,76 @@ class SaleController extends Controller
 
         return redirect()->route('bank-sampah.sales.index')
             ->with('success', 'Penjualan berhasil diperbarui.');
+    }
+
+    public function inlinePrice(Request $request)
+    {
+        $validated = $request->validate([
+            'collector_id'      => 'required|exists:collectors,id',
+            'waste_category_id' => 'required|exists:waste_categories,id',
+            'collector_price'   => 'required|numeric|min:0',
+        ]);
+
+        $device = $request->attributes->get('admin_device')
+            ?? app(DeviceTrackingService::class)->getDeviceFromRequest($request, $request->user());
+
+        $category = WasteCategory::find($validated['waste_category_id']);
+        $newPrice = (float) $validated['collector_price'];
+
+        $price = DB::transaction(function () use ($validated, $newPrice, $device, $category) {
+            $price = WastePrice::where('waste_category_id', $validated['waste_category_id'])
+                ->where('collector_id', $validated['collector_id'])
+                ->first();
+
+            if ($price) {
+                $oldPrice = (float) $price->collector_price;
+                $price->update(['collector_price' => $newPrice]);
+
+                if (abs($oldPrice - $newPrice) > 0.01) {
+                    WastePriceHistory::create([
+                        'waste_price_id'     => $price->id,
+                        'collector_id'       => $validated['collector_id'],
+                        'waste_category_id'  => $validated['waste_category_id'],
+                        'old_price'          => $oldPrice,
+                        'new_price'          => $newPrice,
+                        'unit'               => $category?->unit ?? 'kg',
+                        'changed_at'         => now(),
+                        'changed_by_user_id' => auth()->id(),
+                        'admin_device_id'    => $device?->id,
+                        'source'             => WastePriceHistory::SOURCE_MANUAL,
+                    ]);
+                }
+            } else {
+                $price = WastePrice::create([
+                    'waste_category_id' => $validated['waste_category_id'],
+                    'collector_id'      => $validated['collector_id'],
+                    'collector_price'   => $newPrice,
+                ]);
+
+                WastePriceHistory::create([
+                    'waste_price_id'     => $price->id,
+                    'collector_id'       => $validated['collector_id'],
+                    'waste_category_id'  => $validated['waste_category_id'],
+                    'old_price'          => null,
+                    'new_price'          => $newPrice,
+                    'unit'               => $category?->unit ?? 'kg',
+                    'changed_at'         => now(),
+                    'changed_by_user_id' => auth()->id(),
+                    'admin_device_id'    => $device?->id,
+                    'source'             => WastePriceHistory::SOURCE_MANUAL,
+                ]);
+            }
+
+            return $price;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'waste_category_id' => (int) $validated['waste_category_id'],
+                'collector_price'   => (float) $price->collector_price,
+            ],
+        ]);
     }
 
     public function destroy(Sale $sale)

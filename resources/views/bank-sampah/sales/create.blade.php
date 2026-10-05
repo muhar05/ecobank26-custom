@@ -50,40 +50,6 @@
                 </div>
             </div>
 
-            <!-- Modal for price confirmation -->
-        <x-ui.modal name="price-confirmation" title="Harga Lapak Belum Terdaftar" maxWidth="sm">
-            <template x-if="pendingPriceItem">
-                <div class="space-y-3">
-                    <p class="text-body-sm text-text leading-relaxed">
-                        Material <strong class="text-text font-semibold" x-text="pendingPriceItem.name"></strong> tetap dapat dijual ke Agregator ini, tetapi harga belum tersedia di sistem. Tentukan harga yang akan digunakan.
-                    </p>
-                    <div>
-                        <x-input-label value="Harga Penjualan (Rp)" />
-                        <x-text-input type="number"
-                                      x-model.number="pendingPriceAmount"
-                                      placeholder="0"
-                                      min="1"
-                                      class="no-spinner"
-                                      autocomplete="off" />
-                    </div>
-                    <label class="flex items-center gap-2 text-body-sm cursor-pointer">
-                        <input type="checkbox"
-                               x-model="pendingPriceSaveAsMaster"
-                               class="h-4 w-4 rounded border-border text-primary focus:ring-primary">
-                        <span>Simpan sebagai Harga Lapak Agregator</span>
-                    </label>
-                </div>
-            </template>
-            <x-slot:actions>
-                <x-ui.button type="button" variant="ghost" @click="cancelPendingPrice()">
-                    Batal
-                </x-ui.button>
-                <x-ui.button type="button" variant="primary" @click="confirmPendingPrice()">
-                    Konfirmasi Harga
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.modal>
-
             {{-- Error Banner --}}
             @if($errors->any())
                 <div class="p-4 rounded-radius-md bg-danger-light border border-danger/30 text-danger-text">
@@ -152,7 +118,7 @@
                                 </template>
                                 <template x-if="getCollectorPriceCount(collectorId) === 0">
                                     <p class="text-caption font-semibold text-warning">
-                                        ⚠️ Agregator ini belum memiliki katalog harga lapak terdaftar. Harga jual akan bernilai Rp 0.
+                                        ⚠️ Agregator ini belum memiliki katalog harga lapak. Material tetap dapat dijual, isi harga lewat Edit Harga.
                                     </p>
                                 </template>
                             </div>
@@ -257,7 +223,15 @@
                     </div>
                 </div>
 
-                <div x-show="collectorId && visibleItems().length > 0">
+                <div x-show="collectorId && hasWorkspace()" class="space-y-3">
+                    <x-ui.filter-pills
+                        x-model="activeTab"
+                        :options="[
+                            ['value' => 'all', 'label' => 'Semua'],
+                            ['value' => 'unregistered', 'label' => 'Belum Terdaftar'],
+                            ['value' => 'loss', 'label' => 'Rugi'],
+                        ]"
+                    />
                     <x-text-input type="text"
                                   x-model="searchQuery"
                                   placeholder="Cari material..."
@@ -266,7 +240,7 @@
 
                 <template x-if="recapNotice">
                     <div class="p-3 rounded-radius-md border flex items-start gap-2 transition-subtle"
-                         :class="recapNotice.type === 'error' ? 'bg-danger-light border-danger/30 text-danger-text' : 'bg-warning-light border-warning/30 text-warning-text'">
+                         :class="recapNotice.type === 'error' ? 'bg-danger-light border-danger/30 text-danger-text' : (recapNotice.type === 'success' ? 'bg-success-light border-success/30 text-success-text' : 'bg-warning-light border-warning/30 text-warning-text')">
                         <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
@@ -291,7 +265,7 @@
                     </div>
                 </template>
 
-                <template x-if="collectorId && visibleItems().length === 0">
+                <template x-if="collectorId && !hasWorkspace()">
                     <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
                         <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -299,20 +273,20 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-body-sm font-bold text-text">Agregator ini belum memiliki katalog harga.</p>
+                            <p class="text-body-sm font-bold text-text">Belum ada sisa setoran.</p>
                             <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
-                                Daftarkan harga lapak agregator di master harga sebelum mencatat penjualan.
+                                Tidak ada material dengan sisa setoran untuk tanggal dan agregator ini.
                             </p>
                         </div>
                     </div>
                 </template>
 
-                <template x-if="collectorId && availableRecap.length > 0 && visibleItems().length === 0">
+                <template x-if="collectorId && hasWorkspace() && visibleItems().length === 0">
                     <div class="py-10 px-4 text-center border-2 border-dashed border-border rounded-radius-md flex flex-col items-center justify-center space-y-3">
                         <div>
-                            <p class="text-body-sm font-bold text-text">Tidak ada material yang cocok.</p>
+                            <p class="text-body-sm font-bold text-text">Tidak ada material di tab ini.</p>
                             <p class="text-caption text-text-muted mt-0.5 max-w-md mx-auto">
-                                Ubah kata kunci pencarian untuk melihat material lain.
+                                Ubah tab atau kata kunci pencarian untuk melihat material lain.
                             </p>
                         </div>
                     </div>
@@ -333,6 +307,7 @@
                                         <th class="py-3.5 px-4 w-36 text-right">Berat Dijual (kg)</th>
                                         <th class="py-3.5 px-4 w-36 text-right">Subtotal</th>
                                         <th class="py-3.5 px-4 w-36 text-right">Margin Bank</th>
+                                        <th class="py-3.5 px-4 w-28 text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-border-subtle">
@@ -358,25 +333,39 @@
                                             </td>
 
                                             {{-- Harga Agregator --}}
-                                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
-                                                <template x-if="item.priceNull">
-                                                    <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
-                                                        Belum terdaftar
-                                                    </span>
+                                            <td class="py-3.5 px-4 text-right whitespace-nowrap" @click.stop>
+                                                <template x-if="editingPriceId === item.catId">
+                                                    <input type="number"
+                                                           min="0"
+                                                           step="1"
+                                                           x-model.number="editingPriceAmount"
+                                                           @keydown.enter.prevent="savePrice(item)"
+                                                           @keydown.escape.prevent="cancelEditPrice()"
+                                                           placeholder="0"
+                                                           class="no-spinner w-32 text-right text-body-sm font-mono font-bold rounded-radius-md border border-primary bg-surface text-text px-2 py-1.5 focus:border-primary focus:ring-1 focus:ring-primary">
                                                 </template>
-                                                <template x-if="!item.priceNull && item.hasPrice">
+                                                <template x-if="editingPriceId !== item.catId">
                                                     <div>
-                                                        <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(item.price)"></span>
-                                                        <span class="text-caption text-text-muted">/ <span x-text="item.unit || 'kg'"></span></span>
-                                                        <template x-if="item.price < item.memberPrice">
-                                                            <span class="text-caption text-danger font-bold block mt-0.5">Rugi! &lt; Beli</span>
+                                                        <template x-if="item.priceNull">
+                                                            <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
+                                                                Belum terdaftar
+                                                            </span>
+                                                        </template>
+                                                        <template x-if="!item.priceNull && item.hasPrice">
+                                                            <span>
+                                                                <span class="font-mono text-body-sm font-bold text-text" x-text="formatRp(item.price)"></span>
+                                                                <span class="text-caption text-text-muted">/ <span x-text="item.unit || 'kg'"></span></span>
+                                                                <template x-if="item.price < item.memberPrice">
+                                                                    <span class="text-caption text-danger font-bold block mt-0.5">Rugi! &lt; Beli</span>
+                                                                </template>
+                                                            </span>
+                                                        </template>
+                                                        <template x-if="!item.priceNull && !item.hasPrice">
+                                                            <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
+                                                                Belum ada harga
+                                                            </span>
                                                         </template>
                                                     </div>
-                                                </template>
-                                                <template x-if="!item.priceNull && !item.hasPrice">
-                                                    <span class="inline-flex items-center gap-1 text-caption font-semibold text-warning">
-                                                        Belum ada harga
-                                                    </span>
                                                 </template>
                                             </td>
 
@@ -416,6 +405,29 @@
                                                 <span :class="!item.selected ? 'text-text-muted' : (rowMargin(item) > 0 ? 'text-success-text' : (rowMargin(item) < 0 ? 'text-danger-text' : 'text-text-muted'))"
                                                       x-text="item.selected ? formatRp(rowMargin(item)) : '-'"></span>
                                             </td>
+
+                                            {{-- Aksi: Edit Harga inline (update master WastePrice) --}}
+                                            <td class="py-3.5 px-4 text-center whitespace-nowrap" @click.stop>
+                                                <template x-if="editingPriceId === item.catId">
+                                                    <div class="flex items-center justify-center gap-1.5">
+                                                        <button type="button" @click="savePrice(item)" :disabled="savingPriceId === item.catId"
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-radius-md bg-primary text-white text-caption font-bold hover:bg-primary-hover disabled:opacity-50 transition-subtle">
+                                                            <template x-if="savingPriceId === item.catId"><x-ui.spinner size="sm" /></template>
+                                                            <span x-text="savingPriceId === item.catId ? '...' : 'Simpan'"></span>
+                                                        </button>
+                                                        <button type="button" @click="cancelEditPrice()"
+                                                                class="px-2 py-1.5 rounded-radius-md text-caption font-semibold text-text-muted hover:bg-surface-muted transition-subtle">
+                                                            Batal
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                                <template x-if="editingPriceId !== item.catId">
+                                                    <button type="button" @click="startEditPrice(item)"
+                                                            class="inline-flex items-center px-2.5 py-1.5 rounded-radius-md border border-border text-caption font-semibold text-text hover:bg-surface-muted transition-subtle">
+                                                        Edit Harga
+                                                    </button>
+                                                </template>
+                                            </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -442,9 +454,27 @@
                                                 Beli Nasabah: <strong class="text-text font-mono" x-text="formatRp(item.memberPrice)"></strong> / <span x-text="item.unit || 'kg'"></span>
                                             </p>
                                         </div>
-                                        <div class="text-right shrink-0">
-                                            <span class="font-mono font-bold text-body-sm text-text block" x-text="item.priceNull ? 'Belum terdaftar' : (item.hasPrice ? formatRp(item.price) : 'Belum ada harga')"></span>
-                                            <span class="text-caption text-text-muted">lapak</span>
+                                        <div class="text-right shrink-0" @click.stop>
+                                            <template x-if="editingPriceId === item.catId">
+                                                <div class="flex items-center gap-1.5 justify-end">
+                                                    <input type="number" min="0" step="1" x-model.number="editingPriceAmount"
+                                                           @keydown.enter.prevent="savePrice(item)"
+                                                           @keydown.escape.prevent="cancelEditPrice()"
+                                                           class="no-spinner w-24 text-right text-body-sm font-mono font-bold rounded-radius-md border border-primary bg-surface text-text px-2 py-1.5">
+                                                    <button type="button" @click="savePrice(item)" :disabled="savingPriceId === item.catId"
+                                                            class="px-2 py-1.5 rounded-radius-md bg-primary text-white text-caption font-bold disabled:opacity-50">
+                                                        <span x-text="savingPriceId === item.catId ? '...' : 'Simpan'"></span>
+                                                    </button>
+                                                    <button type="button" @click="cancelEditPrice()" class="text-caption font-semibold text-text-muted">Batal</button>
+                                                </div>
+                                            </template>
+                                            <template x-if="editingPriceId !== item.catId">
+                                                <div>
+                                                    <span class="font-mono font-bold text-body-sm text-text block" x-text="item.priceNull ? 'Belum terdaftar' : (item.hasPrice ? formatRp(item.price) : 'Belum ada harga')"></span>
+                                                    <span class="text-caption text-text-muted block">lapak</span>
+                                                    <button type="button" @click="startEditPrice(item)" class="mt-1 text-caption font-semibold text-primary hover:underline">Edit Harga</button>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
 
@@ -493,11 +523,8 @@
                     <div>
                         <input type="hidden" :name="'details[' + i + '][waste_category_id]'" :value="row.catId">
                         <input type="hidden" :name="'details[' + i + '][weight]'" :value="row.weight">
-                        <template x-if="row.pendingPrice !== undefined">
-                            <input type="hidden" :name="'details[' + i + '][custom_price]'" :value="row.pendingPrice">
-                        </template>
-                        <template x-if="row.pendingPrice !== undefined && row.saveAsMasterPrice">
-                            <input type="hidden" :name="'details[' + i + '][save_as_master_price]'" :value="'1'">
+                        <template x-if="row.priceOverridden">
+                            <input type="hidden" :name="'details[' + i + '][custom_price]'" :value="row.price">
                         </template>
                     </div>
                 </template>
@@ -567,9 +594,10 @@
                 allCollectors: allCollectors,
                 items: [],
                 searchQuery: '',
-                pendingPriceItem: null,
-                pendingPriceAmount: 0,
-                pendingPriceSaveAsMaster: false,
+                activeTab: 'all',
+                editingPriceId: null,
+                editingPriceAmount: null,
+                savingPriceId: null,
                 availableRecap: [],
                 loadingRecap: false,
                 recapNotice: null,
@@ -617,13 +645,28 @@
                     return this.items.filter(it => it.selected && it.catId);
                 },
 
+                hasWorkspace() {
+                    return this.items.some(it => it.remainingWeight !== undefined);
+                },
+
                 visibleItems() {
                     const q = (this.searchQuery || '').toLowerCase().trim();
                     return this.items.filter(it => {
                         if (it.remainingWeight === undefined) return false;
+                        if (this.activeTab === 'unregistered' && !it.priceNull) return false;
+                        if (this.activeTab === 'loss' && !(it.hasPrice && !it.priceNull && it.price < it.memberPrice)) return false;
                         if (!q) return true;
                         return it.name.toLowerCase().includes(q) || (it.code && it.code.toLowerCase().includes(q));
                     });
+                },
+
+                tabCount(tab) {
+                    return this.items.filter(it => {
+                        if (it.remainingWeight === undefined) return false;
+                        if (tab === 'unregistered') return it.priceNull;
+                        if (tab === 'loss') return it.hasPrice && !it.priceNull && it.price < it.memberPrice;
+                        return true;
+                    }).length;
                 },
 
                 availableTotalKg() {
@@ -635,7 +678,7 @@
                     this.items.forEach(it => {
                         prev[it.catId] = {
                             selected: it.selected, weight: it.weight, price: it.price, memberPrice: it.memberPrice,
-                            isExisting: !!it.isExisting, pendingPrice: it.pendingPrice, saveAsMasterPrice: it.saveAsMasterPrice,
+                            isExisting: !!it.isExisting, priceOverridden: !!it.priceOverridden,
                         };
                     });
                     this.items = [];
@@ -646,8 +689,7 @@
                             memberPrice: Math.round(cat.member_price), price: 0,
                             weight: saved ? saved.weight : '', remainingWeight: undefined,
                             selected: saved ? saved.selected : false, hasPrice: false, priceNull: false,
-                            pendingPrice: saved ? saved.pendingPrice : undefined,
-                            saveAsMasterPrice: saved ? saved.saveAsMasterPrice : false,
+                            priceOverridden: saved ? saved.priceOverridden : false,
                         };
                         if (saved && saved.isExisting) {
                             item.price = saved.price;
@@ -670,8 +712,7 @@
                                 memberPrice: saved.memberPrice, price: saved.price,
                                 weight: saved.weight, remainingWeight: undefined,
                                 selected: saved.selected, hasPrice: true, priceNull: false,
-                                isExisting: true,
-                                pendingPrice: saved.pendingPrice, saveAsMasterPrice: saved.saveAsMasterPrice,
+                                isExisting: true, priceOverridden: saved.priceOverridden,
                             };
                             this.items.push(item);
                         }
@@ -681,26 +722,13 @@
 
                 toggleItem(item) {
                     if (!item) return;
-                    if (item.priceNull && !item.selected && item.pendingPrice === undefined) {
-                        item.selected = true;
-                        this.openPriceConfirm(item);
-                        return;
-                    }
                     item.selected = !item.selected;
                     this.onItemToggle(item);
                 },
 
                 checkboxToggle(item) {
-                    if (item.selected) {
-                        item.selected = false;
-                    } else {
-                        item.selected = true;
-                        if (item.priceNull && item.pendingPrice === undefined) {
-                            this.openPriceConfirm(item);
-                        } else {
-                            this.onItemToggle(item);
-                        }
-                    }
+                    item.selected = !item.selected;
+                    this.onItemToggle(item);
                 },
 
                 onItemToggle(item) {
@@ -713,47 +741,69 @@
                     if (item.remainingWeight !== undefined) item.weight = Number(item.remainingWeight);
                 },
 
-                openPriceConfirm(item) {
-                    this.pendingPriceItem = item;
-                    this.pendingPriceAmount = 0;
-                    this.pendingPriceSaveAsMaster = false;
-                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'price-confirmation' }));
+                startEditPrice(item) {
+                    this.editingPriceId = item.catId;
+                    this.editingPriceAmount = item.priceNull ? null : item.price;
+                    this.recapNotice = null;
                 },
 
-                cancelPendingPrice() {
-                    if (this.pendingPriceItem) this.pendingPriceItem.selected = false;
-                    this.pendingPriceItem = null;
-                    this.pendingPriceAmount = 0;
-                    this.pendingPriceSaveAsMaster = false;
-                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'price-confirmation' }));
+                cancelEditPrice() {
+                    this.editingPriceId = null;
+                    this.editingPriceAmount = null;
                 },
 
-                confirmPendingPrice() {
-                    const amt = parseFloat(this.pendingPriceAmount) || 0;
-                    if (amt <= 0) return;
-                    const item = this.pendingPriceItem;
-                    if (!item) return;
-                    item.pendingPrice = amt;
-                    item.price = amt;
-                    item.hasPrice = true;
-                    item.priceNull = false;
-                    this.pendingPriceItem = null;
-                    this.pendingPriceAmount = 0;
-                    this.pendingPriceSaveAsMaster = false;
-                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'price-confirmation' }));
+                savePrice(item) {
+                    const amt = parseFloat(this.editingPriceAmount);
+                    if (!isFinite(amt) || amt < 0) {
+                        this.recapNotice = { type: 'error', code: 'price', message: 'Harga harus berupa angka dan tidak boleh negatif.' };
+                        return;
+                    }
+                    this.savingPriceId = item.catId;
+                    fetch(`{{ route('bank-sampah.sales.inline-price') }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        },
+                        body: JSON.stringify({
+                            collector_id: this.collectorId,
+                            waste_category_id: item.catId,
+                            collector_price: amt,
+                        }),
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            this.savingPriceId = null;
+                            if (res.status === 'success') {
+                                const np = Math.round(res.data.collector_price);
+                                item.price = np;
+                                item.hasPrice = true;
+                                item.priceNull = false;
+                                item.priceOverridden = true;
+                                if (!this.prices[this.collectorId]) this.prices[this.collectorId] = {};
+                                this.prices[this.collectorId][item.catId] = { collector_price: np };
+                                this.editingPriceId = null;
+                                this.editingPriceAmount = null;
+                                this.recapNotice = { type: 'success', code: 'price', message: 'Harga lapak "' + item.name + '" tersimpan.' };
+                                window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: 'Harga lapak tersimpan.' } }));
+                            } else {
+                                this.recapNotice = { type: 'error', code: 'price', message: 'Gagal menyimpan harga lapak.' };
+                            }
+                        })
+                        .catch(() => {
+                            this.savingPriceId = null;
+                            this.recapNotice = { type: 'error', code: 'price', message: 'Gagal menyimpan harga. Periksa koneksi lalu coba lagi.' };
+                        });
                 },
 
                 selectAllItems() {
                     this.visibleItems().forEach(it => {
                         if (it.selected) return;
                         it.selected = true;
-                        if (it.priceNull) return;
-                        this.defaultItemWeight(it);
+                        if (!it.priceNull) this.defaultItemWeight(it);
                     });
-                    const nullItems = this.visibleItems().filter(it => it.selected && it.priceNull);
-                    if (nullItems.length > 0) {
-                        this.openPriceConfirm(nullItems[0]);
-                    }
                 },
 
                 canSelectAll() {
@@ -801,12 +851,6 @@
 
                 fillRowPrice(row) {
                     if (row.isExisting) return;
-                    if (row.pendingPrice !== undefined) {
-                        row.price = row.pendingPrice;
-                        row.hasPrice = true;
-                        row.priceNull = false;
-                        return;
-                    }
                     if (!this.collectorId || !row.catId) {
                         row.hasPrice = false;
                         row.price = 0;
@@ -846,14 +890,15 @@
                                 memberPrice: Math.round(cat.member_price), price: 0,
                                 weight: '', remainingWeight: undefined,
                                 selected: false, hasPrice: false, priceNull: false,
-                                pendingPrice: undefined, saveAsMasterPrice: false,
+                                priceOverridden: false,
                             };
                             this.items.push(it);
                         }
                         it.remainingWeight = Number(x.remaining_weight);
                         if (it.isExisting) return;
+                        if (it.priceOverridden) return;
                         if (x.collector_price !== null && x.collector_price !== undefined) {
-                            if (!it.pendingPrice) it.price = Math.round(x.collector_price);
+                            it.price = Math.round(x.collector_price);
                             it.hasPrice = true;
                             it.priceNull = false;
                         } else {
@@ -913,7 +958,7 @@
                 },
 
                 priceNeededItems() {
-                    return this.selectedItems().filter(r => r.priceNull && !r.pendingPrice);
+                    return this.selectedItems().filter(r => r.priceNull);
                 },
 
                 formatRp(val) {
