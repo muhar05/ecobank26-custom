@@ -114,8 +114,8 @@
                                     {{ $d->deposit->wasteCustomer->name ?? '-' }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-body font-semibold text-text">{{ $d->wasteCategory->name ?? '-' }}</div>
-                                    <div class="text-caption font-mono text-text-muted mt-0.5">{{ $d->wasteCategory->wasteCategoryGroup->name ?? 'Legacy/Belum Grup' }}</div>
+                                    <div class="text-body font-semibold text-text">{{ $d->display_label }}</div>
+                                    <div class="text-caption font-mono text-text-muted mt-0.5">{{ $d->wasteCategory?->wasteCategoryGroup?->name ?? ($d->wasteCategory ? 'Legacy/Belum Grup' : 'Historical Exception') }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right font-mono text-body font-semibold text-text">
                                     {{ number_format($d->weight, 2, ',', '.') }} kg
@@ -154,7 +154,7 @@
                         <div class="border-t border-dashed border-border-subtle my-2"></div>
                         <div class="flex justify-between text-body-sm">
                             <span class="text-text-muted">Kategori:</span>
-                            <span class="font-semibold text-text">{{ $d->wasteCategory->name ?? '-' }}</span>
+                            <span class="font-semibold text-text">{{ $d->display_label }}</span>
                         </div>
                         <div class="flex justify-between text-body-sm">
                             <span class="text-text-muted">Berat / Harga:</span>

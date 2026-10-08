@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DepositDetail extends Model
 {
-    protected $fillable = ['deposit_id', 'waste_category_id', 'weight', 'price_per_unit', 'subtotal'];
+    protected $fillable = ['deposit_id', 'waste_category_id', 'material_label', 'weight', 'price_per_unit', 'subtotal'];
 
     protected function casts(): array
     {
@@ -22,5 +22,27 @@ class DepositDetail extends Model
     public function wasteCategory(): BelongsTo
     {
         return $this->belongsTo(WasteCategory::class);
+    }
+
+    /**
+     * Historical exception: baris tanpa WasteCategory, hanya raw label
+     * (mis. "Buku, Majalah, Brosur, Koran" / "Seng/Kawat").
+     */
+    public function isHistoricalException(): bool
+    {
+        return $this->waste_category_id === null;
+    }
+
+    /**
+     * Label tampil: nama kategori kanonik, atau raw label historis.
+     */
+    public function getDisplayLabelAttribute(): string
+    {
+        return $this->wasteCategory?->name ?? $this->material_label ?? 'Material';
+    }
+
+    public function getDisplayUnitAttribute(): string
+    {
+        return $this->wasteCategory?->unit ?? 'kg';
     }
 }

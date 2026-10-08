@@ -138,7 +138,7 @@
                     <td style="font-weight: bold;">
                         {{ $d->deposit->wasteCustomer->name ?? '-' }}
                     </td>
-                    <td>{{ $d->wasteCategory->name ?? '-' }}</td>
+                    <td>{{ $d->display_label }}</td>
                     <td class="text-right">{{ number_format($d->weight, 2, ',', '.') }} kg</td>
                     <td class="text-right">Rp {{ number_format($d->price_per_unit, 0, ',', '.') }}</td>
                     <td class="text-right" style="font-weight: bold;">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</td>

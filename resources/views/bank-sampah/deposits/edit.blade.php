@@ -36,11 +36,11 @@
         $existingDetails = $deposit->details->map(function ($d) {
             return [
                 'waste_category_id' => $d->waste_category_id,
-                'name' => $d->wasteCategory->name ?? '',
-                'unit' => $d->wasteCategory->unit ?? 'kg',
+                'name' => $d->display_label,
+                'unit' => $d->display_unit,
                 'weight' => (float) $d->weight,
                 'price_per_unit' => (float) $d->price_per_unit,
-                'default_price' => (float) ($d->wasteCategory->member_price ?? $d->price_per_unit),
+                'default_price' => (float) ($d->wasteCategory?->member_price ?? $d->price_per_unit),
             ];
         })->values()->all();
     @endphp

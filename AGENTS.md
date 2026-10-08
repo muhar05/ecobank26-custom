@@ -1,5 +1,11 @@
 # EcoBank026 Agent Instructions
 
+LANGUAGE:
+- Always respond in Indonesian.
+- Use Indonesian for analysis, audit reports, summaries, and final output.
+- Keep code, commands, filenames, database fields, and technical identifiers unchanged.
+- Do not switch to Chinese or another language unless explicitly requested by the user.
+
 ## Mandatory
 Before working on any task:
 1. Read the relevant instructions in `.agents/`.

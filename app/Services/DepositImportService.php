@@ -3,13 +3,12 @@
 namespace App\Services;
 
 use App\Models\Deposit;
+use App\Models\MaterialAlias;
 use App\Models\WasteCategory;
+use App\Models\WasteCategoryGroup;
 use App\Models\WasteCustomer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Models\MaterialAlias;
-use App\Models\WasteCategoryGroup;
-use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class DepositImportService
@@ -20,12 +19,14 @@ class DepositImportService
     {
         $this->mappingService = $mappingService ?? app(MaterialMappingService::class);
     }
+
     /**
      * List all sheet names from an uploaded spreadsheet file.
      */
     public function listSheets(string $filePath): array
     {
         $reader = IOFactory::createReaderForFile($filePath);
+
         return $reader->listWorksheetNames($filePath);
     }
 
@@ -68,7 +69,8 @@ class DepositImportService
     public function calculateFingerprint(string $filePath, string $sheetName, string $confirmedDate): string
     {
         $contentHash = md5_file($filePath);
-        return md5($contentHash . '|' . trim($sheetName) . '|' . trim($confirmedDate));
+
+        return md5($contentHash.'|'.trim($sheetName).'|'.trim($confirmedDate));
     }
 
     /**
@@ -94,7 +96,7 @@ class DepositImportService
 
         $spreadsheet = $reader->load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
-        
+
         // toArray: nullValue=null, calculateFormulas=true, formatData=false, returnByColumnAndRow=false
         $allRows = $worksheet->toArray(null, true, false, false);
 
@@ -121,9 +123,11 @@ class DepositImportService
             $tempTotal = null;
 
             foreach ($row as $colIdx => $cell) {
-                if ($cell === null) continue;
+                if ($cell === null) {
+                    continue;
+                }
                 $val = strtolower(trim((string) $cell));
-                
+
                 if (preg_match('/^(nasabah|nama|nama nasabah|warga|customer|nama warga)$/i', $val)) {
                     $tempCustomer = $colIdx;
                     $matches++;
@@ -171,14 +175,14 @@ class DepositImportService
             $row = $allRows[$r];
 
             // Skip completely empty rows
-            $nonEmpty = array_filter($row, fn($c) => $c !== null && trim((string)$c) !== '');
+            $nonEmpty = array_filter($row, fn ($c) => $c !== null && trim((string) $c) !== '');
             if (empty($nonEmpty)) {
                 continue;
             }
 
-            $rawCustomer = isset($row[$colCustomer]) ? trim((string)$row[$colCustomer]) : '';
-            $rawMaterial = isset($row[$colMaterial]) ? trim((string)$row[$colMaterial]) : '';
-            
+            $rawCustomer = isset($row[$colCustomer]) ? trim((string) $row[$colCustomer]) : '';
+            $rawMaterial = isset($row[$colMaterial]) ? trim((string) $row[$colMaterial]) : '';
+
             $weightVal = $colWeight !== null && isset($row[$colWeight]) ? $this->parseNumber($row[$colWeight]) : null;
             $priceCell = $colPrice !== null && isset($row[$colPrice]) ? $row[$colPrice] : null;
             $priceVal = $this->parseNumber($priceCell);
@@ -186,14 +190,14 @@ class DepositImportService
 
             $rawRows[] = [
                 'excel_row_num' => $r + 1,
-                'raw_customer'  => $rawCustomer,
-                'raw_material'  => $rawMaterial,
-                'weight'        => $weightVal,
-                'excel_price'   => $priceVal,
+                'raw_customer' => $rawCustomer,
+                'raw_material' => $rawMaterial,
+                'weight' => $weightVal,
+                'excel_price' => $priceVal,
                 // Distinguish an empty price cell (falls back to master price,
                 // master is not overwritten) from a non-numeric value (rejected).
                 'excel_price_empty' => $priceCell === null || trim((string) $priceCell) === '',
-                'excel_total'   => $totalVal,
+                'excel_total' => $totalVal,
             ];
         }
 
@@ -219,7 +223,7 @@ class DepositImportService
         $customerById = $activeCustomers->keyBy('id');
         $mappedCustomerIds = array_filter(array_values($customerMappings));
         $missingCustIds = array_diff($mappedCustomerIds, $customerById->keys()->toArray());
-        if (!empty($missingCustIds)) {
+        if (! empty($missingCustIds)) {
             $extraCustomers = WasteCustomer::whereIn('id', $missingCustIds)->get();
             foreach ($extraCustomers as $ec) {
                 $customerById[$ec->id] = $ec;
@@ -230,7 +234,7 @@ class DepositImportService
         $categoryById = $categories->keyBy('id');
         $mappedCategoryIds = array_filter(array_values($materialMappings));
         $missingCatIds = array_diff($mappedCategoryIds, $categoryById->keys()->toArray());
-        if (!empty($missingCatIds)) {
+        if (! empty($missingCatIds)) {
             $extraCategories = WasteCategory::whereIn('id', $missingCatIds)->get();
             foreach ($extraCategories as $ecat) {
                 $categoryById[$ecat->id] = $ecat;
@@ -240,14 +244,14 @@ class DepositImportService
         // Build normalized customer and material mapping lookups for robust propagation
         $customerMappingsNorm = [];
         foreach ($customerMappings as $raw => $cid) {
-            if (!empty($cid)) {
+            if (! empty($cid)) {
                 $customerMappingsNorm[$this->normalizeString($raw)] = (int) $cid;
             }
         }
 
         $materialMappingsNorm = [];
         foreach ($materialMappings as $raw => $mid) {
-            if (!empty($mid)) {
+            if (! empty($mid)) {
                 $materialMappingsNorm[$this->normalizeString($raw)] = (int) $mid;
             }
         }
@@ -264,7 +268,7 @@ class DepositImportService
             $customerByCode[$codeKey] = $c;
 
             $nameKey = $this->normalizeString($c->name);
-            if (!isset($customerByNameNorm[$nameKey])) {
+            if (! isset($customerByNameNorm[$nameKey])) {
                 $customerByNameNorm[$nameKey] = [];
             }
             $customerByNameNorm[$nameKey][] = $c;
@@ -325,7 +329,7 @@ class DepositImportService
             }
 
             if ($excelPrice === null) {
-                if (!($raw['excel_price_empty'] ?? true)) {
+                if (! ($raw['excel_price_empty'] ?? true)) {
                     $status = 'ERROR';
                     $reasons[] = 'Harga tidak valid (bukan angka)';
                 }
@@ -346,7 +350,7 @@ class DepositImportService
                 }
 
                 // If not mapped, check exact code or normalized name
-                if (!$matchedCustomer) {
+                if (! $matchedCustomer) {
                     $normCust = $this->normalizeString($rawCust);
                     if (isset($customerByCode[$normCust])) {
                         $matchedCustomer = $customerByCode[$normCust];
@@ -380,9 +384,9 @@ class DepositImportService
                 }
 
                 // If not mapped in session, resolve via MaterialMappingService pipeline (memoized per unique material)
-                if (!$matchedCategory) {
+                if (! $matchedCategory) {
                     $normMatKey = $this->normalizeString($rawMat);
-                    if (!isset($materialResolutionCache[$normMatKey])) {
+                    if (! isset($materialResolutionCache[$normMatKey])) {
                         $materialResolutionCache[$normMatKey] = $this->mappingService->resolve(
                             $rawMat,
                             MaterialAlias::SOURCE_BANK_SAMPAH,
@@ -449,7 +453,7 @@ class DepositImportService
             if ($matchedCategory && $excelPrice !== null && $masterPrice !== null) {
                 if (abs($excelPrice - $masterPrice) > 0.01) {
                     $hasPriceWarning = true;
-                    $reasons[] = "Harga Excel (Rp " . number_format($excelPrice, 0, ',', '.') . ") berbeda dari master (Rp " . number_format($masterPrice, 0, ',', '.') . ")";
+                    $reasons[] = 'Harga Excel (Rp '.number_format($excelPrice, 0, ',', '.').') berbeda dari master (Rp '.number_format($masterPrice, 0, ',', '.').')';
                 }
             }
 
@@ -459,9 +463,9 @@ class DepositImportService
                 $hasExistingDeposit = true;
                 $policy = $duplicatePolicies[$matchedCustomer->id] ?? 'append';
                 if ($policy === 'append') {
-                    $reasons[] = "Nasabah sudah punya setoran pada tanggal ini (akan ditambahkan sebagai setoran baru)";
+                    $reasons[] = 'Nasabah sudah punya setoran pada tanggal ini (akan ditambahkan sebagai setoran baru)';
                 } else {
-                    $reasons[] = "Nasabah sudah punya setoran pada tanggal ini (akan dilewati/skip)";
+                    $reasons[] = 'Nasabah sudah punya setoran pada tanggal ini (akan dilewati/skip)';
                 }
             }
 
@@ -471,31 +475,31 @@ class DepositImportService
             }
 
             $processedRows[] = [
-                'index'                 => $idx,
-                'excel_row_num'         => $raw['excel_row_num'],
-                'raw_customer'          => $rawCust,
-                'raw_material'          => $rawMat,
-                'weight'                => $weight,
-                'excel_price'           => $excelPrice,
-                'excel_total'           => $excelTotal,
-                'customer_id'           => $matchedCustomer ? $matchedCustomer->id : null,
-                'customer_name'         => $matchedCustomer ? $matchedCustomer->name : null,
-                'customer_code'         => $matchedCustomer ? $matchedCustomer->customer_code : null,
-                'customer_status'       => $customerStatus,
-                'category_id'           => $matchedCategory ? $matchedCategory->id : null,
-                'category_name'         => $matchedCategory ? $matchedCategory->name : null,
-                'category_unit'         => $matchedCategory ? $matchedCategory->unit : 'kg',
-                'material_status'       => $materialStatus,
-                'master_price'          => $masterPrice,
-                'price_mode'            => $priceMode,
-                'used_price'            => $usedPrice,
-                'system_total'          => $systemTotal,
-                'delta'                 => $delta,
-                'has_price_warning'     => $hasPriceWarning,
-                'has_total_warning'     => $hasTotalWarning,
-                'has_existing_deposit'  => $hasExistingDeposit,
-                'status'                => $status,
-                'reasons'               => $reasons,
+                'index' => $idx,
+                'excel_row_num' => $raw['excel_row_num'],
+                'raw_customer' => $rawCust,
+                'raw_material' => $rawMat,
+                'weight' => $weight,
+                'excel_price' => $excelPrice,
+                'excel_total' => $excelTotal,
+                'customer_id' => $matchedCustomer ? $matchedCustomer->id : null,
+                'customer_name' => $matchedCustomer ? $matchedCustomer->name : null,
+                'customer_code' => $matchedCustomer ? $matchedCustomer->customer_code : null,
+                'customer_status' => $customerStatus,
+                'category_id' => $matchedCategory ? $matchedCategory->id : null,
+                'category_name' => $matchedCategory ? $matchedCategory->name : null,
+                'category_unit' => $matchedCategory ? $matchedCategory->unit : 'kg',
+                'material_status' => $materialStatus,
+                'master_price' => $masterPrice,
+                'price_mode' => $priceMode,
+                'used_price' => $usedPrice,
+                'system_total' => $systemTotal,
+                'delta' => $delta,
+                'has_price_warning' => $hasPriceWarning,
+                'has_total_warning' => $hasTotalWarning,
+                'has_existing_deposit' => $hasExistingDeposit,
+                'status' => $status,
+                'reasons' => $reasons,
             ];
         }
 
@@ -523,7 +527,7 @@ class DepositImportService
                 continue;
             }
             $policy = $duplicatePolicies[$r['customer_id']] ?? 'append';
-            if (!empty($r['has_existing_deposit']) && $policy === 'skip') {
+            if (! empty($r['has_existing_deposit']) && $policy === 'skip') {
                 continue;
             }
 
@@ -531,7 +535,7 @@ class DepositImportService
             $subtotal = (float) ($r['system_total'] ?? 0);
 
             $catId = $r['category_id'];
-            if (!isset($materials[$catId])) {
+            if (! isset($materials[$catId])) {
                 $materials[$catId] = [
                     'category_id' => $catId,
                     'name' => $r['category_name'],
@@ -542,7 +546,7 @@ class DepositImportService
             $materials[$catId]['total_weight'] += $weight;
 
             $custId = $r['customer_id'];
-            if (!isset($customers[$custId])) {
+            if (! isset($customers[$custId])) {
                 $customers[$custId] = [
                     'customer_id' => $custId,
                     'name' => $r['customer_name'],
@@ -559,7 +563,7 @@ class DepositImportService
         }
 
         // Attach category group (label) to each unique material
-        if (!empty($materials)) {
+        if (! empty($materials)) {
             $categoriesWithGroups = WasteCategory::with('wasteCategoryGroup')
                 ->findMany(array_keys($materials))
                 ->keyBy('id');
@@ -572,8 +576,8 @@ class DepositImportService
             unset($m);
         }
 
-        usort($materials, fn($a, $b) => strcmp($a['name'], $b['name']));
-        usort($customers, fn($a, $b) => strcmp($a['name'], $b['name']));
+        usort($materials, fn ($a, $b) => strcmp($a['name'], $b['name']));
+        usort($customers, fn ($a, $b) => strcmp($a['name'], $b['name']));
 
         return [
             'materials' => array_values($materials),
@@ -591,11 +595,11 @@ class DepositImportService
         return DB::transaction(function () use ($name, $phone, $address) {
             $customer = WasteCustomer::create([
                 'customer_code' => WasteCustomer::generateNextCustomerCode(),
-                'name'          => trim($name),
-                'phone'         => $phone ? trim($phone) : null,
-                'address'       => $address ? trim($address) : null,
-                'status'        => 'active',
-                'joined_at'     => now(),
+                'name' => trim($name),
+                'phone' => $phone ? trim($phone) : null,
+                'address' => $address ? trim($address) : null,
+                'status' => 'active',
+                'joined_at' => now(),
             ]);
 
             app(ActivityLogService::class)->logInfo(
@@ -617,15 +621,17 @@ class DepositImportService
             $created = [];
             foreach ($customersList as $item) {
                 $name = trim($item['name'] ?? '');
-                if ($name === '') continue;
+                if ($name === '') {
+                    continue;
+                }
 
                 $customer = WasteCustomer::create([
                     'customer_code' => WasteCustomer::generateNextCustomerCode(),
-                    'name'          => $name,
-                    'phone'         => !empty($item['phone']) ? trim($item['phone']) : null,
-                    'address'       => !empty($item['address']) ? trim($item['address']) : null,
-                    'status'        => 'active',
-                    'joined_at'     => now(),
+                    'name' => $name,
+                    'phone' => ! empty($item['phone']) ? trim($item['phone']) : null,
+                    'address' => ! empty($item['address']) ? trim($item['address']) : null,
+                    'status' => 'active',
+                    'joined_at' => now(),
                 ]);
 
                 $customer->raw_customer = $item['raw_customer'] ?? $name;
@@ -638,6 +644,7 @@ class DepositImportService
 
                 $created[] = $customer;
             }
+
             return $created;
         });
     }
@@ -697,11 +704,11 @@ class DepositImportService
             $code = WasteCategory::generateCode($group);
 
             $category = WasteCategory::create([
-                'code'                    => $code,
-                'name'                    => trim($name),
+                'code' => $code,
+                'name' => trim($name),
                 'waste_category_group_id' => $group ? $group->id : null,
-                'unit'                    => trim($unit),
-                'member_price'            => $memberPrice,
+                'unit' => trim($unit),
+                'member_price' => $memberPrice,
             ]);
 
             if ($rawMaterialToAlias) {
@@ -731,7 +738,7 @@ class DepositImportService
     {
         $fingerprint = $stagingData['fingerprint'];
         if ($this->isFingerprintImported($fingerprint)) {
-            throw new \RuntimeException("Impor ini sudah pernah berhasil diproses sebelumnya. Impor ulang file/sheet yang sama diblokir.");
+            throw new \RuntimeException('Impor ini sudah pernah berhasil diproses sebelumnya. Impor ulang file/sheet yang sama diblokir.');
         }
 
         $rows = $stagingData['rows'];
@@ -744,7 +751,7 @@ class DepositImportService
         // Verify no unresolved errors
         foreach ($rows as $r) {
             if ($r['status'] === 'ERROR' || $r['status'] === 'NEEDS MAPPING' || $r['status'] === 'AMBIGUOUS') {
-                throw new \RuntimeException("Masih terdapat baris yang bermasalah atau belum terpetakan. Selesaikan seluruh error/mapping sebelum mengimpor.");
+                throw new \RuntimeException('Masih terdapat baris yang bermasalah atau belum terpetakan. Selesaikan seluruh error/mapping sebelum mengimpor.');
             }
         }
 
@@ -759,18 +766,26 @@ class DepositImportService
             $customerId = $row['customer_id'];
             $policy = $duplicatePolicies[$customerId] ?? 'append';
 
-            if (!empty($row['has_existing_deposit']) && $policy === 'skip') {
+            if (! empty($row['has_existing_deposit']) && $policy === 'skip') {
                 $skippedCount++;
+
                 continue;
             }
 
             $processedCount++;
-            if (!isset($grouped[$customerId])) {
+
+            // Import operasional WAJIB memakai WasteCategory. Historical
+            // exception (material_label tanpa category) tidak lewat jalur ini.
+            if (empty($row['category_id'])) {
+                throw new \RuntimeException('Import operasional menolak baris tanpa Kategori Sampah (waste_category_id wajib).');
+            }
+
+            if (! isset($grouped[$customerId])) {
                 $grouped[$customerId] = [
                     'waste_customer_id' => $customerId,
-                    'date'              => $confirmedDate,
-                    'notes'             => "Import Excel: {$filename} (Sheet: {$sheetName}) [Batch: {$batchCode}] [FP: {$fingerprint}]",
-                    'details'           => [],
+                    'date' => $confirmedDate,
+                    'notes' => "Import Excel: {$filename} (Sheet: {$sheetName}) [Batch: {$batchCode}] [FP: {$fingerprint}]",
+                    'details' => [],
                 ];
             }
 
@@ -783,14 +798,14 @@ class DepositImportService
 
             $grouped[$customerId]['details'][] = [
                 'waste_category_id' => $row['category_id'],
-                'weight'            => $weight,
-                'price_per_unit'    => $price,
-                'subtotal'          => $subtotal,
+                'weight' => $weight,
+                'price_per_unit' => $price,
+                'subtotal' => $subtotal,
             ];
         }
 
         if (empty($grouped)) {
-            throw new \RuntimeException("Tidak ada transaksi yang dapat diimpor (semua baris dilewati karena duplikasi atau tidak ada data).");
+            throw new \RuntimeException('Tidak ada transaksi yang dapat diimpor (semua baris dilewati karena duplikasi atau tidak ada data).');
         }
 
         // Cross-check: material recap, customer recap, and grouped totals must agree.
@@ -802,7 +817,7 @@ class DepositImportService
         if (abs($recapMaterialWeight - $totalWeight) > 0.01
             || abs($recapCustomerWeight - $totalWeight) > 0.01
             || abs($recapCustomerAmount - $totalAmount) > 0.01) {
-            throw new \RuntimeException("Validasi rekap gagal: total rekap material/nasabah tidak konsisten dengan total transaksi. Impor dibatalkan.");
+            throw new \RuntimeException('Validasi rekap gagal: total rekap material/nasabah tidak konsisten dengan total transaksi. Impor dibatalkan.');
         }
 
         // Master sync: Excel prices are the operational truth for Harga Beli
@@ -814,7 +829,7 @@ class DepositImportService
                 continue;
             }
             $policy = $duplicatePolicies[$row['customer_id'] ?? ''] ?? 'append';
-            if (!empty($row['has_existing_deposit']) && $policy === 'skip') {
+            if (! empty($row['has_existing_deposit']) && $policy === 'skip') {
                 continue;
             }
             $excelPrice = $row['excel_price'] ?? null;
@@ -840,17 +855,17 @@ class DepositImportService
         Cache::forever("deposit_import_fp_{$fingerprint}", true);
 
         return [
-            'batch_code'      => $batchCode,
-            'filename'        => $filename,
-            'sheet_name'      => $sheetName,
-            'date'            => $confirmedDate,
-            'total_rows'      => count($rows),
-            'processed_rows'  => $processedCount,
-            'skipped_rows'    => $skippedCount,
-            'deposits_count'  => count($createdDeposits),
+            'batch_code' => $batchCode,
+            'filename' => $filename,
+            'sheet_name' => $sheetName,
+            'date' => $confirmedDate,
+            'total_rows' => count($rows),
+            'processed_rows' => $processedCount,
+            'skipped_rows' => $skippedCount,
+            'deposits_count' => count($createdDeposits),
             'customers_count' => count($grouped),
-            'total_weight'    => $totalWeight,
-            'total_amount'    => $totalAmount,
+            'total_weight' => $totalWeight,
+            'total_amount' => $totalAmount,
         ];
     }
 
@@ -860,7 +875,7 @@ class DepositImportService
      * back together with the deposits. Only touches WasteCategory; aggregator
      * prices (WastePrice.collector_price) are never modified here.
      *
-     * @param array<int, float> $masterPrices category_id => excel price
+     * @param  array<int, float>  $masterPrices  category_id => excel price
      */
     protected function syncMasterMemberPrices(array $masterPrices): void
     {
@@ -872,7 +887,7 @@ class DepositImportService
 
         foreach ($masterPrices as $categoryId => $price) {
             $category = $categories->get($categoryId);
-            if (!$category) {
+            if (! $category) {
                 continue;
             }
             if (abs((float) $category->member_price - $price) > 0.009) {
@@ -894,13 +909,17 @@ class DepositImportService
      */
     private function parseNumber($val): ?float
     {
-        if ($val === null || $val === '') return null;
-        if (is_numeric($val)) return (float) $val;
+        if ($val === null || $val === '') {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return (float) $val;
+        }
 
         // Strip currency symbols, spaces, and periods used as thousand separators
         $str = str_replace([' ', 'Rp', 'rp', 'RP'], '', (string) $val);
         // If has comma as decimal
-        if (str_contains($str, ',') && !str_contains($str, '.')) {
+        if (str_contains($str, ',') && ! str_contains($str, '.')) {
             $str = str_replace(',', '.', $str);
         } else {
             // e.g. "1.000,50" -> strip '.' then replace ',' with '.'

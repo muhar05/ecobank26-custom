@@ -62,10 +62,10 @@
                             <p class="font-bold text-text truncate">
                                 {{ $dep->wasteCustomer->name ?? 'Nasabah' }}
                             </p>
-                            <p class="text-body-sm text-text-muted truncate mt-0.5" title="{{ $dep->details->pluck('wasteCategory.name')->filter()->join(', ') }}">
+                            <p class="text-body-sm text-text-muted truncate mt-0.5" title="{{ $dep->details->map->display_label->filter()->join(', ') }}">
                                 {{ $dep->details->count() }} Material:
                                 <span class="text-text">
-                                    {{ $dep->details->pluck('wasteCategory.name')->filter()->join(', ') }}
+                                    {{ $dep->details->map->display_label->filter()->join(', ') }}
                                 </span>
                             </p>
                         </div>

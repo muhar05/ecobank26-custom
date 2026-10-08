@@ -88,11 +88,11 @@
                                 <tr class="hover:bg-surface-muted/50 transition-subtle">
                                     <td class="py-3 px-4 text-center text-body-sm font-mono text-text-muted">{{ $i + 1 }}</td>
                                     <td class="py-3 px-4">
-                                        <span class="text-body font-semibold text-text">{{ $det->wasteCategory->name ?? 'Material' }}</span>
+                                        <span class="text-body font-semibold text-text">{{ $det->display_label }}</span>
                                     </td>
                                     <td class="py-3 px-4 text-right whitespace-nowrap">
                                         <span class="font-mono text-body font-semibold text-text">{{ number_format($det->weight, 2, ',', '.') }}</span>
-                                        <span class="text-body-sm text-text-muted ml-0.5">{{ $det->wasteCategory->unit ?? 'kg' }}</span>
+                                        <span class="text-body-sm text-text-muted ml-0.5">{{ $det->display_unit }}</span>
                                     </td>
                                     <td class="py-3 px-4 text-right whitespace-nowrap">
                                         <span class="font-mono text-body text-text">Rp {{ number_format($det->price_per_unit, 0, ',', '.') }}</span>
@@ -113,10 +113,10 @@
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2">
                                     <span class="text-body-sm font-mono text-text-muted shrink-0">{{ $i + 1 }}.</span>
-                                    <span class="text-body font-semibold text-text truncate">{{ $det->wasteCategory->name ?? 'Material' }}</span>
+                                    <span class="text-body font-semibold text-text truncate">{{ $det->display_label }}</span>
                                 </div>
                                 <div class="text-body text-text-muted mt-0.5 pl-6">
-                                    {{ number_format($det->weight, 2, ',', '.') }} {{ $det->wasteCategory->unit ?? 'kg' }}
+                                    {{ number_format($det->weight, 2, ',', '.') }} {{ $det->display_unit }}
                                     @ Rp {{ number_format($det->price_per_unit, 0, ',', '.') }}
                                 </div>
                             </div>
