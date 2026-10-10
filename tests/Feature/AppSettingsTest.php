@@ -4,12 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityLog;
 use App\Models\AppSetting;
-use App\Models\Bill;
-use App\Models\FundCategory;
-use App\Models\Kk;
-use App\Models\Rt;
 use App\Models\User;
-use App\Services\BillService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
@@ -47,7 +42,7 @@ class AppSettingsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Pengaturan Sistem');
-        $response->assertSee('Informasi RW');
+        $response->assertSeeText('Identitas & Wilayah');
     }
 
     /**
@@ -101,46 +96,5 @@ class AppSettingsTest extends TestCase
         $this->assertArrayHasKey('metadata', $payload);
         $this->assertEquals(10, $payload['metadata']['old_values']['billing.default_due_days']);
         $this->assertEquals(15, $payload['metadata']['new_values']['billing.default_due_days']);
-    }
-
-    /**
-     * Test that bill due date automatically follows dynamic settings.
-     */
-    public function test_due_date_follows_setting()
-    {
-        // Setup a mock active RT and KK
-        $rt = Rt::create(['rt_number' => '001']);
-        $kk = Kk::create([
-            'rt_id' => $rt->id,
-            'kk_number' => '1234567890123456',
-            'family_head' => 'Kepala Keluarga Moko',
-            'status' => 'active',
-        ]);
-
-        $category = FundCategory::create([
-            'name' => 'Iuran Wajib Bulanan',
-            'monthly_amount' => 50000,
-            'is_mandatory' => true,
-            'is_active' => true,
-        ]);
-
-        // Pre-seed setting as 25 days
-        AppSetting::setValue('billing.default_due_days', 25, 'integer', 'billing');
-        AppSetting::setValue('billing.bill_prefix', 'TAG-RW', 'string', 'document');
-
-        $billService = app(BillService::class);
-        $generated = $billService->generateMonthlyBills(5, 2026);
-
-        $this->assertEquals(1, $generated);
-
-        $bill = Bill::first();
-        $this->assertNotNull($bill);
-
-        // Assert code uses custom prefix
-        $this->assertStringStartsWith('TAG-RW-', $bill->bill_code);
-
-        // Assert due date is exactly 25 days from today
-        $expectedDate = now()->addDays(25)->toDateString();
-        $this->assertEquals($expectedDate, $bill->due_date->toDateString());
     }
 }

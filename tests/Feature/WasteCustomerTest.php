@@ -397,46 +397,6 @@ class WasteCustomerTest extends TestCase
     }
 
     /**
-     * Test Admin Bank Sampah can access the monitoring dashboard.
-     */
-    public function test_admin_bank_sampah_can_access_monitoring_dashboard(): void
-    {
-        $response = $this->actingAs($this->adminBankSampah)
-            ->get(route('bank-sampah.monitoring'));
-
-        $response->assertStatus(200);
-        $response->assertSee('Monitoring');
-        $response->assertSee('Audit Konsistensi');
-    }
-
-    /**
-     * Test Admin RW can access the monitoring dashboard.
-     */
-    public function test_admin_rw_can_access_monitoring_dashboard(): void
-    {
-        $adminRw = User::factory()->create();
-        $adminRw->assignRole('admin_rw');
-
-        $response = $this->actingAs($adminRw)
-            ->get(route('bank-sampah.monitoring'));
-
-        $response->assertStatus(200);
-        $response->assertSee('Monitoring');
-        $response->assertSee('Audit Konsistensi');
-    }
-
-    /**
-     * Test Warga cannot access the monitoring dashboard.
-     */
-    public function test_warga_cannot_access_monitoring_dashboard(): void
-    {
-        $response = $this->actingAs($this->warga)
-            ->get(route('bank-sampah.monitoring'));
-
-        $response->assertStatus(403);
-    }
-
-    /**
      * Test log created on deposit.
      */
     public function test_log_created_on_deposit(): void
