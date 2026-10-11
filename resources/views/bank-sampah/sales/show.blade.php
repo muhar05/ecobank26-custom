@@ -155,7 +155,7 @@
                                     {{ $index + 1 }}
                                 </td>
                                 <td class="py-3 px-4 border-r border-border">
-                                    <span class="font-bold text-text text-body block">{{ $detail->wasteCategory->name ?? '-' }}</span>
+                                    <span class="font-bold text-text text-body block">{{ $detail->wasteCategory->name ?? $detail->material_label ?? '-' }}</span>
                                     @if($detail->wasteCategory && $detail->wasteCategory->code)
                                         <span class="font-mono text-caption text-text-muted block">{{ $detail->wasteCategory->code }}</span>
                                     @endif

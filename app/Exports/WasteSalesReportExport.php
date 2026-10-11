@@ -122,13 +122,15 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
             $date = Carbon::instance($d->sale->date)->toDateString();
             $code = 'SAL-' . str_pad($d->sale->id, 5, '0', STR_PAD_LEFT);
             $agregator = $d->sale->collector->name ?? '-';
-            $catName = $d->wasteCategory->name ?? '-';
+            $catName = $d->wasteCategory->name ?? $d->material_label ?? '-';
             
             $groupName = '-';
             if ($d->wasteCategory && $d->wasteCategory->wasteCategoryGroup) {
                 $groupName = $d->wasteCategory->wasteCategoryGroup->name;
             } elseif ($d->wasteCategory && $d->wasteCategory->category_group) {
                 $groupName = $d->wasteCategory->category_group . ' (Legacy)';
+            } elseif (!$d->wasteCategory && $d->material_label) {
+                $groupName = 'Historical Exception';
             }
 
             $weight = (float) $d->weight;

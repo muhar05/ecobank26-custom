@@ -10,6 +10,7 @@ class SaleDetail extends Model
     protected $fillable = [
         'sale_id',
         'waste_category_id',
+        'material_label',
         'weight',
         'price_per_unit',
         'member_price',

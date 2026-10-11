@@ -132,7 +132,7 @@
                     <td>{{ $d->sale->date ? $d->sale->date->toDateString() : '-' }}</td>
                     <td style="font-family: monospace;">SAL-{{ str_pad($d->sale_id, 5, '0', STR_PAD_LEFT) }}</td>
                     <td style="font-weight: bold;">{{ $d->sale->collector->name ?? '-' }}</td>
-                    <td>{{ $d->wasteCategory->name ?? '-' }}</td>
+                    <td>{{ $d->wasteCategory->name ?? $d->material_label ?? '-' }}</td>
                     <td class="text-right">{{ number_format($d->weight, 2, ',', '.') }} kg</td>
                     <td class="text-right">Rp {{ number_format($d->price_per_unit, 0, ',', '.') }}</td>
                     <td class="text-right" style="font-weight: bold;">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</td>

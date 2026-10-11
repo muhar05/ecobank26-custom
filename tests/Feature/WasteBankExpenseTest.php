@@ -83,6 +83,7 @@ class WasteBankExpenseTest extends TestCase
             'amount' => 10000,
             'description' => 'Beli plastik',
             'expense_date' => now()->format('Y-m-d'),
+            'proof_explanation' => 'Nota hilang',
         ]);
 
         $response->assertSessionHas('error');
