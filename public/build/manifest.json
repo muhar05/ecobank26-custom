@@ -1,6 +1,25 @@
 {
+  "node_modules/flatpickr/dist/esm/index.js": {
+    "file": "assets/esm-C9xzwTW6.js",
+    "name": "esm",
+    "src": "node_modules/flatpickr/dist/esm/index.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/flatpickr/dist/flatpickr.css": {
+    "file": "assets/flatpickr-CveviJq_.css",
+    "src": "node_modules/flatpickr/dist/flatpickr.css"
+  },
+  "node_modules/flatpickr/dist/l10n/id.js": {
+    "file": "assets/id-CKT5azgZ.js",
+    "name": "id",
+    "src": "node_modules/flatpickr/dist/l10n/id.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js"
+    ]
+  },
   "resources/css/app.css": {
-    "file": "assets/app-BdH-Ypz8.css",
+    "file": "assets/app-CBIPM6hx.css",
     "name": "app",
     "names": [
       "app.css"
@@ -36,12 +55,13 @@
     "src": "resources/fonts/plus-jakarta-sans-800-latin.woff2"
   },
   "resources/js/app.js": {
-    "file": "assets/app-CMKeTw88.js",
+    "file": "assets/app-C7OeIHd_.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
-    "css": [
-      "assets/app-CveviJq_.css"
+    "dynamicImports": [
+      "node_modules/flatpickr/dist/esm/index.js",
+      "node_modules/flatpickr/dist/l10n/id.js"
     ]
   }
 }

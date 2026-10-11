@@ -3,9 +3,6 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import intersect from '@alpinejs/intersect';
 import { initSpaNav } from './spa-nav';
-import flatpickr from 'flatpickr';
-import { Indonesian } from 'flatpickr/dist/l10n/id.js';
-import 'flatpickr/dist/flatpickr.css';
 
 Alpine.plugin(intersect);
 
@@ -21,9 +18,18 @@ function syncSaleDateInput(input) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function initSaleDatePickers(root) {
+async function initSaleDatePickers(root) {
     const scope = root && root.querySelectorAll ? root : document;
-    scope.querySelectorAll('input[data-sale-date-picker]').forEach((input) => {
+    const inputs = scope.querySelectorAll('input[data-sale-date-picker]');
+    if (!inputs.length) return;
+
+    const [{ default: flatpickr }, { Indonesian }] = await Promise.all([
+        import('flatpickr'),
+        import('flatpickr/dist/l10n/id.js'),
+        import('flatpickr/dist/flatpickr.css'),
+    ]);
+
+    inputs.forEach((input) => {
         if (input._flatpickr) return;
         flatpickr(input, {
             dateFormat: 'Y-m-d',

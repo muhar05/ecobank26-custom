@@ -29,5 +29,5 @@ opencode.json
 .agents
 .audit
 *.xlsx
+*.sql
 /storage/historical/
-/docs
