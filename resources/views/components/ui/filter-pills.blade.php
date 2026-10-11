@@ -16,12 +16,18 @@
     // Normalize options
     $normalizedOptions = collect($options)->map(function ($opt) {
         if (is_array($opt)) {
+            $rawIcon = $opt['icon'] ?? null;
+            $safeIcon = null;
+            if ($rawIcon && !preg_match('/<script|javascript:|on\w+\s*=/i', (string) $rawIcon)) {
+                $safeIcon = $rawIcon;
+            }
+
             return [
                 'value' => (string) ($opt['value'] ?? ''),
                 'label' => (string) ($opt['label'] ?? ''),
                 'count' => isset($opt['count']) ? $opt['count'] : null,
                 'countExpr' => $opt['countExpr'] ?? null,
-                'icon' => $opt['icon'] ?? null,
+                'icon' => $safeIcon,
                 'description' => $opt['description'] ?? null,
             ];
         }

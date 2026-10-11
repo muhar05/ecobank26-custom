@@ -17,6 +17,8 @@ use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 
 class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
+    use \App\Exports\Concerns\SanitizesFormulaInjection;
+
     protected Request $request;
 
     public function __construct(Request $request)
@@ -118,10 +120,10 @@ class WasteCashflowReportExport implements FromArray, WithHeadings, WithTitle, W
             $totalIn += $item['in'];
             $totalOut += $item['out'];
             $rows[] = [
-                $item['date'],
-                $item['code'],
-                $item['type'],
-                $item['description'],
+                $this->sanitizeCell($item['date']),
+                $this->sanitizeCell($item['code']),
+                $this->sanitizeCell($item['type']),
+                $this->sanitizeCell($item['description']),
                 $item['in'] > 0 ? $item['in'] : '',
                 $item['out'] > 0 ? $item['out'] : ''
             ];

@@ -52,14 +52,13 @@ class LoginRequest extends FormRequest
         // 1. Normalisasi nomor telepon menggunakan logic terpusat jika input berupa digit/nomor telepon
         $phone = \App\Models\User::normalizePhone($login);
 
-        // 2. Cari user multi-kredensial: phone, username, email, atau name
+        // 2. Cari user multi-kredensial unik: phone, username, atau email
         $user = \App\Models\User::where(function ($query) use ($login, $phone) {
             if (! empty($phone)) {
                 $query->where('phone', $phone);
             }
             $query->orWhere('username', $login)
-                  ->orWhere('email', $login)
-                  ->orWhere('name', $login);
+                  ->orWhere('email', $login);
         })->first();
 
         // 3. Verifikasi user dan kecocokan password teks mentahnya
@@ -67,7 +66,7 @@ class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'login' => 'No. Telepon/Nama atau password salah.',
+                'login' => 'No. Telepon, Username, atau password salah.',
             ]);
         }
 

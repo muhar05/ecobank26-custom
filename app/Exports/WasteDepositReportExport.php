@@ -18,6 +18,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class WasteDepositReportExport implements FromArray, ShouldAutoSize, WithCustomStartCell, WithHeadings, WithStyles, WithTitle
 {
+    use \App\Exports\Concerns\SanitizesFormulaInjection;
+
     protected Request $request;
 
     public function __construct(Request $request)
@@ -144,11 +146,11 @@ class WasteDepositReportExport implements FromArray, ShouldAutoSize, WithCustomS
             $totalAmount += $subtotal;
 
             $rows[] = [
-                $date,
-                $code,
-                $nasabah,
-                $catName,
-                $groupName,
+                $this->sanitizeCell($date),
+                $this->sanitizeCell($code),
+                $this->sanitizeCell($nasabah),
+                $this->sanitizeCell($catName),
+                $this->sanitizeCell($groupName),
                 $weight,
                 $price,
                 $subtotal,

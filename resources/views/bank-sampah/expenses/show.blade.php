@@ -48,13 +48,13 @@
                     <div class="p-6">
                         @if($expense->proof_path)
                             @if(Str::endsWith(strtolower($expense->proof_path), ['.pdf']))
-                                <a href="{{ asset('storage/' . $expense->proof_path) }}" target="_blank" class="w-full flex items-center justify-center gap-2 p-4 bg-info-light text-info-text rounded-radius-lg border border-info/30 hover:bg-info-light transition">
+                                <a href="{{ route('bank-sampah.expenses.proof', $expense) }}" target="_blank" class="w-full flex items-center justify-center gap-2 p-4 bg-info-light text-info-text rounded-radius-lg border border-info/30 hover:bg-info-light transition">
                                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     <span class="font-semibold">Lihat File PDF</span>
                                 </a>
                             @else
-                                <a href="{{ asset('storage/' . $expense->proof_path) }}" target="_blank" class="block rounded-radius-lg overflow-hidden border border-border hover:opacity-90 transition bg-surface-muted/50 flex justify-center p-2">
-                                    <img src="{{ asset('storage/' . $expense->proof_path) }}" alt="Bukti Pengeluaran" class="max-w-full h-auto max-h-96 object-contain rounded-radius-md">
+                                <a href="{{ route('bank-sampah.expenses.proof', $expense) }}" target="_blank" class="block rounded-radius-lg overflow-hidden border border-border hover:opacity-90 transition bg-surface-muted/50 flex justify-center p-2">
+                                    <img src="{{ route('bank-sampah.expenses.proof', $expense) }}" alt="Bukti Pengeluaran" class="max-w-full h-auto max-h-96 object-contain rounded-radius-md">
                                 </a>
                             @endif
                         @else

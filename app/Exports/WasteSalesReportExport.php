@@ -19,6 +19,8 @@ use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 
 class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
+    use \App\Exports\Concerns\SanitizesFormulaInjection;
+
     protected Request $request;
 
     public function __construct(Request $request)
@@ -141,11 +143,11 @@ class WasteSalesReportExport implements FromArray, WithHeadings, WithTitle, With
             $totalAmount += $subtotal;
 
             $rows[] = [
-                $date,
-                $code,
-                $agregator,
-                $catName,
-                $groupName,
+                $this->sanitizeCell($date),
+                $this->sanitizeCell($code),
+                $this->sanitizeCell($agregator),
+                $this->sanitizeCell($catName),
+                $this->sanitizeCell($groupName),
                 $weight,
                 $price,
                 $subtotal

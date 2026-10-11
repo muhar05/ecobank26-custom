@@ -28,4 +28,6 @@ opencode.json
 .kiro
 .agents
 .audit
+*.xlsx
+/storage/historical/
 /docs

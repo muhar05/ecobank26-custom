@@ -70,9 +70,13 @@ class WasteBankExpenseTest extends TestCase
             'balance' => 35000,
         ]);
 
-        // Check if file was uploaded
+        // Check if file was uploaded to private local disk
         $expense = WasteBankExpense::first();
-        Storage::disk('public')->assertExists($expense->proof_path);
+        Storage::disk('local')->assertExists($expense->proof_path);
+
+        // Admin can view the protected proof
+        $proofRes = $this->actingAs($this->admin)->get(route('bank-sampah.expenses.proof', $expense));
+        $proofRes->assertStatus(200);
     }
 
     public function test_cannot_create_expense_when_balance_insufficient()

@@ -18,6 +18,8 @@ use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 
 class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTitle, WithStyles, ShouldAutoSize, WithCustomStartCell
 {
+    use \App\Exports\Concerns\SanitizesFormulaInjection;
+
     protected Request $request;
 
     public function __construct(Request $request)
@@ -129,10 +131,10 @@ class WasteSavingsJournalReportExport implements FromArray, WithHeadings, WithTi
             }
 
             $rows[] = [
-                $date,
-                $nasabah,
-                $tipe,
-                $desc,
+                $this->sanitizeCell($date),
+                $this->sanitizeCell($nasabah),
+                $this->sanitizeCell($tipe),
+                $this->sanitizeCell($desc),
                 $amount,
                 $customerId ? $bal : '-'
             ];

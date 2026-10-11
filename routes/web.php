@@ -96,7 +96,7 @@ Route::middleware(['auth', 'permission:manage_waste_prices', 'track_admin_device
 });
 
 // Bank Sampah - Admin Devices
-Route::middleware(['auth'])->prefix('bank-sampah/devices')->name('bank-sampah.devices.')->group(function () {
+Route::middleware(['auth', 'role:admin_bank_sampah|admin_rw'])->prefix('bank-sampah/devices')->name('bank-sampah.devices.')->group(function () {
     Route::get('name', [\App\Http\Controllers\AdminDeviceController::class, 'nameDeviceForm'])->name('name');
     Route::post('name', [\App\Http\Controllers\AdminDeviceController::class, 'storeDeviceName'])->name('store-name');
     Route::get('/', [\App\Http\Controllers\AdminDeviceController::class, 'index'])->name('index');
@@ -138,6 +138,7 @@ Route::middleware(['auth', 'permission:manage_sales'])->prefix('bank-sampah')->n
 
 // Bank Sampah - Expenses
 Route::middleware(['auth', 'role:admin_bank_sampah|admin_rw'])->prefix('bank-sampah')->name('bank-sampah.')->group(function () {
+    Route::get('expenses/{expense}/proof', [\App\Http\Controllers\WasteBankExpenseController::class, 'proof'])->name('expenses.proof');
     Route::resource('expenses', \App\Http\Controllers\WasteBankExpenseController::class)->only(['index', 'create', 'store', 'show']);
 });
 

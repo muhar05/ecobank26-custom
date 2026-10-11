@@ -63,7 +63,7 @@ class WasteBankExpenseController extends Controller
 
         try {
             if ($request->hasFile('proof')) {
-                $path = $request->file('proof')->store('expenses', 'public');
+                $path = $request->file('proof')->store('expenses', 'local');
                 $validated['proof_path'] = $path;
             }
 
@@ -78,7 +78,8 @@ class WasteBankExpenseController extends Controller
         } catch (\App\Exceptions\InsufficientBalanceException $e) {
             return back()->withInput()->with('error', 'Saldo kas Bank Sampah tidak mencukupi untuk pengeluaran ini.');
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            report($e);
+            return back()->withInput()->with('error', 'Terjadi kesalahan sistem saat memproses pengeluaran. Silakan coba lagi atau hubungi administrator.');
         }
     }
 
@@ -86,5 +87,27 @@ class WasteBankExpenseController extends Controller
     {
         $expense->load('recordedBy', 'ledger');
         return view('bank-sampah.expenses.show', compact('expense'));
+    }
+
+    /**
+     * Layani unduhan/preview bukti nota secara terautentikasi (private disk).
+     */
+    public function proof(WasteBankExpense $expense)
+    {
+        if (!$expense->proof_path) {
+            abort(404, 'Bukti nota tidak ditemukan.');
+        }
+
+        // Cek disk privat (lokasi penyimpanan saat ini)
+        if (Storage::disk('local')->exists($expense->proof_path)) {
+            return Storage::disk('local')->response($expense->proof_path);
+        }
+
+        // Fallback disk publik jika ada unggahan lama
+        if (Storage::disk('public')->exists($expense->proof_path)) {
+            return Storage::disk('public')->response($expense->proof_path);
+        }
+
+        abort(404, 'Berkas bukti nota tidak ditemukan pada penyimpanan.');
     }
 }
