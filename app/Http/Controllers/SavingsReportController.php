@@ -43,7 +43,8 @@ class SavingsReportController extends Controller
 
         $customers = $query->orderBy('name')
             ->paginate(15)
-            ->withQueryString();
+            ->withQueryString()
+            ->fragment('table-section');
 
         // Calculate summary metrics across all customers
         $totalCustomers = WasteCustomer::count();

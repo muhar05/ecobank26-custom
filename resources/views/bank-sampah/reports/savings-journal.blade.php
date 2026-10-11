@@ -94,7 +94,7 @@
         @endif
 
         <!-- Data List -->
-        <div class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden">
+        <div id="table-section" class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden scroll-mt-20">
             <!-- DESKTOP VIEW (Table) -->
             <div class="hidden sm:block overflow-x-auto">
                 <table class="min-w-full divide-y divide-border">

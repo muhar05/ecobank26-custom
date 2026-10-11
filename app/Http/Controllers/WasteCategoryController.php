@@ -32,7 +32,7 @@ class WasteCategoryController extends Controller
             }
         }
 
-        $categories = $query->latest()->paginate(20)->withQueryString();
+        $categories = $query->latest()->paginate(20)->withQueryString()->fragment('table-section');
 
         // Dynamic group summaries calculated in controller
         $groups = WasteCategoryGroup::withCount('wasteCategories')->orderBy('name')->get();

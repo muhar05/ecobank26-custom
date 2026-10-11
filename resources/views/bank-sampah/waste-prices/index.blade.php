@@ -250,7 +250,7 @@
             </x-ui.card>
 
             {{-- Main Table Card --}}
-            <x-ui.card variant="bordered" class="p-0 overflow-hidden space-y-0">
+            <x-ui.card id="table-section" variant="bordered" class="p-0 overflow-hidden space-y-0 scroll-mt-20">
                 {{-- Desktop Table (md+) --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">

@@ -24,7 +24,7 @@ class WasteBankExpenseController extends Controller
             $query->whereBetween('expense_date', [$startOfMonth, $endOfMonth]);
         }
 
-        $expenses = $query->paginate(20)->withQueryString();
+        $expenses = $query->paginate(20)->withQueryString()->fragment('table-section');
 
         // Metrics
         $currentBalance = $service->getWasteBankBalance();

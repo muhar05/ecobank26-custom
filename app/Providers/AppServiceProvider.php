@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Gunakan view pagination Tailwind kustom berstandar EcoBank026
+        Paginator::defaultView('vendor.pagination.tailwind');
+        Paginator::defaultSimpleView('vendor.pagination.tailwind');
+
         // Batasi upaya per IP untuk mencegah enumerasi kombinasi customer_code + phone.
         RateLimiter::for('cek-saldo', function (Request $request) {
             return Limit::perMinute(30)->by($request->ip());

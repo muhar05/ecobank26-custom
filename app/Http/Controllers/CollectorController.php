@@ -19,7 +19,7 @@ class CollectorController extends Controller
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")
                 ->orWhere('address', 'like', "%{$search}%"))
-            ->latest()->paginate(20)->withQueryString();
+            ->latest()->paginate(20)->withQueryString()->fragment('table-section');
         return view('bank-sampah.collectors.index', compact('collectors', 'search'));
     }
 

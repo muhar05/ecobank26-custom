@@ -21,7 +21,7 @@ class DepositController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        $deposits = Deposit::with(['wasteCustomer', 'details.wasteCategory'])
+        $deposits = Deposit::with(['wasteCustomer:id,name,customer_code', 'details:id,deposit_id,weight'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
                 ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")
                     ->orWhere('customer_code', 'like', "%{$search}%")))
@@ -30,7 +30,8 @@ class DepositController extends Controller
             ->latest('date')
             ->latest('id')
             ->paginate(20)
-            ->withQueryString();
+            ->withQueryString()
+            ->fragment('table-section');
 
         return view('bank-sampah.deposits.index', compact('deposits', 'search', 'startDate', 'endDate'));
     }

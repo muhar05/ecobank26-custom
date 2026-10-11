@@ -79,7 +79,7 @@ class WasteBankReportController extends Controller
                 });
             });
 
-        $details = $query->latest('id')->paginate(20)->withQueryString();
+        $details = $query->latest('id')->paginate(20)->withQueryString()->fragment('table-section');
 
         // Calculate summaries on all matching rows (not paginated)
         $allMatching = $query->get();
@@ -183,7 +183,7 @@ class WasteBankReportController extends Controller
                 });
             });
 
-        $details = $query->latest('id')->paginate(20)->withQueryString();
+        $details = $query->latest('id')->paginate(20)->withQueryString()->fragment('table-section');
 
         // Calculate summaries
         $allMatching = $query->get();
@@ -287,7 +287,7 @@ class WasteBankReportController extends Controller
             ->when($type, fn($q) => $q->where('type', $type))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
-        $ledgers = $query->orderBy('created_at', 'desc')->orderBy('id', 'desc')->paginate(25)->withQueryString();
+        $ledgers = $query->orderBy('created_at', 'desc')->orderBy('id', 'desc')->paginate(25)->withQueryString()->fragment('table-section');
 
         // Totals calculated on current filters
         $totalSetor = SavingsLedger::whereBetween('created_at', [$startDate, $endDate])

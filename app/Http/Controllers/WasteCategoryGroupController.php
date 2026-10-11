@@ -18,7 +18,9 @@ class WasteCategoryGroupController extends Controller
                   ->orWhere('description', 'like', "%{$search}%");
             })
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString()
+            ->fragment('table-section');
 
         return view('bank-sampah.waste-category-groups.index', compact('groups', 'search'));
     }

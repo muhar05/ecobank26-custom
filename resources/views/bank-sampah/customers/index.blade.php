@@ -80,7 +80,7 @@
 
         {{-- Main Directory List / Table --}}
         @if($customers->count() > 0)
-            <x-ui.card variant="bordered" class="p-0 overflow-hidden">
+            <x-ui.card id="table-section" variant="bordered" class="p-0 overflow-hidden scroll-mt-20">
                 {{-- DESKTOP TABLE VIEW (md+) --}}
                 <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-left border-collapse">

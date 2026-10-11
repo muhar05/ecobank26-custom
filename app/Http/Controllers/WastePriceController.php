@@ -50,7 +50,10 @@ class WastePriceController extends Controller
             }
         });
 
-        $categories = $categoriesQuery->orderBy('name')->paginate(20)->withQueryString();
+        $categories = $categoriesQuery->orderBy('name')
+            ->paginate(20)
+            ->withQueryString()
+            ->fragment('table-section');
 
         // Fetch dynamic groups with category counts and price counts
         $groups = WasteCategoryGroup::withCount(['wasteCategories', 'wasteCategories as active_prices_count' => function($q) {
@@ -194,7 +197,8 @@ class WastePriceController extends Controller
         ->when($source, fn($q) => $q->where('source', $source))
         ->latest('changed_at')
         ->paginate(25)
-        ->withQueryString();
+        ->withQueryString()
+        ->fragment('table-section');
 
         $collectors = Collector::orderBy('name')->get();
         $categories = WasteCategory::orderBy('name')->get();

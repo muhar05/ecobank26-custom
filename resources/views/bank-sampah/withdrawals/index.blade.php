@@ -22,7 +22,7 @@
             </div>
         @endif
 
-        <div class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden transition-colors duration-300">
+        <div id="table-section" class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden transition-colors duration-300 scroll-mt-20">
             <div class="p-4 border-b border-border bg-surface-muted/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div class="w-full sm:max-w-md">
                     <x-table-toolbar :search="$search ?? ''" placeholder="Cari data penarikan..." />

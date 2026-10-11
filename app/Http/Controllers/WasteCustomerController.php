@@ -27,7 +27,7 @@ class WasteCustomerController extends Controller
             $query->where('status', $request->status);
         }
 
-        $customers = $query->latest('id')->paginate(15)->withQueryString();
+        $customers = $query->latest('id')->paginate(15)->withQueryString()->fragment('table-section');
 
         return view('bank-sampah.customers.index', compact('customers'));
     }

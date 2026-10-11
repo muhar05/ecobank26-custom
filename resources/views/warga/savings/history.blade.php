@@ -61,7 +61,7 @@
             </div>
 
             {{-- Transactions List --}}
-            <div class="space-y-4">
+            <div id="table-section" class="space-y-4 scroll-mt-20">
                 @forelse($ledgers as $l)
                     <div class="bg-surface rounded-radius-lg p-6 border border-border shadow-sm flex items-center justify-between">
                         <div class="flex items-center gap-4">

@@ -54,11 +54,14 @@ class SaleController extends Controller
             }
         }
 
-        // 2. Query sales history with collector and details
-        $sales = Sale::with(['collector', 'details.wasteCategory'])
+        // 2. Query sales history with collector and lightweight details
+        $sales = Sale::with(['collector', 'details:id,sale_id,weight,margin'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
                 ->orWhereHas('collector', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest()->paginate(15)->withQueryString();
+            ->latest()
+            ->paginate(15)
+            ->withQueryString()
+            ->fragment('table-section');
 
         $collectors = Collector::orderBy('name')->get();
         $wastePrices = WastePrice::all()->groupBy('collector_id')

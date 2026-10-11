@@ -78,7 +78,7 @@
         </div>
 
         {{-- Tabel Riwayat Perubahan --}}
-        <div class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden">
+        <div id="table-section" class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden scroll-mt-20">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border text-left text-xs">
                     <thead class="bg-surface-muted/60 font-bold text-text-muted uppercase tracking-wider text-caption">

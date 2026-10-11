@@ -42,7 +42,7 @@
             </div>
         </div>
 
-        <div class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden">
+        <div id="table-section" class="bg-surface rounded-radius-lg shadow-sm border border-border overflow-hidden scroll-mt-20">
             <div class="p-4 border-b border-border bg-surface-muted/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <form method="GET" action="{{ route('bank-sampah.expenses.index') }}" class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">

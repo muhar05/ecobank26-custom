@@ -56,7 +56,7 @@
     </div>
 
     {{-- Main Container --}}
-    <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[200ms] space-y-6">
+    <div id="table-section" :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[200ms] space-y-6 scroll-mt-20">
         @if ($logs->isEmpty())
             <div class="bg-surface rounded-radius-lg border border-border p-16 text-center text-text-muted text-sm">
                 Tidak ada catatan aktivitas yang ditemukan.

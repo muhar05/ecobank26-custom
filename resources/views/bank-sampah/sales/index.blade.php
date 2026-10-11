@@ -190,7 +190,7 @@
         {{-- ========================================================= --}}
         {{-- SECTION 2: RIWAYAT TRANSAKSI PENJUALAN                    --}}
         {{-- ========================================================= --}}
-        <x-ui.card variant="bordered" class="p-0 overflow-hidden">
+        <x-ui.card id="table-section" variant="bordered" class="p-0 overflow-hidden scroll-mt-20">
             <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-heading-sm font-bold text-text">Riwayat Transaksi Penjualan</h2>

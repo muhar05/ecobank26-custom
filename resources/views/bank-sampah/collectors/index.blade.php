@@ -26,7 +26,7 @@
             </div>
         @endif
 
-        <x-ui.card variant="bordered" class="p-0 overflow-hidden space-y-0">
+        <x-ui.card id="table-section" variant="bordered" class="p-0 overflow-hidden space-y-0 scroll-mt-20">
             <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface">
                 <x-table-toolbar :search="$search ?? ''" placeholder="Cari agregator berdasarkan nama, kontak, atau alamat..." />
             </div>

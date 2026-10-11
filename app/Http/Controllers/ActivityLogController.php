@@ -33,7 +33,7 @@ class ActivityLogController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        $logs = $query->latest('id')->paginate(15)->withQueryString();
+        $logs = $query->latest('id')->paginate(15)->withQueryString()->fragment('table-section');
         
         $users = User::orderBy('name')->get(['id', 'name']);
         

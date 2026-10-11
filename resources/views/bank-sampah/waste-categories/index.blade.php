@@ -55,7 +55,7 @@
         </div>
 
         <!-- Filter & Search Bar -->
-        <div class="bg-surface rounded-radius-lg shadow-subtle border border-border overflow-hidden transition-colors duration-300">
+        <div id="table-section" class="bg-surface rounded-radius-lg shadow-subtle border border-border overflow-hidden transition-colors duration-300 scroll-mt-20">
             <div class="p-4 border-b border-border bg-surface-muted/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-2">
                     <form action="{{ route('bank-sampah.waste-categories.index') }}" method="GET" class="flex flex-wrap items-center gap-2" id="filter-form">

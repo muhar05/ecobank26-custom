@@ -15,10 +15,13 @@ class WithdrawalController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $withdrawals = Withdrawal::with(['wasteCustomer'])
+        $withdrawals = Withdrawal::with(['wasteCustomer:id,name,customer_code'])
             ->when($search, fn($q) => $q->where('notes', 'like', "%{$search}%")
                 ->orWhereHas('wasteCustomer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
-            ->latest('date')->paginate(20)->withQueryString();
+            ->latest('date')
+            ->paginate(20)
+            ->withQueryString()
+            ->fragment('table-section');
         return view('bank-sampah.withdrawals.index', compact('withdrawals', 'search'));
     }
 
