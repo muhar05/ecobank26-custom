@@ -9,11 +9,11 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Seeder migrasi riwayat penarikan saldo nasabah dari sheet 'Tabungan Nasabah'
- * (docs/Bank Sampah NEW.xlsx & storage/historical/Bank-Sampah-2025-2026.xlsx).
+ * Seeder riwayat penarikan saldo nasabah, HANYA periode File B
+ * (`storage/historical/Bank Sampah NEW.xlsx`, Mei - September 2026).
  *
- * Mengimpor 43 transaksi penarikan saldo (withdrawals) untuk 38 nasabah.
- * Total penarikan: Rp 5.416.730,00.
+ * Mengimpor 20 transaksi penarikan saldo (withdrawals) untuk 20 nasabah.
+ * Total penarikan: Rp 3.238.395,00.
  *
  * Idempotent: aman dijalankan berulang.
  */
@@ -25,44 +25,21 @@ class HistoricalWithdrawalSeeder extends Seeder
     public static function events(): array
     {
         return [
-            ['customer' => 'Bu Betria', 'amount' => 300000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Maryani', 'amount' => 20000.0, 'date' => '2025-10-19', 'notes' => 'Penarikan tabungan (Cash)'],
-            ['customer' => 'Bu Alim', 'amount' => 44000.0, 'date' => '2025-10-23', 'notes' => 'Penarikan tabungan (TF)'],
-            ['customer' => 'Bu Angga', 'amount' => 200000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Bu Fardani', 'amount' => 17560.0, 'date' => '2025-08-02', 'notes' => 'Penarikan tabungan (Cash)'],
-            ['customer' => 'Bu Hartinah', 'amount' => 77000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Lia RT 2', 'amount' => 63000.0, 'date' => '2025-10-01', 'notes' => 'Penarikan tabungan (TF)'],
-            ['customer' => 'Bu Martinah', 'amount' => 25000.0, 'date' => '2025-10-23', 'notes' => 'Penarikan tabungan (TF)'],
-            ['customer' => 'Bu Ratu Tuti', 'amount' => 85000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Widodo', 'amount' => 140000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Mbak Nurhayati', 'amount' => 190000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Transfer)'],
             ['customer' => 'Mbak Nurhayati', 'amount' => 180000.0, 'date' => '2026-09-07', 'notes' => 'Penarikan tabungan periode lanjutan'],
-            ['customer' => 'Pak Suprayitno', 'amount' => 29000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Pak Wawan', 'amount' => 100000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Bu Purwani', 'amount' => 141000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
+            ['customer' => 'Bu Betria', 'amount' => 300000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
+            ['customer' => 'Bu Hartinah', 'amount' => 77000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
+            ['customer' => 'Bu Ratu Tuti', 'amount' => 85000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Bu Purwani', 'amount' => 38000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan periode lanjutan'],
             ['customer' => 'Bu Rumiyati', 'amount' => 125000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Yayuk', 'amount' => 19572.5, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (dipindah ke bu wiwin)'],
-            ['customer' => 'Bu Wiwin', 'amount' => 130427.5, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Bu Wiwin', 'amount' => 150000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan periode lanjutan'],
-            ['customer' => 'Bu Ani', 'amount' => 50000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Bu Linda', 'amount' => 58000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Irma', 'amount' => 100000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Bu Neni', 'amount' => 200000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Bu Wuri', 'amount' => 200000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Bu Tunut', 'amount' => 200000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Selly', 'amount' => 200000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Mba Dian', 'amount' => 131000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Bu Arsudin', 'amount' => 41200.0, 'date' => '2025-08-09', 'notes' => 'Penarikan tabungan (Cash)'],
-            ['customer' => 'Bu Ecin Dwi', 'amount' => 100000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Bu Ecin Dwi', 'amount' => 200000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan periode lanjutan'],
-            ['customer' => 'Bu Sri Retno', 'amount' => 80000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
-            ['customer' => 'Bu Uum', 'amount' => 110000.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Syifa Kamila', 'amount' => 150000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Bu Hadiyana', 'amount' => 500000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Bu Halimah', 'amount' => 200000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
-            ['customer' => 'Bu Devilie', 'amount' => 113000.0, 'date' => '2025-09-07', 'notes' => 'Penarikan tabungan (Cash)'],
-            ['customer' => 'Bu Ani RW 21', 'amount' => 133575.0, 'date' => '2026-04-26', 'notes' => 'Penarikan tabungan (Pencairan Tabungan Periode 2025/2026)'],
             ['customer' => 'Bu Ani RW 21', 'amount' => 106400.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan periode lanjutan'],
             ['customer' => 'Bu Sinta UE', 'amount' => 11300.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],
             ['customer' => 'Gloria RT 5', 'amount' => 94000.0, 'date' => '2026-09-12', 'notes' => 'Penarikan tabungan (Pencairan Tabungan)'],

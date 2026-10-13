@@ -26,11 +26,11 @@ class HistoricalWithdrawalSyncTest extends TestCase
     {
         $this->seed(HistoricalWithdrawalSeeder::class);
 
-        $this->assertEquals(43, Withdrawal::count());
-        $this->assertEquals(43, SavingsLedger::where('type', 'debit')->count());
+        $this->assertEquals(20, Withdrawal::count());
+        $this->assertEquals(20, SavingsLedger::where("type", "debit")->count());
 
         $totalWithdrawn = (float) Withdrawal::sum('amount');
-        $this->assertEquals(5416730.00, $totalWithdrawn);
+        $this->assertEquals(3238395.00, $totalWithdrawn);
 
         // Verify specific known customer withdrawal
         $betria = WasteCustomer::where('name', 'Bu Betria')->first();
@@ -56,9 +56,9 @@ class HistoricalWithdrawalSyncTest extends TestCase
         $this->seed(HistoricalWithdrawalSeeder::class);
         $this->seed(HistoricalWithdrawalSeeder::class);
 
-        $this->assertEquals(43, Withdrawal::count());
-        $this->assertEquals(43, SavingsLedger::where('type', 'debit')->count());
-        $this->assertEquals(5416730.00, (float) Withdrawal::sum('amount'));
+        $this->assertEquals(20, Withdrawal::count());
+        $this->assertEquals(20, SavingsLedger::where("type", "debit")->count());
+        $this->assertEquals(3238395.00, (float) Withdrawal::sum('amount'));
     }
 
     public function test_sync_command_dry_run_and_execution(): void
@@ -74,9 +74,9 @@ class HistoricalWithdrawalSyncTest extends TestCase
         // Full execution
         $this->artisan('bank-sampah:sync-withdrawals')
             ->assertSuccessful()
-            ->expectsOutputToContain('Data penarikan (Withdrawal): 43');
+            ->expectsOutputToContain('Data penarikan (Withdrawal): 20');
 
-        $this->assertEquals(43, Withdrawal::count());
-        $this->assertEquals(43, SavingsLedger::where('type', 'debit')->count());
+        $this->assertEquals(20, Withdrawal::count());
+        $this->assertEquals(20, SavingsLedger::where("type", "debit")->count());
     }
 }

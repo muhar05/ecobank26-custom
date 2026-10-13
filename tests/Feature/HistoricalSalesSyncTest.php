@@ -26,7 +26,7 @@ class HistoricalSalesSyncTest extends TestCase
         $this->seed(HistoricalSalesSeeder::class);
 
         $this->assertEquals(12, Sale::count());
-        $this->assertEquals(189, SaleDetail::count());
+        $this->assertEquals(190, SaleDetail::count());
 
         $totalSubtotal = (float) SaleDetail::sum('subtotal');
         $this->assertGreaterThan(10000000, $totalSubtotal);
@@ -56,7 +56,7 @@ class HistoricalSalesSyncTest extends TestCase
         $this->seed(HistoricalSalesSeeder::class);
 
         $this->assertEquals(12, Sale::count());
-        $this->assertEquals(189, SaleDetail::count());
+        $this->assertEquals(190, SaleDetail::count());
     }
 
     public function test_sync_command_dry_run_and_execution(): void
@@ -75,6 +75,6 @@ class HistoricalSalesSyncTest extends TestCase
             ->expectsOutputToContain('Transaksi penjualan (Sale): 12');
 
         $this->assertEquals(12, Sale::count());
-        $this->assertEquals(189, SaleDetail::count());
+        $this->assertEquals(190, SaleDetail::count());
     }
 }

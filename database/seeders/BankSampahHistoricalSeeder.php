@@ -14,9 +14,10 @@ use Illuminate\Database\Seeder;
  * 1. HistoricalMasterDataSeeder (Kategori, Alias, Agregator)
  * 2. HistoricalCustomerSeeder   (Nasabah Bank Sampah)
  * 3. KamiBoxPriceSeeder         (Katalog Harga KamiBox)
- * 4. HistoricalCashLedgerSeeder (Buku Kas & Beban Operasional)
- * 5. HistoricalWithdrawalSeeder (Penarikan Saldo Nasabah)
- * 6. HistoricalSalesSeeder      (Penjualan Sampah ke Lapak)
+ * 4. HistoricalDepositSeeder    (Setoran nasabah)
+ * 5. HistoricalCashLedgerSeeder (Buku Kas & Beban Operasional)
+ * 6. HistoricalWithdrawalSeeder (Penarikan Saldo Nasabah)
+ * 7. HistoricalSalesSeeder      (Penjualan Sampah ke Lapak)
  */
 class BankSampahHistoricalSeeder extends Seeder
 {
@@ -26,6 +27,7 @@ class BankSampahHistoricalSeeder extends Seeder
             HistoricalMasterDataSeeder::class,
             HistoricalCustomerSeeder::class,
             KamiBoxPriceSeeder::class,
+            HistoricalDepositSeeder::class,
             HistoricalCashLedgerSeeder::class,
             HistoricalWithdrawalSeeder::class,
             HistoricalSalesSeeder::class,

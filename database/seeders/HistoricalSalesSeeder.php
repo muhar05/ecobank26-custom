@@ -23,25 +23,43 @@ class HistoricalSalesSeeder extends Seeder
     public function run(): void
     {
         $mappingService = app(MaterialMappingService::class);
-        $collectors = Collector::all()->keyBy("name");
+        $collectors = Collector::all()->keyBy('name');
 
-        $salesData = self::sales();
+        // Gabungkan blok Timbangan dengan kunci natural identik
+        // (collector + tanggal + catatan) supaya total_amount = jumlah
+        // seluruh blok pada hari itu, bukan hanya blok terakhir.
+        $groups = [];
+        foreach (self::sales() as $saleItem) {
+            $key = $saleItem['collector'].'|'.$saleItem['date'].'|'.$saleItem['notes'];
+            if (! isset($groups[$key])) {
+                $groups[$key] = [
+                    'collector' => $saleItem['collector'],
+                    'date' => $saleItem['date'],
+                    'notes' => $saleItem['notes'],
+                    'details' => [],
+                ];
+            }
+            foreach ($saleItem['details'] as $detailItem) {
+                $groups[$key]['details'][] = $detailItem;
+            }
+        }
+
         $createdSales = 0;
         $createdDetails = 0;
 
-        DB::transaction(function () use ($salesData, $collectors, $mappingService, &$createdSales, &$createdDetails) {
-            foreach ($salesData as $saleItem) {
-                $collector = $collectors->get($saleItem["collector"]);
+        DB::transaction(function () use ($groups, $collectors, $mappingService, &$createdSales, &$createdDetails) {
+            foreach ($groups as $group) {
+                $collector = $collectors->get($group['collector']);
                 if (! $collector) {
-                    $collector = Collector::firstOrCreate(["name" => $saleItem["collector"]]);
+                    $collector = Collector::firstOrCreate(['name' => $group['collector']]);
                     $collectors->put($collector->name, $collector);
                 }
 
-                $saleAmount = round((float) collect($saleItem["details"])->sum('subtotal'), 2);
+                $saleAmount = round((float) collect($group['details'])->sum('subtotal'), 2);
 
                 $sale = Sale::where('collector_id', $collector->id)
-                    ->whereDate('date', $saleItem['date'])
-                    ->where('notes', $saleItem['notes'])
+                    ->whereDate('date', $group['date'])
+                    ->where('notes', $group['notes'])
                     ->first();
 
                 if ($sale) {
@@ -49,50 +67,36 @@ class HistoricalSalesSeeder extends Seeder
                 } else {
                     $sale = Sale::create([
                         'collector_id' => $collector->id,
-                        'date'         => $saleItem['date'],
-                        'notes'        => $saleItem['notes'],
+                        'date' => $group['date'],
+                        'notes' => $group['notes'],
                         'total_amount' => $saleAmount,
                     ]);
                 }
 
                 $createdSales++;
 
-                foreach ($saleItem["details"] as $detailItem) {
-                    $mat = $detailItem["material"];
+                // Recreate detail tiap blok agar setiap baris Excel tersimpan
+                // utuh, termasuk dua label berbeda yang memetakan ke kategori
+                // kanonik yang sama (mis. Kaca & Botol Kaca Bening/Putih).
+                $sale->details()->delete();
+
+                foreach ($group['details'] as $detailItem) {
+                    $mat = $detailItem['material'];
                     $resolved = $mappingService->resolve($mat);
 
-                    $catId = $resolved["category"]?->id ?? null;
+                    $catId = $resolved['category']?->id ?? null;
                     $matLabel = $catId ? null : $mat;
 
-                    // Idempotent detail upsert (supporting nullable waste_category_id)
-                    $detailQuery = SaleDetail::where('sale_id', $sale->id);
-                    if ($catId) {
-                        $detailQuery->where('waste_category_id', $catId);
-                    } else {
-                        $detailQuery->whereNull('waste_category_id')->where('material_label', $matLabel);
-                    }
-                    $detail = $detailQuery->first();
-
-                    if ($detail) {
-                        $detail->update([
-                            "weight"         => $detailItem["weight"],
-                            "price_per_unit" => $detailItem["price_per_unit"],
-                            "member_price"   => $detailItem["member_price"],
-                            "subtotal"       => $detailItem["subtotal"],
-                            "margin"         => $detailItem["margin"],
-                        ]);
-                    } else {
-                        SaleDetail::create([
-                            "sale_id"           => $sale->id,
-                            "waste_category_id" => $catId,
-                            "material_label"    => $matLabel,
-                            "weight"            => $detailItem["weight"],
-                            "price_per_unit"    => $detailItem["price_per_unit"],
-                            "member_price"      => $detailItem["member_price"],
-                            "subtotal"          => $detailItem["subtotal"],
-                            "margin"            => $detailItem["margin"],
-                        ]);
-                    }
+                    SaleDetail::create([
+                        'sale_id' => $sale->id,
+                        'waste_category_id' => $catId,
+                        'material_label' => $matLabel,
+                        'weight' => $detailItem['weight'],
+                        'price_per_unit' => $detailItem['price_per_unit'],
+                        'member_price' => $detailItem['member_price'],
+                        'subtotal' => $detailItem['subtotal'],
+                        'margin' => $detailItem['margin'],
+                    ]);
 
                     $createdDetails++;
                 }
