@@ -13,7 +13,7 @@
 
     {{-- Filter & Search Form --}}
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 delay-[100ms] bg-surface rounded-radius-lg border border-border p-6 shadow-sm">
-        <form method="GET" action="{{ route('admin.audit-logs') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('admin.audit-logs') }}" data-live-search class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {{-- Search input --}}
             <div>

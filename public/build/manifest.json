@@ -10,7 +10,7 @@
     "src": "node_modules/flatpickr/dist/flatpickr.css"
   },
   "node_modules/flatpickr/dist/l10n/id.js": {
-    "file": "assets/id-CKT5azgZ.js",
+    "file": "assets/id-Cs1u8WUK.js",
     "name": "id",
     "src": "node_modules/flatpickr/dist/l10n/id.js",
     "isDynamicEntry": true,
@@ -55,7 +55,7 @@
     "src": "resources/fonts/plus-jakarta-sans-800-latin.woff2"
   },
   "resources/js/app.js": {
-    "file": "assets/app-C7OeIHd_.js",
+    "file": "assets/app-B3Q-oO0e.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

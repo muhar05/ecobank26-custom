@@ -30,7 +30,7 @@
 
         {{-- Search & Date Range Filter Toolbar --}}
         <x-ui.card variant="bordered" class="p-4 sm:p-5">
-            <form action="{{ route('bank-sampah.deposits.index') }}" method="GET" class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <form action="{{ route('bank-sampah.deposits.index') }}" method="GET" data-live-search class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
                 {{-- Pencarian Nama / Kode Nasabah / Catatan --}}
                 <div class="flex-1 min-w-[260px]">
                     <div class="relative">
@@ -71,12 +71,10 @@
                     </x-ui.button>
 
                     {{-- Tombol Reset jika filter aktif --}}
-                    @if(!empty($search) || !empty($startDate) || !empty($endDate))
-                        <a href="{{ route('bank-sampah.deposits.index') }}"
-                           class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle inline-flex items-center min-h-[44px]">
-                            Reset
-                        </a>
-                    @endif
+                    <a href="{{ route('bank-sampah.deposits.index') }}" data-live-reset
+                       class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle inline-flex items-center min-h-[44px] {{ (!empty($search) || !empty($startDate) || !empty($endDate)) ? '' : 'hidden' }}">
+                        Reset
+                    </a>
                 </div>
             </form>
         </x-ui.card>
@@ -274,7 +272,7 @@
             {{-- HONEST EMPTY STATES --}}
             @if(!empty($search) || !empty($startDate) || !empty($endDate))
                 {{-- Search / Filter Empty State --}}
-                <div class="p-10 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3">
+                <div id="table-section" class="p-10 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3 scroll-mt-20">
                     <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -297,7 +295,7 @@
                 </div>
             @else
                 {{-- Zero Database Empty State --}}
-                <div class="p-12 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3">
+                <div id="table-section" class="p-12 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3 scroll-mt-20">
                     <div class="w-14 h-14 rounded-full bg-primary-light text-primary flex items-center justify-center">
                         <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>

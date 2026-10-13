@@ -38,7 +38,7 @@
 
         {{-- Search & Filter Toolbar --}}
         <x-ui.card variant="bordered" class="p-4 sm:p-5">
-            <form method="GET" action="{{ route('bank-sampah.customers.index') }}" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <form method="GET" action="{{ route('bank-sampah.customers.index') }}" data-live-search class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div class="relative flex-1">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -68,12 +68,10 @@
                         Filter
                     </x-ui.button>
 
-                    @if(request()->anyFilled(['search', 'status']))
-                        <a href="{{ route('bank-sampah.customers.index') }}"
-                           class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle">
-                            Reset
-                        </a>
-                    @endif
+                    <a href="{{ route('bank-sampah.customers.index') }}" data-live-reset
+                       class="text-body font-semibold text-text-muted hover:text-danger px-2.5 py-2 transition-subtle {{ request()->anyFilled(['search', 'status']) ? '' : 'hidden' }}">
+                        Reset
+                    </a>
                 </div>
             </form>
         </x-ui.card>
@@ -246,7 +244,7 @@
             {{-- HONEST EMPTY STATES --}}
             @if(request()->anyFilled(['search', 'status']))
                 {{-- Search No Result State --}}
-                <div class="p-10 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3">
+                <div id="table-section" class="p-10 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3 scroll-mt-20">
                     <div class="w-12 h-12 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -269,7 +267,7 @@
                 </div>
             @else
                 {{-- Zero Database Empty State --}}
-                <div class="p-12 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3">
+                <div id="table-section" class="p-12 text-center border-2 border-dashed border-border rounded-radius-lg bg-surface flex flex-col items-center justify-center space-y-3 scroll-mt-20">
                     <div class="w-14 h-14 rounded-full bg-primary-light text-primary flex items-center justify-center">
                         <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>

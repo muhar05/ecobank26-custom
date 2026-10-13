@@ -3,6 +3,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import intersect from '@alpinejs/intersect';
 import { initSpaNav } from './spa-nav';
+import { initLiveSearch } from './live-search';
 
 Alpine.plugin(intersect);
 
@@ -11,6 +12,7 @@ window.Alpine = Alpine;
 Alpine.start();
 
 initSpaNav();
+initLiveSearch();
 initSaleDatePickers(document);
 
 function syncSaleDateInput(input) {

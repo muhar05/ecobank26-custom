@@ -198,7 +198,7 @@
                 </div>
 
                 {{-- Search Toolbar --}}
-                <form method="GET" action="{{ route('bank-sampah.sales.index') }}" class="flex items-center gap-2 w-full sm:w-auto">
+                <form method="GET" action="{{ route('bank-sampah.sales.index') }}" data-live-search class="flex items-center gap-2 w-full sm:w-auto">
                     <div class="relative flex-1 sm:w-72">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

@@ -1,6 +1,6 @@
 @props(['action' => null, 'placeholder' => 'Cari data...', 'search' => ''])
 
-<form method="GET" action="{{ $action ?? request()->url() }}" x-data="{ loading: false }" @submit="loading = true" class="flex flex-col sm:flex-row gap-2">
+<form method="GET" action="{{ $action ?? request()->url() }}" data-live-search x-data="{ loading: false }" @submit="loading = true" class="flex flex-col sm:flex-row gap-2">
     <div class="flex-1">
         <input type="text" name="search" value="{{ $search }}" placeholder="{{ $placeholder }}" class="w-full rounded-radius-md border-border bg-surface text-text shadow-sm text-sm focus:border-primary focus:ring-primary placeholder:text-text-muted">
     </div>
@@ -14,8 +14,6 @@
             </template>
             <span x-text="loading ? 'Mencari...' : 'Cari'"></span>
         </button>
-        @if($search)
-        <a href="{{ $action ?? request()->url() }}" class="inline-flex items-center px-3 py-2 text-sm text-text-muted hover:text-text transition">Reset</a>
-        @endif
+        <a href="{{ $action ?? request()->url() }}" data-live-reset class="inline-flex items-center px-3 py-2 text-sm text-text-muted hover:text-text transition {{ $search ? '' : 'hidden' }}">Reset</a>
     </div>
 </form>

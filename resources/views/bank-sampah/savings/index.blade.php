@@ -51,7 +51,7 @@
         <div id="table-section" class="bg-surface rounded-radius-lg shadow-subtle border border-border overflow-hidden transition-all duration-300">
             {{-- Toolbar: Search & Filter RT --}}
             <div class="p-4 sm:p-5 border-b border-border-subtle bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <form method="GET" action="{{ route('bank-sampah.savings') }}" class="flex flex-col sm:flex-row sm:items-center gap-3 w-full" id="savings-filter-form">
+                <form method="GET" action="{{ route('bank-sampah.savings') }}" data-live-search class="flex flex-col sm:flex-row sm:items-center gap-3 w-full" id="savings-filter-form">
                     {{-- Search Input (Nama / No. RT / Kode) --}}
                     <div class="relative flex-1">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
@@ -70,7 +70,6 @@
                     @if(!empty($rtOptions) && count($rtOptions) > 1)
                         <div class="w-full sm:w-44">
                             <select name="rt"
-                                    onchange="document.getElementById('savings-filter-form').submit()"
                                     class="w-full text-body-sm rounded-radius-md border border-border bg-surface text-text py-2 px-3 focus:border-primary focus:ring-1 focus:ring-primary shadow-subtle transition-subtle">
                                 <option value="">Semua No. RT</option>
                                 @foreach($rtOptions as $opt)

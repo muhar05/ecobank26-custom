@@ -158,7 +158,13 @@
                         this.$nextTick(() => {
                             const form = this.$el.closest('form');
                             if (form) {
-                                form.submit();
+                                // requestSubmit memicu event submit (subject), sehingga
+                                // ditangkap oleh live-search / validasi HTML bawaan.
+                                if (typeof form.requestSubmit === 'function') {
+                                    form.requestSubmit();
+                                } else {
+                                    form.submit();
+                                }
                             }
                         });
                     }

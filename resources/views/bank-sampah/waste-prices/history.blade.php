@@ -26,7 +26,7 @@
 
         {{-- Filter Bar --}}
         <div class="bg-surface rounded-radius-lg shadow-sm border border-border p-4">
-            <form action="{{ route('bank-sampah.waste-prices.history') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <form action="{{ route('bank-sampah.waste-prices.history') }}" method="GET" data-live-search class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                 <div>
                     <label class="block text-caption font-bold text-text-muted uppercase tracking-wider mb-1">Agregator</label>
                     <select name="collector_id" class="w-full text-xs rounded-radius-md border-border bg-surface text-text">

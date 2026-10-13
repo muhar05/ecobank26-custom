@@ -58,11 +58,11 @@
         <div id="table-section" class="bg-surface rounded-radius-lg shadow-subtle border border-border overflow-hidden transition-colors duration-300 scroll-mt-20">
             <div class="p-4 border-b border-border bg-surface-muted/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div class="flex items-center gap-2">
-                    <form action="{{ route('bank-sampah.waste-categories.index') }}" method="GET" class="flex flex-wrap items-center gap-2" id="filter-form">
+                    <form action="{{ route('bank-sampah.waste-categories.index') }}" method="GET" data-live-search class="flex flex-wrap items-center gap-2" id="filter-form">
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
-                        <select name="waste_category_group_id" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary" onchange="document.getElementById('filter-form').submit()">
+                        <select name="waste_category_group_id" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary">
                             <option value="">Semua Grup Kategori</option>
                             <option value="uncategorized" {{ request('waste_category_group_id') === 'uncategorized' ? 'selected' : '' }}>Belum Dikategorikan</option>
                             @foreach($groups as $g)
