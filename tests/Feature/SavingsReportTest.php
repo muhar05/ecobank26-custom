@@ -305,11 +305,40 @@ class SavingsReportTest extends TestCase
         $res->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
 
         $content = $res->streamedContent();
+        $this->assertTrue(str_starts_with($content, chr(0xEF).chr(0xBB).chr(0xBF)));
         $this->assertStringContainsString('Kode Nasabah', $content);
         $this->assertStringContainsString('No. RT / Alamat', $content);
         $this->assertStringContainsString('Dewi Persik', $content);
         $this->assertStringContainsString('RT 01', $content);
         $this->assertStringContainsString('12500', $content);
+        $this->assertStringContainsString('TOTAL', $content);
+    }
+
+    public function test_savings_export_respects_search_and_rt_filter(): void
+    {
+        [$admin, $device] = $this->createAdminClient();
+
+        WasteCustomer::create([
+            'name' => 'Warga RT Satu',
+            'customer_code' => 'NSB-000001',
+            'address' => 'RT 01',
+            'status' => 'active',
+        ]);
+        WasteCustomer::create([
+            'name' => 'Warga RT Dua',
+            'customer_code' => 'NSB-000002',
+            'address' => 'RT 02',
+            'status' => 'active',
+        ]);
+
+        $res = $this->actingAs($admin)
+            ->withUnencryptedCookie(DeviceTrackingService::COOKIE_NAME, $device->device_token)
+            ->get(route('bank-sampah.savings.export', ['rt' => 'RT 01']));
+
+        $res->assertStatus(200);
+        $content = $res->streamedContent();
+        $this->assertStringContainsString('Warga RT Satu', $content);
+        $this->assertStringNotContainsString('Warga RT Dua', $content);
     }
 
     public function test_spa_navigation_works_on_savings_and_detail(): void

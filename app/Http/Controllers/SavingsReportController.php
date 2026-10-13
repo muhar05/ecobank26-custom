@@ -130,38 +130,115 @@ class SavingsReportController extends Controller
         ));
     }
 
-    public function export()
+    public function export(Request $request)
     {
-        $customers = WasteCustomer::withSum(['savingsLedgers as total_credit' => fn($q) => $q->where('type', 'credit')], 'amount')
+        $search = $request->input('search');
+        $rtFilter = $request->input('rt');
+
+        $query = WasteCustomer::query();
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('customer_code', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        if ($rtFilter) {
+            $query->where(function ($q) use ($rtFilter) {
+                $q->where('address', 'like', "%{$rtFilter}%")
+                  ->orWhere('name', 'like', "%{$rtFilter}%");
+            });
+        }
+
+        $customers = $query->withSum(['savingsLedgers as total_credit' => fn($q) => $q->where('type', 'credit')], 'amount')
             ->withSum(['savingsLedgers as total_debit' => fn($q) => $q->where('type', 'debit')], 'amount')
             ->orderBy('name')
             ->get();
 
-        $filename = 'saldo-nasabah-' . now()->format('Y-m-d') . '.csv';
+        $suffix = '';
+        if ($rtFilter) {
+            $suffix .= '-' . \Illuminate\Support\Str::slug($rtFilter);
+        }
+        $filename = 'saldo-nasabah' . $suffix . '-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($customers) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Kode Nasabah', 'Nama Nasabah', 'No. RT / Alamat', 'Total Setoran', 'Total Penarikan', 'Saldo Akhir']);
+
+            // Tambahkan BOM UTF-8 agar Microsoft Excel langsung membaca encoding dan pemisah kolom dengan benar
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Header kolom CSV rapi dan jelas
+            fputcsv($handle, [
+                'No.',
+                'Kode Nasabah',
+                'Nama Nasabah',
+                'No. RT / Alamat',
+                'Total Setoran',
+                'Total Penarikan',
+                'Saldo Akhir',
+                'Status Saldo'
+            ], ',', '"', '\\');
+
+            $grandCredit = 0.0;
+            $grandDebit = 0.0;
+            $grandBalance = 0.0;
+            $no = 1;
+
+            $fmtNum = static function (float $num): string|int {
+                return fmod($num, 1.0) == 0.0 ? (int) $num : number_format($num, 2, '.', '');
+            };
 
             foreach ($customers as $c) {
                 $code = $c->customer_code ?? '-';
                 $name = $c->name ?? '-';
-                $rt = $c->rt_number;
+                $rt = $c->rt_number ?: ($c->address ?: '-');
                 $credit = (float) ($c->total_credit ?? 0);
                 $debit = (float) ($c->total_debit ?? 0);
                 $balance = $credit - $debit;
 
+                $grandCredit += $credit;
+                $grandDebit += $debit;
+                $grandBalance += $balance;
+
+                $status = match (true) {
+                    $balance > 0 => 'Ada Saldo',
+                    $balance < 0 => 'Minus',
+                    default => 'Nol / Lunas',
+                };
+
                 fputcsv($handle, [
+                    $no++,
                     $code,
                     $name,
                     $rt,
-                    $credit,
-                    $debit,
-                    $balance,
-                ]);
+                    $fmtNum($credit),
+                    $fmtNum($debit),
+                    $fmtNum($balance),
+                    $status,
+                ], ',', '"', '\\');
             }
 
+            // Baris Total Akumulasi di akhir file
+            fputcsv($handle, [
+                'TOTAL',
+                '',
+                count($customers) . ' Nasabah',
+                '',
+                $fmtNum($grandCredit),
+                $fmtNum($grandDebit),
+                $fmtNum($grandBalance),
+                '',
+            ], ',', '"', '\\');
+
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ]);
     }
 }

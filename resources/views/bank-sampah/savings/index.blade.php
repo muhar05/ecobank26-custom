@@ -8,8 +8,8 @@
                 <span class="text-text">Saldo Nasabah</span>
             </x-slot:breadcrumbs>
             <x-slot:actions>
-                <a href="{{ route('bank-sampah.savings.export') }}" class="inline-flex items-center gap-2 bg-surface border border-border text-text px-4 py-2.5 rounded-radius-md text-body-sm font-semibold hover:bg-surface-muted shadow-subtle transition-subtle min-h-[44px]">
-                    <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <a href="{{ route('bank-sampah.savings.export', request()->query()) }}" class="inline-flex items-center gap-2 bg-surface border border-border text-text px-4 py-2.5 rounded-radius-md text-body-sm font-semibold hover:bg-surface-muted shadow-subtle transition-subtle min-h-[44px]">
+                    <x-ui.icon name="download" class="w-4 h-4 text-text-muted" />
                     Export CSV
                 </a>
             </x-slot:actions>

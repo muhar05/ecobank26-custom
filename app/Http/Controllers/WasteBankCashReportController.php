@@ -77,22 +77,44 @@ class WasteBankCashReportController extends Controller
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
             
             // Header CSV
-            fputcsv($handle, ['Tanggal', 'Keterangan', 'Masuk', 'Keluar', 'Saldo Berjalan']);
+            fputcsv($handle, ['No.', 'Tanggal', 'Keterangan', 'Kas Masuk', 'Kas Keluar', 'Saldo Berjalan'], ',', '"', '\\');
             
+            $no = 1;
+            $totalIn = 0.0;
+            $totalOut = 0.0;
+
             foreach ($ledgers as $l) {
+                if ($l->type === 'in') {
+                    $totalIn += (float) $l->amount;
+                } else {
+                    $totalOut += (float) $l->amount;
+                }
+
                 // Atur format nominal rupiah untuk masing-masing kolom angka
                 $masuk = $l->type === 'in' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '-';
                 $keluar = $l->type === 'out' ? 'Rp ' . number_format($l->amount, 0, ',', '.') : '-';
                 $saldo = 'Rp ' . number_format($l->balance, 0, ',', '.');
 
                 fputcsv($handle, [
+                    $no++,
                     $l->date->format('Y-m-d'),
                     $l->description,
                     $masuk,
                     $keluar,
                     $saldo,
-                ]);
+                ], ',', '"', '\\');
             }
+
+            // Baris Total Akumulasi di akhir file
+            fputcsv($handle, [
+                'TOTAL',
+                '',
+                count($ledgers) . ' Transaksi',
+                'Rp ' . number_format($totalIn, 0, ',', '.'),
+                'Rp ' . number_format($totalOut, 0, ',', '.'),
+                'Rp ' . number_format($ledgers->first()?->balance ?? 0, 0, ',', '.'),
+            ], ',', '"', '\\');
+
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
