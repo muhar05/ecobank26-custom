@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Log Aktivitas & Audit Trail">
-<div x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 50)" class="space-y-6 sm:space-y-8 pb-8">
+<div x-data="{ loaded: Boolean(window._ecoSpaNavigated) }" x-init="if (!loaded) setTimeout(() => loaded = true, 50)" class="space-y-6 sm:space-y-8 pb-8">
 
     {{-- Header Banner --}}
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-700 relative overflow-hidden bg-surface rounded-radius-lg p-6 sm:p-10 shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-6 border border-border">

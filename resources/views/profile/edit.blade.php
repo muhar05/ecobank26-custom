@@ -1,5 +1,5 @@
 <x-layouts.dashboard title="Profile">
-<div x-data="{ loaded: false }" x-init="setTimeout(() => loaded = true, 50)" class="space-y-6">
+<div x-data="{ loaded: Boolean(window._ecoSpaNavigated) }" x-init="if (!loaded) setTimeout(() => loaded = true, 50)" class="space-y-6">
 
     {{-- Header --}}
     <div :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'" class="transition-all duration-500 relative overflow-hidden bg-primary rounded-radius-lg p-6 shadow-subtle">

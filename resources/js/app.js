@@ -49,6 +49,10 @@ async function initSaleDatePickers(root) {
 if (typeof MutationObserver !== 'undefined') {
     const slot = document.getElementById('app-content-slot');
     if (slot) {
-        new MutationObserver(() => initSaleDatePickers(slot)).observe(slot, { childList: true, subtree: true });
+        let pickerDebounceTimer = null;
+        new MutationObserver(() => {
+            clearTimeout(pickerDebounceTimer);
+            pickerDebounceTimer = setTimeout(() => initSaleDatePickers(slot), 40);
+        }).observe(slot, { childList: true, subtree: true });
     }
 }

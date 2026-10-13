@@ -15,30 +15,35 @@ class WasteBankExpenseController extends Controller
     {
         $query = WasteBankExpense::with('recordedBy')->latest('expense_date')->latest('id');
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->whereBetween('expense_date', [$request->start_date, $request->end_date]);
-        } else {
-            // Default to current month
-            $startOfMonth = now()->startOfMonth()->format('Y-m-d');
-            $endOfMonth = now()->endOfMonth()->format('Y-m-d');
-            $query->whereBetween('expense_date', [$startOfMonth, $endOfMonth]);
+        if ($request->filled('start_date')) {
+            $query->whereDate('expense_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('expense_date', '<=', $request->end_date);
         }
 
         $expenses = $query->paginate(20)->withQueryString()->fragment('table-section');
 
         // Metrics
         $currentBalance = $service->getWasteBankBalance();
-        
-        $currentMonth = now()->format('Y-m');
-        $totalIn = WasteBankCashLedger::where('type', 'in')
-            ->where('date', 'like', "{$currentMonth}%")
-            ->sum('amount');
-            
-        $totalOut = WasteBankCashLedger::where('type', 'out')
-            ->where('date', 'like', "{$currentMonth}%")
-            ->sum('amount');
 
-        return view('bank-sampah.expenses.index', compact('expenses', 'currentBalance', 'totalIn', 'totalOut'));
+        $cashQueryIn = WasteBankCashLedger::where('type', 'in');
+        $cashQueryOut = WasteBankCashLedger::where('type', 'out');
+
+        if ($request->filled('start_date')) {
+            $cashQueryIn->whereDate('date', '>=', $request->start_date);
+            $cashQueryOut->whereDate('date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $cashQueryIn->whereDate('date', '<=', $request->end_date);
+            $cashQueryOut->whereDate('date', '<=', $request->end_date);
+        }
+
+        $totalIn = (float) $cashQueryIn->sum('amount');
+        $totalOut = (float) $cashQueryOut->sum('amount');
+        $hasDateFilter = $request->filled('start_date') || $request->filled('end_date');
+
+        return view('bank-sampah.expenses.index', compact('expenses', 'currentBalance', 'totalIn', 'totalOut', 'hasDateFilter'));
     }
 
     public function create()

@@ -29,15 +29,15 @@
                 <p class="font-mono text-heading-lg font-bold text-text mt-2">Rp {{ number_format($currentBalance, 0, ',', '.') }}</p>
             </div>
             <div class="bg-primary-light rounded-radius-lg p-5 border border-primary/30 dark:border-primary/30/50 shadow-subtle flex flex-col justify-between">
-                <p class="text-body-sm font-bold text-primary uppercase tracking-wide">Pemasukan (Bulan Ini)</p>
+                <p class="text-body-sm font-bold text-primary uppercase tracking-wide">Pemasukan {{ $hasDateFilter ? '(Periode)' : '(Total Kas)' }}</p>
                 <p class="font-mono text-heading-lg font-bold text-text mt-2">Rp {{ number_format($totalIn, 0, ',', '.') }}</p>
             </div>
             <div class="bg-danger-light rounded-radius-lg p-5 border border-danger/30 dark:border-danger/30/50 shadow-subtle flex flex-col justify-between">
-                <p class="text-body-sm font-bold text-danger uppercase tracking-wide">Pengeluaran (Bulan Ini)</p>
+                <p class="text-body-sm font-bold text-danger uppercase tracking-wide">Pengeluaran {{ $hasDateFilter ? '(Periode)' : '(Total Kas)' }}</p>
                 <p class="font-mono text-heading-lg font-bold text-danger-text mt-2">Rp {{ number_format($totalOut, 0, ',', '.') }}</p>
             </div>
             <div class="bg-info-light rounded-radius-lg p-5 border border-info/30 dark:border-info/30 shadow-subtle flex flex-col justify-between">
-                <p class="text-body-sm font-bold text-info-text uppercase tracking-wide">Net Flow (Bulan Ini)</p>
+                <p class="text-body-sm font-bold text-info-text uppercase tracking-wide">Net Flow {{ $hasDateFilter ? '(Periode)' : '(Total Kas)' }}</p>
                 <p class="font-mono text-heading-lg font-bold text-info-text mt-2">Rp {{ number_format($totalIn - $totalOut, 0, ',', '.') }}</p>
             </div>
         </div>
@@ -46,13 +46,13 @@
             <div class="p-4 border-b border-border bg-surface-muted/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <form method="GET" action="{{ route('bank-sampah.expenses.index') }}" data-live-search class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">
-                        <input type="date" name="start_date" value="{{ request('start_date', now()->startOfMonth()->format('Y-m-d')) }}" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary">
+                        <input type="date" name="start_date" value="{{ request('start_date', '') }}" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary">
                         <span class="text-text-muted">-</span>
-                        <input type="date" name="end_date" value="{{ request('end_date', now()->endOfMonth()->format('Y-m-d')) }}" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary">
+                        <input type="date" name="end_date" value="{{ request('end_date', '') }}" class="rounded-radius-md border-border bg-surface text-body-sm shadow-subtle focus:ring-primary focus:border-primary">
                     </div>
-                    <button type="submit" class="bg-surface text-text border border-border px-4 py-2 rounded-radius-md text-body-sm font-semibold hover:bg-surface-muted transition-subtle">Filter</button>
-                    @if(request('start_date'))
-                        <a href="{{ route('bank-sampah.expenses.index') }}" class="text-body-sm text-danger font-semibold hover:underline">Reset</a>
+                    <button type="submit" class="bg-surface text-text border border-border px-4 py-2 rounded-radius-md text-body-sm font-semibold hover:bg-surface-muted transition-subtle cursor-pointer">Filter</button>
+                    @if(request('start_date') || request('end_date'))
+                        <a href="{{ route('bank-sampah.expenses.index') }}" data-live-reset class="text-body-sm text-danger font-semibold hover:underline">Reset</a>
                     @endif
                 </form>
             </div>
@@ -98,9 +98,9 @@
                                 <td colspan="5" class="px-6 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
                                         <div class="w-16 h-16 bg-surface-muted rounded-full flex items-center justify-center mb-4">
-                                            <svg class="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                            <x-ui.icon name="document-text" class="w-8 h-8 text-text-muted" stroke-width="1.5" />
                                         </div>
-                                        <p class="text-body-sm text-text-muted">Belum ada catatan pengeluaran pada rentang tanggal ini.</p>
+                                        <p class="text-body-sm text-text-muted">{{ $hasDateFilter ? 'Belum ada catatan pengeluaran pada rentang tanggal ini.' : 'Belum ada catatan pengeluaran operasional.' }}</p>
                                     </div>
                                 </td>
                             </tr>

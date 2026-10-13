@@ -130,7 +130,6 @@ function isEligibleLink(anchor, event) {
 
 function showLoading() {
     const bar = document.getElementById('eco-nav-progress');
-    const slot = document.getElementById('app-content-slot');
 
     if (bar) {
         clearTimeout(progressTimer);
@@ -144,16 +143,10 @@ function showLoading() {
             }
         }, 150);
     }
-
-    if (slot) {
-        slot.style.transition = 'opacity 150ms ease';
-        slot.style.opacity = '0.7';
-    }
 }
 
 function hideLoading() {
     const bar = document.getElementById('eco-nav-progress');
-    const slot = document.getElementById('app-content-slot');
 
     if (bar) {
         clearTimeout(progressTimer);
@@ -164,10 +157,6 @@ function hideLoading() {
                 bar.style.width = '0%';
             }, 200);
         }, 120);
-    }
-
-    if (slot) {
-        slot.style.opacity = '1';
     }
 }
 
@@ -387,7 +376,10 @@ export async function navigate(targetUrl, { pushHistory = true } = {}) {
             // 6. Execute scripts
             executeScripts(slot, scripts);
 
-            // 7. Initialize Alpine on updated slot (Rule 8)
+            // 7. Flag bahwa navigasi SPA sudah pernah berlangsung (menonaktifkan entrance delay berulang)
+            window._ecoSpaNavigated = true;
+
+            // 8. Initialize Alpine on updated slot (Rule 8)
             if (window.Alpine && typeof window.Alpine.initTree === 'function') {
                 try {
                     window.Alpine.initTree(slot);
@@ -396,7 +388,7 @@ export async function navigate(targetUrl, { pushHistory = true } = {}) {
                 }
             }
 
-            // 8. Dispatch toast if fragment has toast flash message
+            // 9. Dispatch toast if fragment has toast flash message
             if (toasts) {
                 if (toasts.success) {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: toasts.success } }));
@@ -411,13 +403,11 @@ export async function navigate(targetUrl, { pushHistory = true } = {}) {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: toasts.info } }));
                 }
             }
-
-            // 9. Scroll container to top
-            const mainContent = document.getElementById('app-content');
-            if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'instant' });
         };
 
-        if (document.startViewTransition) {
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (document.startViewTransition && !prefersReducedMotion) {
             try {
                 await document.startViewTransition(applyUpdate).finished;
             } catch {
@@ -425,6 +415,12 @@ export async function navigate(targetUrl, { pushHistory = true } = {}) {
             }
         } else {
             applyUpdate();
+        }
+
+        // Scroll ke atas setelah transisi selesai agar tidak melompat di tengah snapshot animasi
+        const mainContent = document.getElementById('app-content');
+        if (mainContent) {
+            mainContent.scrollTop = 0;
         }
 
         if (pushHistory) {
