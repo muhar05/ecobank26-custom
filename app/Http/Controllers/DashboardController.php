@@ -15,9 +15,9 @@ class DashboardController extends Controller
             ->latest('id')->limit(5)->get();
         $recentCashLedgers = \App\Models\WasteBankCashLedger::latest('id')->limit(5)->get();
         $depositWeightByMaterial = \App\Models\DepositDetail::query()
-            ->join('waste_categories', 'waste_categories.id', '=', 'deposit_details.waste_category_id')
-            ->selectRaw('waste_categories.name as name, SUM(deposit_details.weight) as total_weight')
-            ->groupBy('deposit_details.waste_category_id', 'waste_categories.name')
+            ->leftJoin('waste_categories', 'waste_categories.id', '=', 'deposit_details.waste_category_id')
+            ->selectRaw('COALESCE(waste_categories.name, deposit_details.material_label) as name, SUM(deposit_details.weight) as total_weight')
+            ->groupByRaw('COALESCE(waste_categories.name, deposit_details.material_label)')
             ->orderByDesc('total_weight')
             ->limit(5)
             ->get();

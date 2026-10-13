@@ -195,11 +195,17 @@
                 <div class="flex items-start justify-between gap-4 border-b border-border-subtle pb-3">
                     <div>
                         <h2 class="text-heading-sm font-bold text-text">Setoran per Material</h2>
+                        <p class="text-caption text-text-muted mt-0.5">Top 5 material dengan timbangan terbanyak</p>
                     </div>
+                    @if($depositWeightByMaterial->isNotEmpty())
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-radius-sm bg-primary/10 text-primary text-caption font-bold border border-primary/20 shrink-0">
+                            Top 5
+                        </span>
+                    @endif
                 </div>
 
                 @if($depositWeightByMaterial->isNotEmpty())
-                    <div id="chart-bs-material" class="min-h-[260px]"></div>
+                    <div id="chart-bs-material" class="min-h-[260px] w-full"></div>
                 @else
                     <div class="py-12 px-4 text-center border-2 border-dashed border-border-subtle rounded-radius-md flex flex-col items-center justify-center space-y-3">
                         <div class="w-11 h-11 rounded-full bg-surface-muted text-text-muted flex items-center justify-center">
@@ -348,23 +354,118 @@
             matEl.innerHTML = '';
             const matCategories = @json($depositWeightByMaterial->pluck('name'));
             const matWeights = @json($depositWeightByMaterial->pluck('total_weight')->map(fn ($w) => (float) $w));
+            const totalDepositWeight = {{ (float)$totalDepositWeight }};
             const matKg = v => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(v) + ' kg';
+
+            const maxWeight = matWeights.length ? Math.max(...matWeights) : 0;
+            let maxAxis = 100;
+            if (maxWeight > 500) {
+                maxAxis = Math.ceil(maxWeight / 200) * 200;
+            } else if (maxWeight > 100) {
+                maxAxis = Math.ceil(maxWeight / 50) * 50;
+            } else if (maxWeight > 20) {
+                maxAxis = Math.ceil(maxWeight / 10) * 10;
+            } else if (maxWeight > 0) {
+                maxAxis = Math.ceil(maxWeight / 5) * 5;
+            }
+
             const chartMat = new ApexCharts(matEl, {
                 ...baseOpts,
-                chart: { ...baseOpts.chart, type: 'bar', height: 260, parentHeightOffset: 0, animations: { enabled: false } },
+                chart: { 
+                    ...baseOpts.chart, 
+                    type: 'bar', 
+                    height: 260, 
+                    parentHeightOffset: 0, 
+                    animations: { enabled: true, easing: 'easeinout', speed: 350 } 
+                },
                 series: [{ name: 'Berat setoran', data: matWeights }],
                 xaxis: {
-                    labels: { formatter: matKg, style: { colors: isDark ? '#a8a29e' : '#78716c' } },
-                    axisBorder: { show: false }, axisTicks: { show: false }
+                    categories: matCategories,
+                    min: 0,
+                    max: maxAxis,
+                    tickAmount: 4,
+                    title: {
+                        text: 'Satuan: kg',
+                        offsetY: -3,
+                        style: {
+                            color: isDark ? '#a8a29e' : '#78716c',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            fontFamily: 'Plus Jakarta Sans, sans-serif'
+                        }
+                    },
+                    labels: { 
+                        formatter: v => (v === null || v === undefined) ? '' : new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(v),
+                        style: { 
+                            colors: isDark ? '#a8a29e' : '#78716c',
+                            fontSize: '11px',
+                            fontFamily: 'Plus Jakarta Sans, sans-serif'
+                        } 
+                    },
+                    axisBorder: { show: false }, 
+                    axisTicks: { show: false },
+                    tooltip: { enabled: false },
+                    crosshairs: { show: false }
                 },
                 yaxis: {
-                    labels: { style: { colors: isDark ? '#a8a29e' : '#78716c', fontSize: '12px', fontWeight: 600 } }
+                    tooltip: { enabled: false },
+                    labels: { 
+                        style: { 
+                            colors: isDark ? '#f5f5f4' : '#1c1917', 
+                            fontSize: '12px', 
+                            fontWeight: 600,
+                            fontFamily: 'Plus Jakarta Sans, sans-serif'
+                        },
+                        maxWidth: 135
+                    }
                 },
                 colors: ['#059669'],
-                plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '55%' } },
+                plotOptions: { 
+                    bar: { 
+                        horizontal: true, 
+                        borderRadius: 4, 
+                        barHeight: '52%' 
+                    } 
+                },
                 dataLabels: { enabled: false },
                 legend: { show: false },
-                tooltip: { y: { formatter: matKg }, theme: isDark ? 'dark' : 'light' }
+                tooltip: { 
+                    enabled: true,
+                    theme: isDark ? 'dark' : 'light',
+                    shared: false,
+                    intersect: false,
+                    followCursor: true,
+                    x: { show: true },
+                    y: { 
+                        formatter: function (v) {
+                            if (v === null || v === undefined) return '';
+                            const total = totalDepositWeight > 0 ? totalDepositWeight : 1;
+                            const pct = ((v / total) * 100).toFixed(1).replace('.', ',');
+                            return matKg(v) + ' (' + pct + '% dari total)';
+                        },
+                        title: {
+                            formatter: () => 'Total: '
+                        }
+                    } 
+                },
+                responsive: [
+                    {
+                        breakpoint: 480,
+                        options: {
+                            xaxis: {
+                                tickAmount: 2
+                            },
+                            yaxis: {
+                                labels: {
+                                    maxWidth: 95,
+                                    style: {
+                                        fontSize: '11px'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
             });
             chartMat.render();
             charts.push(chartMat);
