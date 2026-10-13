@@ -4,14 +4,27 @@ on:
   push:
     branches:
       - main  # Ganti ke 'master' jika branch utama di GitHub Anda namanya master
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Mengambil kode terbaru dari GitHub
         uses: actions/checkout@v4
+
+      - name: Setup Node.js (Vite 8 compiler)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies frontend
+        run: npm ci --ignore-scripts
+
+      - name: Build assets frontend (Vite)
+        run: npm run build
 
       - name: Eksekusi SSH dan Pull Code di Hostinger
         uses: appleboy/ssh-action@master
@@ -21,11 +34,38 @@ jobs:
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 65002  # Port SSH standar hPanel Hostinger
           script: |
-            # 1. Masuk ke folder public_html aplikasi Anda
+            # 1. Masuk ke folder public_html aplikasi
             cd domains/ecobank026.my.id/public_html
             
-            # 2. Tarik perubahan kode terbaru dari GitHub server
+            # 2. Tarik perubahan kode terbaru dari GitHub
             git pull origin main
             
-            # 3. Bersihkan cache Laravel agar perubahan langsung aktif
+            # 3. Jalankan migrasi database baru jika ada
+            /opt/alt/php84/usr/bin/php artisan migrate --force
+            
+            # 4. Bersihkan cache Laravel agar perubahan langsung aktif
             /opt/alt/php84/usr/bin/php artisan optimize:clear
+
+      - name: Upload compiled assets ke Hostinger (SCP)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002
+          source: "public/build"
+          target: "domains/ecobank026.my.id/public_html"
+          overwrite: true
+
+      - name: Cache konfigurasi & route Laravel di Hostinger
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002
+          script: |
+            cd domains/ecobank026.my.id/public_html
+            /opt/alt/php84/usr/bin/php artisan config:cache
+            /opt/alt/php84/usr/bin/php artisan route:cache
+            /opt/alt/php84/usr/bin/php artisan view:cache
